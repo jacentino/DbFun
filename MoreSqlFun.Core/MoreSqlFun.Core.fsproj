@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Models.fs" />
+    <Compile Include="GenericGetters.fs" />
+    <Compile Include="GenericSetters.fs" />
+    <Compile Include="Parameters.fs" />
+    <Compile Include="OutParams.fs" />
+    <Compile Include="Row.fs" />
+    <Compile Include="Result.fs" />
+    <Compile Include="Connector.fs" />
+    <Compile Include="Query.fs" />
+  </ItemGroup>
+
+</Project>
