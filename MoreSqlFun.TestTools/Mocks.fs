@@ -1,12 +1,12 @@
-﻿namespace MoreSqlFun.Core.Tests
+﻿namespace MoreSqlFun.TestTools
 
 open System
 open System.Data
-open Moq;
 open System.Data.Common
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Builders.Queries
 open Microsoft.Data.SqlClient
+
+open Moq
+open MoreSqlFun.Core.Builders.Queries
 
 
 module Mocks = 
@@ -106,7 +106,7 @@ module Mocks =
     let createPrototypeAndRegular data = 
         createDataReaderMock(data), createDataReaderMock(data)
 
-    let createCommandExecutorMock  (args: (string * DbType) list) data = 
+    let createCommandExecutorMock (args: (string * DbType) list) data = 
 
         let checkParams (command: DbCommand) = 
             for name, dbType in args do
@@ -126,3 +126,29 @@ module Mocks =
                 checkParams(command)
                 async.Return (createDataReaderMock(data))
         }
+
+    let setupCommandOutParams (data: (string * obj) seq) = 
+        { new ICommandExecutor with
+            member __.OpenConnection(_: DbConnection): unit = 
+                ()
+            member __.CreateCommand(connection: DbConnection): DbCommand = 
+                connection.CreateCommand()
+            member __.Execute(command: DbCommand, _: CommandBehavior): IDataReader = 
+                for name, value in data do
+                    command.Parameters.[name].Value <- value
+                createDataReaderMock []
+            member __.ExecuteAsync(command: DbCommand, _: CommandBehavior): Async<IDataReader> = 
+                for name, value in data do
+                    command.Parameters.[name].Value <- value
+                async.Return (createDataReaderMock [])
+        }
+
+
+    let createConnectionMock data = 
+        let connection = Mock<IDbConnection>()
+        let command = Mock<IDbCommand>()
+        command.Setup(fun x -> x.CreateParameter()).Returns(SqlParameter()) |> ignore
+        command.SetupGet(fun x -> x.Parameters).Returns(Mock<IDataParameterCollection>().Object) |> ignore
+        command.Setup(fun x -> x.ExecuteReader()).Returns(createDataReaderMock data) |> ignore
+        connection.Setup(fun x -> x.CreateCommand()).Returns(command.Object) |> ignore
+        connection.Object

@@ -1,19 +1,19 @@
 ﻿namespace MoreSqlFun.MsSql.Builders
 
 open System
-open System.Data 
 open MoreSqlFun.Core
 open MoreSqlFun.Core.Builders
 open Microsoft.Data.SqlClient.Server
 open System.Linq.Expressions
+open System.Data
 
 type ITVParamSetter<'Arg> = GenericSetters.ISetter<SqlDataRecord, 'Arg>
 
-type ITVParamSetterProvider = GenericSetters.ISetterProvider<IDbCommand>
+type ITVParamSetterProvider = GenericSetters.ISetterProvider<SqlDataRecord, SqlDataRecord>
 
 module TableValuedParams = 
 
-    type IBuilder = GenericSetters.IBuilder<SqlDataRecord>
+    type IBuilder = GenericSetters.IBuilder<SqlDataRecord, SqlDataRecord>
 
     type SimpleBuilder() =
 
@@ -48,18 +48,20 @@ module TableValuedParams =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (_, name: string) = 
-                let ordinal = 0
-                let fieldType = typeof<'Arg>
+            member this.Build<'Arg> (_, name: string) (prototype: SqlDataRecord) = 
+                let ordinal = prototype.GetOrdinal(name)
+                let fieldType = prototype.GetFieldType(ordinal)
                 let colSetter = typedColAccessMethods |> List.tryFind (fst >> (=) fieldType) |> Option.map snd |> Option.defaultValue setValueMethod
                 let recParam = Expression.Parameter(typeof<SqlDataRecord>)
                 let valueParam = Expression.Parameter(typeof<'Arg>)
                 let convertedValue = 
-                    if typeof<'Arg> <> fieldType then
+                    if typeof<'Arg> = typeof<char> then
+                        Expression.New(typeof<string>.GetConstructor([| typeof<char>; typeof<int> |]), valueParam, Expression.Constant(1)) :> Expression
+                    elif typeof<'Arg> <> fieldType then
                         try
                             Expression.Convert(valueParam, fieldType) :> Expression
                         with :? InvalidOperationException as ex ->
-                            raise <| Exception(sprintf "Column type doesn't match field type: %s (%s -> %s)" name valueParam.Type.Name typeof<'Arg>.Name, ex)
+                            raise <| Exception(sprintf "Column type doesn't match field type: %s (%s -> %s)" name valueParam.Type.Name fieldType.Name, ex)
                     else
                         valueParam :> Expression
                 let call = Expression.Call(recParam, colSetter, Expression.Constant(ordinal), convertedValue)
@@ -77,7 +79,7 @@ module TableValuedParams =
 open TableValuedParams
 
 type TVParamBuilder(builders: IBuilder seq) = 
-    inherit GenericSetters.GenericSetterBuilder<SqlDataRecord>(Seq.append builders [])
+    inherit GenericSetters.GenericSetterBuilder<SqlDataRecord, SqlDataRecord>(Seq.append builders [ SimpleBuilder() ])
 
     
 

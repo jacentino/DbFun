@@ -3,8 +3,8 @@
 open System
 open Xunit
 open MoreSqlFun.Core.Builders
-open MoreSqlFun.Core.Tests.Models
-open MoreSqlFun.Core.Tests.Mocks
+open MoreSqlFun.TestTools.Models
+open MoreSqlFun.TestTools.Mocks
 
 module ResultTests = 
 
@@ -126,7 +126,7 @@ module ResultTests =
                     ]
                     [ col<int> "roleId"; col<string> "name"; ],
                     [
-                        [ 1; "Adiministrator" ]
+                        [ 1; "Administrator" ]
                         [ 2; "Data Analyst" ]
                         [ 3; "Code Reviewer" ]
                     ]
@@ -150,7 +150,7 @@ module ResultTests =
                     created = DateTime(2023, 1, 1)
                 },
                 [
-                    1, "Adiministrator"
+                    1, "Administrator"
                     2, "Data Analyst" 
                     3, "Code Reviewer"
                 ]
@@ -170,7 +170,7 @@ module ResultTests =
                     ]
                     [ col<int> "roleId"; col<string> "name"; ],
                     [
-                        [ 1; "Adiministrator" ]
+                        [ 1; "Administrator" ]
                         [ 2; "Data Analyst" ]
                         [ 3; "Code Reviewer" ]
                     ]
@@ -193,7 +193,7 @@ module ResultTests =
                     name = "jacentino"
                     email = "jacentino@gmail.com"
                     created = DateTime(2023, 1, 1)
-                    roles = [ "Adiministrator"; "Data Analyst"; "Code Reviewer" ]
+                    roles = [ "Administrator"; "Data Analyst"; "Code Reviewer" ]
 
                 }
                 

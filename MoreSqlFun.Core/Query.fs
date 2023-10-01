@@ -65,20 +65,28 @@ type QueryBuilder(createConnection: unit -> DbConnection, ?executor: Queries.ICo
             return resultReader.Read(dataReader), outParamGetter.Get(command)
         }
 
-    member __.Sql (paramSetter: IParamSetter<'Params>): (IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result> = 
-        fun (resultReaderBuilder: IDataReader -> IResultReader<'Result>) (commandText: string) ->            
+    member __.Sql (paramSetter: unit -> IParamSetter<'Params>): (IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result> = 
+        fun (resultReaderBuilder: IDataReader -> IResultReader<'Result>) (commandText: string) ->
+            let paramSetter = paramSetter()
             let resultReader = createResultReader(CommandType.Text, commandText, resultReaderBuilder, paramSetter.SetArtificial)
             fun (parameters: 'Params) (provider: IConnector) ->
                 executeQuery(provider, commandText, resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
 
-    member __.Sql (paramSetter1: IParamSetter<'Params1>, paramSetter2: IParamSetter<'Params2>): (IDataReader -> IResultReader<'Result>) -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
+    member __.Sql (paramSetter1: unit -> IParamSetter<'Params1>, paramSetter2: unit -> IParamSetter<'Params2>): (IDataReader -> IResultReader<'Result>) -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
         fun (resultReaderBuilder: IDataReader -> IResultReader<'Result>) (commandText: string) ->
+            let paramSetter1 = paramSetter1()
+            let paramSetter2 = paramSetter2()
             let resultReader = createResultReader(CommandType.Text, commandText, resultReaderBuilder, fun cmd -> paramSetter1.SetArtificial cmd; paramSetter2.SetArtificial cmd)
             fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector) ->
                 executeQuery(provider, commandText, resultReader, fun cmd -> paramSetter1.SetValue(parameters1, cmd); paramSetter2.SetValue(parameters2, cmd))
 
-    member __.Proc (paramSetter: IParamSetter<'Params>): (unit -> IOutParamGetter<'OutParams>) -> (IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (outParamGetter: unit -> IOutParamGetter<'OutParams>) (resultReaderBuilder: IDataReader -> IResultReader<'Result>) (commandText: string) ->            
-            let resultReader = createResultReader(CommandType.StoredProcedure, commandText, resultReaderBuilder, paramSetter.SetArtificial)
+    member __.Proc (paramSetter: unit -> IParamSetter<'Params>): (unit -> IOutParamGetter<'OutParams>) -> (IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (outParamGetter: unit -> IOutParamGetter<'OutParams>) (resultReaderBuilder: IDataReader -> IResultReader<'Result>) (commandText: string) ->
+            let paramSetter = paramSetter()
+            let outParamGetter = outParamGetter()
+            let setParams command = 
+                paramSetter.SetArtificial(command)
+                outParamGetter.Create(command)
+            let resultReader = createResultReader(CommandType.StoredProcedure, commandText, resultReaderBuilder, setParams)
             fun (parameters: 'Params) (provider: IConnector) ->
-                executeProcedure(provider, commandText, outParamGetter(), resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
+                executeProcedure(provider, commandText, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))

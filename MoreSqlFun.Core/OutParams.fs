@@ -40,16 +40,19 @@ module OutParams =
                         let param = command.CreateParameter()
                         param.ParameterName <- name
                         param.DbType <- dbTypes |> List.tryFind (fst >> (=) typeof<'Result>) |> Option.map snd |> Option.defaultValue DbType.Object
+                        param.Direction <- ParameterDirection.Output
                         command.Parameters.Add param |> ignore
                     member __.Get(command: IDbCommand): 'Result = 
-                        let param = command.Parameters.[name] :?> IDataParameter
-                        if param = null then
+                        let ordinal = command.Parameters.IndexOf(name)
+                        if ordinal = -1 then
                             failwithf "Output parameter doesn't exist: %s" name
+                        let param = command.Parameters.[ordinal] :?> IDataParameter
                         Convert.ChangeType(param.Value, typeof<'Result>) :?> 'Result
                     member __.IsNull(command: IDbCommand): bool = 
-                        let param = command.Parameters.[name] :?> IDataParameter
-                        if param = null then
+                        let ordinal = command.Parameters.IndexOf(name)
+                        if ordinal = -1 then
                             failwithf "Output parameter doesn't exist: %s" name
+                        let param = command.Parameters.[ordinal] :?> IDataParameter
                         param.Value = DBNull.Value
                 }
 

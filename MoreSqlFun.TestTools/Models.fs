@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.Core.Tests.Models
+﻿namespace MoreSqlFun.TestTools.Models
 
 open System
 open MoreSqlFun.Core.Models
@@ -18,7 +18,7 @@ type Access =
     | [<EnumValue("NO")>] NoAccess  = 0
     | [<EnumValue("RD")>] Read      = 1 
     | [<EnumValue("WR")>] Write     = 2
-    | [<EnumValue("RW")>] ReadWrite = 2
+    | [<EnumValue("RW")>] ReadWrite = 3
 
 type User = 
     {

@@ -6,11 +6,11 @@ open MoreSqlFun.Core
 
 type IParamSetter<'Arg> = GenericSetters.ISetter<IDbCommand, 'Arg>
 
-type IParamSetterProvider = GenericSetters.ISetterProvider<IDbCommand>
+type IParamSetterProvider = GenericSetters.ISetterProvider<unit, IDbCommand>
 
 module Params = 
 
-    type IBuilder = GenericSetters.IBuilder<IDbCommand>
+    type IBuilder = GenericSetters.IBuilder<unit, IDbCommand>
 
     type SimpleBuilder() =
 
@@ -25,7 +25,7 @@ module Params =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (_, name: string) = 
+            member this.Build<'Arg> (_, name: string) () = 
                 { new IParamSetter<'Arg> with
                     member __.SetValue (value: 'Arg, command: IDbCommand) = 
                         let param = command.CreateParameter()
@@ -71,9 +71,9 @@ module Params =
 
             member __.CanBuild (argType: Type) = Types.isCollectionType argType && Types.isSimpleType (Types.getElementType argType)
 
-            member this.Build<'Arg> (provider: IParamSetterProvider, name: string) = 
+            member this.Build<'Arg> (provider: IParamSetterProvider, name: string) () = 
                 let elemType = Types.getElementType(typeof<'Arg>)
-                let elemSetter = provider.Setter(elemType, name)
+                let elemSetter = provider.Setter(elemType, name, ())
                 let setValueMethod = 
                     if typeof<'Arg>.IsArray then
                         this.GetType().GetMethod("SetArray").MakeGenericMethod(elemType)
@@ -100,4 +100,4 @@ module Params =
 open Params
 
 type ParamBuilder(builders: IBuilder seq) = 
-    inherit GenericSetters.GenericSetterBuilder<IDbCommand>(Seq.append builders [ SimpleBuilder(); SimpleCollectionBuilder() ])
+    inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>(Seq.append builders [ SimpleBuilder(); SimpleCollectionBuilder() ])

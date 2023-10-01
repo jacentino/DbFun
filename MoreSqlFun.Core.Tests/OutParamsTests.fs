@@ -4,7 +4,7 @@ open System
 open Xunit
 open Microsoft.Data.SqlClient
 open MoreSqlFun.Core.Builders
-open MoreSqlFun.Core.Tests.Models
+open MoreSqlFun.TestTools.Models
 
 module OutParamsTests = 
 

@@ -6,7 +6,7 @@ open Xunit
 open Moq
 
 open MoreSqlFun.Core.Builders
-open MoreSqlFun.Core.Tests.Models
+open MoreSqlFun.TestTools.Models
 
 module RowTests = 
 

@@ -14,6 +14,13 @@ type IResultReader<'Result> =
 
 type ResultBuilder(rowGetterProvider: IRowGetterProvider) = 
 
+    member __.Unit: IDataReader -> IResultReader<unit seq> = 
+        fun (_: IDataReader) ->
+            { new IResultReader<unit seq> with
+                  member __.Read(_: IDataReader): unit seq = 
+                      Seq.empty
+            }
+
     member __.One<'Result> (rowBuilder: IDataRecord -> IRowGetter<'Result>): IDataReader -> IResultReader<'Result> = 
         fun (prototype: IDataReader) ->
             let getter = rowBuilder(prototype)

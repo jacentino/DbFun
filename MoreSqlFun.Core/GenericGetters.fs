@@ -309,7 +309,7 @@ module GenericGetters =
         member this.CreateGetter<'Result>(name: string, record: 'Prototype): IGetter<'DbObject, 'Result> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with
             | Some builder -> builder.Build<'Result>(this, name) record
-            | None -> failwithf "Could not found row/column getter for type: %A" typeof<'Result>
+            | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
 
         member this.CreateGetter(argType: Type, name: string, record: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "CreateGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
