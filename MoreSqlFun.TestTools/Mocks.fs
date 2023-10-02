@@ -90,7 +90,7 @@ module Mocks =
                 else
                     false
             member this.Read(): bool = 
-                if rowIndex.Value < currents().data.Length - 1 then
+                if rsIndex.Value < data.Length && rowIndex.Value < currents().data.Length - 1 then
                     rowIndex.Value <- rowIndex.Value + 1
                     true
                 else
