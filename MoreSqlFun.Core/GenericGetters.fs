@@ -21,6 +21,9 @@ module GenericGetters =
         abstract member CanBuild: Type -> bool
         abstract member Build: IGetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> IGetter<'DbObject, 'Result>
 
+    type IBuilderEx<'Prototype, 'DbObject> = 
+        abstract member Build: IGetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> IGetter<'DbObject, 'Result>
+
 
     type UnitBuilder<'Prototype, 'DbObject>() =
 
@@ -216,6 +219,12 @@ module GenericGetters =
                 let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, f.Name)
                 FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
                         
+        interface IBuilderEx<'Prototype, 'DbObject> with
+
+            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+                let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, sprintf "%s%s" name f.Name)
+                FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
+                        
 
     type TupleBuilder<'Prototype, 'DbObject>() = 
 
@@ -302,9 +311,19 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
-        member this.Record<'Result>(name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
-            this.CreateGetter<'Result>(name, prototype)
+        member this.Record<'Result>(?prefix: string): 'Prototype -> IGetter<'DbObject, 'Result> = 
+            fun (prototype: 'Prototype) ->
+                let prefix = defaultArg prefix ""
+                match this.GetBuilder<'Result>() with
+                | Some builder ->
+                    match builder with
+                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(this, prefix) prototype
+                    | _ -> builder.Build<'Result>(this, prefix) prototype
+                | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
 
+
+        member this.GetBuilder<'Arg>(): IBuilder<'Prototype, 'DbObject> option = 
+            builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>)
 
         member this.CreateGetter<'Result>(name: string, record: 'Prototype): IGetter<'DbObject, 'Result> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with

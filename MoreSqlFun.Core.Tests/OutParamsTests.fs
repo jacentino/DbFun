@@ -114,13 +114,37 @@ module OutParamsTests =
 
         let command = connection.CreateCommand()
         let b = OutParamBuilder []
-        let getter = b.Record<User>("")()
+        let getter = b.Record<User>()()
 
         getter.Create(command)
         command.Parameters.["userId"].Value <- 2
         command.Parameters.["name"].Value <- "jacentino"
         command.Parameters.["email"].Value <- "jacentino@gmail.com"
         command.Parameters.["created"].Value <- DateTime.Today
+        let value = getter.Get(command)
+
+        let expected = 
+            {
+                userId = 2
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime.Today
+            }
+        Assert.Equal(expected, value)
+
+
+    [<Fact>]        
+    let ``Flat records - prefixed names``() = 
+
+        let command = connection.CreateCommand()
+        let b = OutParamBuilder []
+        let getter = b.Record<User>("user_")()
+
+        getter.Create(command)
+        command.Parameters.["user_userId"].Value <- 2
+        command.Parameters.["user_name"].Value <- "jacentino"
+        command.Parameters.["user_email"].Value <- "jacentino@gmail.com"
+        command.Parameters.["user_created"].Value <- DateTime.Today
         let value = getter.Get(command)
 
         let expected = 

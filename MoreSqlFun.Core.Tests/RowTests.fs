@@ -245,7 +245,31 @@ module RowTests =
                             vcol("created", DateTime(2023, 1, 1))
                         ]
 
-        let getter = builder.Record<User>("") record
+        let getter = builder.Record<User>() record
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId  = 5
+                name    = "jacentino"
+                email   = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+        Assert.Equal(expected, value)
+                            
+
+    [<Fact>]
+    let ``Records - prefixed names``() = 
+
+        let builder = RowBuilder []
+        let record = createDataRecordMock 
+                        [   vcol("user_userId", 5)
+                            vcol("user_name", "jacentino")
+                            vcol("user_email", "jacentino@gmail.com")
+                            vcol("user_created", DateTime(2023, 1, 1))
+                        ]
+
+        let getter = builder.Record<User>("user_") record
         let value = getter.Get(record)
 
         let expected = 
@@ -269,7 +293,7 @@ module RowTests =
                             vcol("created", DateTime(2023, 1, 1))
                         ]
 
-        let getter = builder.Optional(builder.Record<User>("")) record
+        let getter = builder.Optional(builder.Record<User>()) record
         let value = getter.Get(record)
 
         let expected = 
@@ -293,7 +317,7 @@ module RowTests =
                             ncol<DateTime>("created")
                         ]
 
-        let getter = builder.Optional(builder.Record<User>("")) record
+        let getter = builder.Optional(builder.Record<User>()) record
         let value = getter.Get(record)
 
         Assert.Equal(None, value)

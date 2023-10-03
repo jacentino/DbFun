@@ -208,7 +208,7 @@ module QueryTests =
         let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
                
-        let query = qb.Proc(pb.Simple<int> "id") (opb.Record<User>("user")) rs.Unit "getUser"
+        let query = qb.Proc(pb.Simple<int> "id") (opb.Record<User>()) rs.Unit "getUser"
 
         let _, user = query 1 connector |> Async.RunSynchronously
 

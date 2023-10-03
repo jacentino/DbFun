@@ -196,13 +196,14 @@ module ParametersTests =
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
         Assert.Equal(box DBNull.Value, command.Parameters.["name"].Value)
 
+
     [<Fact>]
     let ``Flat records``() = 
 
         let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Record<User>("user")()).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (b.Record<User>()()).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -212,12 +213,27 @@ module ParametersTests =
 
 
     [<Fact>]
+    let ``Flat records - name prefixes``() = 
+
+        let b = ParamBuilder([])
+        use command = connection.CreateCommand()
+
+        (b.Record<User>("user_")()).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+
+        Assert.Equal(4, command.Parameters.Count)
+        Assert.Equal(box 1, command.Parameters.["user_userId"].Value)
+        Assert.Equal(box "jacenty", command.Parameters.["user_name"].Value)
+        Assert.Equal(box "jacenty@gmail.com", command.Parameters.["user_email"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["user_created"].Value)
+
+
+    [<Fact>]
     let ``Options of flat records - Some``() = 
 
         let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Record<User>("user"))()).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (b.Optional(b.Record<User>())()).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -232,7 +248,7 @@ module ParametersTests =
         let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Record<User>("user"))()).SetValue(None, command)
+        (b.Optional(b.Record<User>())()).SetValue(None, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box DBNull.Value, command.Parameters.["userId"].Value)
@@ -277,7 +293,7 @@ module ParametersTests =
         let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple(b.Simple<int>("orgId"), b.Record<User>("user"))()).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
+        (b.Tuple(b.Simple<int>("orgId"), b.Record<User>())()).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
 
         Assert.Equal(5, command.Parameters.Count)
         Assert.Equal(box 10, command.Parameters.["orgId"].Value)

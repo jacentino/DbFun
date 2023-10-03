@@ -248,7 +248,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        let tvp = tvpBuilder.Record<User>("user")
+        let tvp = tvpBuilder.Record<User>()
         (b.TableValuedSeq(tvp, "users")()).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
