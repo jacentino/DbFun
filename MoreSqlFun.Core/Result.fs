@@ -149,7 +149,7 @@ type ResultBuilder(rowGetterProvider: IRowGetterProvider) =
 
     member private this.GetPropChain(expr: Expr) = 
         match expr with
-        | PropertyGet (Some inner, property, _) -> property :: this.GetPropChain(inner)
+        | PropertyGet (Some inner, property, _) -> this.GetPropChain(inner) @ [ property ]
         | _ -> []
 
     member private this.GenerateMerge(propChain: PropertyInfo list, target: Expression, replacement: Expression) = 

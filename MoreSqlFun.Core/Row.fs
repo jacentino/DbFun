@@ -132,3 +132,11 @@ type RowBuilder(builders: IBuilder seq) =
 
     member this.FK<'Foreign, 'Result>(foreign: IDataRecord -> IRowGetter<'Foreign>, result: IDataRecord -> IRowGetter<'Result>) = 
         this.Tuple(this.Key<unit, 'Foreign>(this.Simple<unit>(""), foreign), result)
+
+    interface IRowGetterProvider with
+        member this.Getter(resType: Type, name: string, record: IDataRecord): obj = 
+            this.CreateGetter(resType, name, record)
+        member this.Getter<'Result>(name: string, record: IDataRecord): IRowGetter<'Result> =                
+            this.CreateGetter<'Result>(name, record)
+
+type RowOverride<'Arg> = GenericGetters.Override<IDataRecord, IDataRecord, 'Arg>

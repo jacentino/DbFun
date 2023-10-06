@@ -155,3 +155,28 @@ module OutParamsTests =
                 created = DateTime.Today
             }
         Assert.Equal(expected, value)
+
+
+    [<Fact>]        
+    let ``Flat records - overrides``() = 
+
+        let command = connection.CreateCommand()
+        let b = OutParamBuilder []
+        let u = Unchecked.defaultof<User>
+        let getter = b.Record<User>(OutParamOverride<int>(<@ u.userId @>, b.Simple<int>("id")))()
+
+        getter.Create(command)
+        command.Parameters.["id"].Value <- 2
+        command.Parameters.["name"].Value <- "jacentino"
+        command.Parameters.["email"].Value <- "jacentino@gmail.com"
+        command.Parameters.["created"].Value <- DateTime.Today
+        let value = getter.Get(command)
+
+        let expected = 
+            {
+                userId = 2
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime.Today
+            }
+        Assert.Equal(expected, value)

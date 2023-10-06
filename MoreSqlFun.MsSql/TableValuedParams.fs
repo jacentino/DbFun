@@ -81,5 +81,11 @@ open TableValuedParams
 type TVParamBuilder(builders: IBuilder seq) = 
     inherit GenericSetters.GenericSetterBuilder<SqlDataRecord, SqlDataRecord>(Seq.append builders [ SimpleBuilder() ])
 
-    
+    interface GenericSetters.ISetterProvider<SqlDataRecord, SqlDataRecord> with
+        member this.Setter<'Arg>(name: string, prototype: SqlDataRecord): GenericSetters.ISetter<SqlDataRecord, 'Arg> = 
+            this.GetSetter<'Arg>(name, prototype)
+        member this.Setter(argType: Type, name: string, prototype: SqlDataRecord): obj = 
+            this.GetSetter(argType, name, prototype)    
+
+type TVParamOverride<'Arg> = GenericSetters.Override<SqlDataRecord, SqlDataRecord, 'Arg>
 

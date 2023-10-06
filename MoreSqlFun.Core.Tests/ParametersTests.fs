@@ -228,6 +228,24 @@ module ParametersTests =
 
 
     [<Fact>]
+    let ``Flat records - overrides``() = 
+
+        let b = ParamBuilder([])
+        use command = connection.CreateCommand()
+        let u = Unchecked.defaultof<User>
+
+        let setter = b.Record<User>(ParamOverride<int>(<@ u.userId @>, b.Simple<int>("id")))()
+
+        setter.SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+
+        Assert.Equal(4, command.Parameters.Count)
+        Assert.Equal(box 1, command.Parameters.["id"].Value)
+        Assert.Equal(box "jacenty", command.Parameters.["name"].Value)
+        Assert.Equal(box "jacenty@gmail.com", command.Parameters.["email"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["created"].Value)
+
+
+    [<Fact>]
     let ``Options of flat records - Some``() = 
 
         let b = ParamBuilder([])

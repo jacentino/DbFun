@@ -5,6 +5,8 @@ open System.Reflection
 open FSharp.Reflection
 open System.Linq.Expressions
 open MoreSqlFun.Core
+open Microsoft.FSharp.Quotations
+open Microsoft.FSharp.Quotations.Patterns
 
 module GenericSetters =
 
@@ -24,6 +26,52 @@ module GenericSetters =
     type IBuilderEx<'Prototype, 'DbObject> = 
         abstract member Build: ISetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> ISetter<'DbObject, 'Arg>
 
+    type IOverride<'Prototype, 'DbObject> = 
+        abstract member IsRelevant: string -> bool
+        abstract member IsFinal: bool
+        abstract member Shift: unit -> IOverride<'Prototype, 'DbObject>
+        abstract member Build: 'Prototype -> ISetter<'DbObject, 'Arg>
+
+    type Override<'Prototype, 'DbObject, 'Arg>(propNames: string list, setter: 'Prototype -> ISetter<'DbObject, 'Arg>) =         
+
+        static let rec getPropChain(expr: Expr) = 
+            match expr with
+            | PropertyGet (Some inner, property, _) -> getPropChain(inner) @ [ property.Name ]
+            | _ -> []
+
+        new (path: Expr<'Arg>, setter: 'Prototype -> ISetter<'DbObject, 'Arg>) = 
+            Override(getPropChain(path), setter)
+
+        interface IOverride<'Prototype, 'DbObject> with
+            member __.IsRelevant (propertyName: string) = propNames |> List.tryHead |> Option.map ((=) propertyName) |> Option.defaultValue false
+            member __.IsFinal = propNames |> List.isEmpty
+            member __.Shift() = Override(propNames |> List.tail, setter)
+            member __.Build<'Arg2>(prototype: 'Prototype) = 
+                setter(prototype) :?> ISetter<'DbObject, 'Arg2>
+
+
+    type SetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, overrides: IOverride<'Prototype, 'DbObject> seq) = 
+
+        member this.GetSetter(argType: Type, name: string, prototype: 'Prototype): obj = 
+            let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetSetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
+            let gmethod = method.MakeGenericMethod(argType)
+            gmethod.Invoke(this, [| name; prototype |])
+
+        member __.GetSetter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            let relevant = overrides |> Seq.filter (fun x -> x.IsRelevant name) |> Seq.map (fun x -> x.Shift()) |> Seq.toList
+            match relevant |> List.tryFind (fun x -> x.IsFinal) with
+            | Some ov -> ov.Build(prototype)
+            | None ->
+                match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>) with
+                | Some builder -> builder.Build(SetterProvider(builders, relevant), name) prototype
+                | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
+
+        interface ISetterProvider<'Prototype, 'DbObject> with
+            member this.Setter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+                this.GetSetter<'Arg>(name, prototype)
+            member this.Setter(argType: Type, name: string, prototype: 'Prototype): obj = 
+                this.GetSetter(argType, name, prototype)
+
 
     type UnitBuilder<'Prototype, 'DbObject>() =
 
@@ -31,7 +79,7 @@ module GenericSetters =
 
             member __.CanBuild (argType: Type) = argType = typeof<unit>
 
-            member __.Build<'Arg> (_: ISetterProvider<'Prototype, 'DbObject>, _: string)  (_: 'Prototype) = 
+            member __.Build<'Arg> (_: ISetterProvider<'Prototype, 'DbObject>, _: string) (_: 'Prototype) = 
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (_: 'Arg, _: 'DbObject) = 
                         ()
@@ -333,8 +381,27 @@ module GenericSetters =
                         item3.SetArtificial(command)
                 }
 
-        member this.GetBuilder<'Arg>(): IBuilder<'Prototype, 'DbObject> option = 
+        member __.GetBuilder<'Arg>(): IBuilder<'Prototype, 'DbObject> option = 
             builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>)
+
+        member this.Optional<'Arg> (name: string) = 
+            fun (prototype: 'Prototype) -> this.GetSetter<'Arg option>(name, prototype)
+
+        member this.Record<'Arg>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array) = 
+            fun (prototype: 'Prototype) ->
+                let provider = SetterProvider<'Prototype, 'DbObject>(builders, overrides)
+                match this.GetBuilder<'Arg>() with
+                | Some builder ->
+                    match builder with
+                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Arg>(provider, prefix) prototype
+                    | _ -> builder.Build<'Arg>(provider, prefix) prototype
+                | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
+
+        member this.Record<'Arg>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array) = 
+            this.Record<'Arg>("", overrides)
+
+        member this.Record<'Arg>(?prefix: string) = 
+            this.Record<'Arg>(defaultArg prefix "", [||])
 
         member this.GetSetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetSetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
@@ -342,26 +409,7 @@ module GenericSetters =
             gmethod.Invoke(this, [| name; prototype |])
 
         member this.GetSetter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            let provider = SetterProvider<'Prototype, 'DbObject>(builders, [||])
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>) with
-            | Some builder -> builder.Build(this, name) prototype
+            | Some builder -> builder.Build(provider, name) prototype
             | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
-
-        member this.Optional<'Arg> (name: string) = 
-            fun (prototype: 'Prototype) -> this.GetSetter<'Arg option>(name, prototype)
-
-        member this.Record<'Arg>(?prefix: string) = 
-            fun (prototype: 'Prototype) ->
-                let prefix = defaultArg prefix ""
-                match this.GetBuilder<'Arg>() with
-                | Some builder ->
-                    match builder with
-                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Arg>(this, prefix) prototype
-                    | _ -> builder.Build<'Arg>(this, prefix) prototype
-                | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
-
-        interface ISetterProvider<'Prototype, 'DbObject> with
-            member this.Setter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
-                this.GetSetter<'Arg>(name, prototype)
-            member this.Setter(argType: Type, name: string, prototype: 'Prototype): obj = 
-                this.GetSetter(argType, name, prototype)
-            

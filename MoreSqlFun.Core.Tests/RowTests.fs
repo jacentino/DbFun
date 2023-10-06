@@ -283,6 +283,30 @@ module RowTests =
                             
 
     [<Fact>]
+    let ``Records - overrides``() = 
+
+        let builder = RowBuilder []
+        let record = createDataRecordMock 
+                        [   vcol("id", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let u = Unchecked.defaultof<User>
+        let getter = builder.Record<User>(RowOverride<int>(<@ u.userId @>, builder.Simple<int>("id"))) record
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId  = 5
+                name    = "jacentino"
+                email   = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+        Assert.Equal(expected, value)
+                            
+
+    [<Fact>]
     let ``Record options - Some``() = 
 
         let builder = RowBuilder []

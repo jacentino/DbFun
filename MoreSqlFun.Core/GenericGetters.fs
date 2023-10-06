@@ -5,6 +5,8 @@ open System.Reflection
 open System.Linq.Expressions
 open Microsoft.FSharp.Reflection
 open MoreSqlFun.Core
+open Microsoft.FSharp.Quotations
+open Microsoft.FSharp.Quotations.Patterns
 
 module GenericGetters = 
 
@@ -23,6 +25,52 @@ module GenericGetters =
 
     type IBuilderEx<'Prototype, 'DbObject> = 
         abstract member Build: IGetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> IGetter<'DbObject, 'Result>
+
+
+    type IOverride<'Prototype, 'DbObject> = 
+        abstract member IsRelevant: string -> bool
+        abstract member IsFinal: bool
+        abstract member Shift: unit -> IOverride<'Prototype, 'DbObject>
+        abstract member Build: 'Prototype -> IGetter<'DbObject, 'Result>
+
+    type Override<'Prototype, 'DbObject, 'Result>(propNames: string list, setter: 'Prototype -> IGetter<'DbObject, 'Result>) =         
+
+        static let rec getPropChain(expr: Expr) = 
+            match expr with
+            | PropertyGet (Some inner, property, _) -> getPropChain(inner) @ [ property.Name ]
+            | _ -> []
+
+        new (path: Expr<'Result>, setter: 'Prototype -> IGetter<'DbObject, 'Result>) = 
+            Override(getPropChain(path), setter)
+
+        interface IOverride<'Prototype, 'DbObject> with
+            member __.IsRelevant (propertyName: string) = propNames |> List.tryHead |> Option.map ((=) propertyName) |> Option.defaultValue false
+            member __.IsFinal = propNames |> List.isEmpty
+            member __.Shift() = Override(propNames |> List.tail, setter)
+            member __.Build<'Result2>(prototype: 'Prototype) = 
+                setter(prototype) :?> IGetter<'DbObject, 'Result2>
+
+    type GetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, overrides: IOverride<'Prototype, 'DbObject> seq) = 
+
+        member this.GetGetter(argType: Type, name: string, prototype: 'Prototype): obj = 
+            let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
+            let gmethod = method.MakeGenericMethod(argType)
+            gmethod.Invoke(this, [| name; prototype |])
+
+        member __.GetGetter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            let relevant = overrides |> Seq.filter (fun x -> x.IsRelevant name) |> Seq.map (fun x -> x.Shift()) |> Seq.toList
+            match relevant |> List.tryFind (fun x -> x.IsFinal) with
+            | Some ov -> ov.Build(prototype)
+            | None ->
+                match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with
+                | Some builder -> builder.Build(GetterProvider(builders, relevant), name) prototype
+                | None -> failwithf "Could not found param builder for type: %A" typeof<'Result>
+
+        interface IGetterProvider<'Prototype, 'DbObject> with
+            member this.Getter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+                this.GetGetter<'Result>(name, prototype)
+            member this.Getter(argType: Type, name: string, prototype: 'Prototype): obj = 
+                this.GetGetter(argType, name, prototype)
 
 
     type UnitBuilder<'Prototype, 'DbObject>() =
@@ -311,32 +359,32 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
-        member this.Record<'Result>(?prefix: string): 'Prototype -> IGetter<'DbObject, 'Result> = 
+        member this.Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): 'Prototype -> IGetter<'DbObject, 'Result> = 
             fun (prototype: 'Prototype) ->
-                let prefix = defaultArg prefix ""
+                let provider = GetterProvider<'Prototype, 'DbObject>(builders, overrides)
                 match this.GetBuilder<'Result>() with
                 | Some builder ->
                     match builder with
-                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(this, prefix) prototype
-                    | _ -> builder.Build<'Result>(this, prefix) prototype
+                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(provider, prefix) prototype
+                    | _ -> builder.Build<'Result>(provider, prefix) prototype
                 | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
 
+        member this.Record<'Result>(?prefix: string): 'Prototype -> IGetter<'DbObject, 'Result> = 
+            this.Record<'Result>(defaultArg prefix "", [||])
 
-        member this.GetBuilder<'Arg>(): IBuilder<'Prototype, 'DbObject> option = 
+        member this.Record<'Result>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): 'Prototype -> IGetter<'DbObject, 'Result> = 
+            this.Record<'Result>("", overrides)
+
+        member __.GetBuilder<'Arg>(): IBuilder<'Prototype, 'DbObject> option = 
             builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>)
 
         member this.CreateGetter<'Result>(name: string, record: 'Prototype): IGetter<'DbObject, 'Result> = 
+            let provider = GetterProvider<'Prototype, 'DbObject>(builders, [||])
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with
-            | Some builder -> builder.Build<'Result>(this, name) record
+            | Some builder -> builder.Build<'Result>(provider, name) record
             | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
 
         member this.CreateGetter(argType: Type, name: string, record: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "CreateGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
             let gmethod = method.MakeGenericMethod(argType)
             gmethod.Invoke(this, [| name; record |])
-
-        interface IGetterProvider<'Prototype, 'DbObject> with
-            member this.Getter(resType: Type, name: string, record: 'Prototype): obj = 
-                this.CreateGetter(resType, name, record)
-            member this.Getter<'Result>(name: string, record: 'Prototype): IGetter<'DbObject, 'Result> =                
-                this.CreateGetter<'Result>(name, record)

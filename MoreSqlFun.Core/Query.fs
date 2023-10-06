@@ -1,6 +1,5 @@
 ﻿namespace MoreSqlFun.Core.Builders
 
-open System
 open System.Data
 open System.Data.Common
 open MoreSqlFun.Core

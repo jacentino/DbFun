@@ -101,3 +101,5 @@ open Params
 
 type ParamBuilder(builders: IBuilder seq) = 
     inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>(Seq.append builders [ SimpleBuilder(); SimpleCollectionBuilder() ])
+
+type ParamOverride<'Arg> = GenericSetters.Override<unit, IDbCommand, 'Arg>

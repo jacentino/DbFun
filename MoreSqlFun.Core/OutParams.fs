@@ -58,3 +58,11 @@ module OutParams =
 
 type OutParamBuilder(builders: OutParams.IBuilder seq) =
     inherit GenericGetters.GenericGetterBuilder<unit, IDbCommand>(Seq.append builders [ OutParams.SimpleOutParamBuilder() ])
+
+    interface IOutParamGetterProvider with
+        member this.Getter(resType: Type, name: string, _): obj = 
+            this.CreateGetter(resType, name, ())
+        member this.Getter<'Result>(name: string, _): IOutParamGetter<'Result> =                
+            this.CreateGetter<'Result>(name, ())
+
+type OutParamOverride<'Arg> = GenericGetters.Override<unit, IDbCommand, 'Arg>

@@ -60,7 +60,34 @@ module TableValuedParamsTests =
                 SqlMetaData("created", SqlDbType.DateTime)
             |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Simple<User>("user") (record)
+        let setter = tvpBuilder.Record<User>() (record)
+        let user = 
+            {
+                User.userId = 3
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+        setter.SetValue(user, record)
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+
+
+    [<Fact>]
+    let ``Records with overrides``() =         
+        let tvpBuilder = TVParamBuilder []
+        let metadata = 
+            [| 
+                SqlMetaData("id", SqlDbType.Int)
+                SqlMetaData("name", SqlDbType.VarChar, 20)
+                SqlMetaData("email", SqlDbType.VarChar, 100)
+                SqlMetaData("created", SqlDbType.DateTime)
+            |]
+        let u = Unchecked.defaultof<User>
+        let record = SqlDataRecord(metadata)
+        let setter = tvpBuilder.Record<User>(TVParamOverride(<@ u.userId @>, tvpBuilder.Simple<int>("id"))) (record)
         let user = 
             {
                 User.userId = 3
