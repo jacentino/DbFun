@@ -19,15 +19,11 @@ type QueryBuilder(
         ?rowBuilders        = rowBuilders,
         ?timeout            = timeout)
 
-    member this.Configure(
-            ?paramBuilders      : ParamsImpl.IBuilder list,
-            ?outParamBuilders   : OutParamsImpl.IBuilder list,
-            ?rowBuilders        : RowsImpl.IBuilder list,
-            ?timeout            : int) = 
+    member this.Timeout(timeout: int) = 
         QueryBuilder(
             createConnection,
             ?executor            = executor,
             paramBuilders       = defaultArg paramBuilders this.ParamBuilders,
             outParamBuilders    = defaultArg outParamBuilders this.OutParamBuilders,
             rowBuilders         = defaultArg rowBuilders this.RowBuilders,
-            ?timeout            = (timeout |> Option.orElse timeout))
+            timeout            = timeout)

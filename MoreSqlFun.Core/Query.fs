@@ -80,20 +80,15 @@ type QueryBuilder(
     member __.ParamBuilders      = paramBuilders
     member __.OutParamBuilders   = outParamBuilders
     member __.RowBuilders        = rowBuilders
-    member __.Timeout            = timeout
 
-    member this.Configure(
-            ?paramBuilders      : ParamsImpl.IBuilder list,
-            ?outParamBuilders   : OutParamsImpl.IBuilder list,
-            ?rowBuilders        : RowsImpl.IBuilder list,
-            ?timeout            : int) = 
+    member this.Timeout(timeout: int) = 
         QueryBuilder(
             createConnection,
             executor,
-            paramBuilders       = defaultArg paramBuilders this.ParamBuilders,
-            outParamBuilders    = defaultArg outParamBuilders this.OutParamBuilders,
-            rowBuilders         = defaultArg rowBuilders this.RowBuilders,
-            ?timeout            = (timeout |> Option.orElse timeout))
+            paramBuilders       = this.ParamBuilders,
+            outParamBuilders    = this.OutParamBuilders,
+            rowBuilders         = this.RowBuilders,
+            timeout             = timeout)
 
     member __.Sql (createParamSetter: IParamSetterProvider * unit -> IParamSetter<'Params>): (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result> = 
         fun (createResultReader: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->

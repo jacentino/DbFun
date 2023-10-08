@@ -61,7 +61,7 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
         let qb = QueryBuilder((fun () -> new SqlConnection()), executor, paramBuilders = ParamsImpl.getDefaultBuilders(createConnection))
-        let query = qb.Configure(timeout = 30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
+        let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"
 
