@@ -2,7 +2,6 @@
 
 open System
 open Xunit
-open System.Data
 open Microsoft.Data.SqlClient
 open MoreSqlFun.TestTools.Models
 open MoreSqlFun.TestTools.Mocks
@@ -26,14 +25,9 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let tvpBuilder = TVParamBuilder []
-        let pb = ParamBuilder([], (fun () -> new SqlConnection()), tvpBuilder)
-        let opb = OutParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
                
-        let query = qb.Proc(pb.Simple<int> "id") (opb.ReturnAnd<User>("ret_val", "user")) rs.Unit "getUser"
+        let query = qb.Proc(Params.Simple<int> "id") (OutParams.ReturnAnd<User>("ret_val", "user")) Results.Unit "getUser"
 
         let _, (retVal, user) = query 1 connector |> Async.RunSynchronously
 
@@ -48,4 +42,35 @@ module QueryTests =
         Assert.Equal(5, retVal)
         Assert.Equal(expected, user)
 
+    [<Fact>]
+    let ``Record seq - using TVP`` () =
+    
+        let executor = createCommandExecutorMock [] []
 
+        let createConnection () = 
+            createConnectionMock                         
+                [
+                    [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
+                    [
+                        [ "userId"; "int"; 4s; 10uy; 0uy; 0uy ]
+                        [ "name"; "nvarchar"; 20s; 0uy; 0uy; 0uy ]
+                        [ "email"; "nvarchar"; 100s; 0uy; 0uy; 0uy ]
+                        [ "created"; "datetime"; 8s; 0uy; 0uy; 0uy ]
+                    ]                            
+                ]
+
+        let connector = new Connector(new SqlConnection(), null)
+        let qb = QueryBuilder((fun () -> new SqlConnection()), executor, paramBuilders = ParamsImpl.getDefaultBuilders(createConnection))
+        let query = qb.Configure(timeout = 30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
+                        "insert into User (userId, name, email, created) 
+                         select userId, name, email, created from @users"
+
+        let user = 
+            {
+                userId = 3
+                name = "jacentino"
+                email = "jacentino@gmail.com" 
+                created = DateTime(2023, 1, 1)
+            }
+
+        query [user] connector |> Async.RunSynchronously

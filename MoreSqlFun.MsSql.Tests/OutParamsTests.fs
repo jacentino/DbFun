@@ -3,6 +3,7 @@
 open System
 open Xunit
 open Microsoft.Data.SqlClient
+open MoreSqlFun.Core.Builders
 open MoreSqlFun.MsSql.Builders
 open System.Data
 open MoreSqlFun.TestTools.Models
@@ -10,14 +11,14 @@ open MoreSqlFun.TestTools.Models
 module OutParamsTests = 
 
     let connection = new SqlConnection()
-
+    let provider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders())
+    let builderParams = provider :> IOutParamGetterProvider, ()
 
     [<Fact>]
     let ``Return alone``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Return("ret_value")()
+        let getter = OutParams.Return("ret_value") builderParams
 
         getter.Create(command)
         command.Parameters.["ret_value"].Value <- 5
@@ -31,8 +32,7 @@ module OutParamsTests =
     let ``Return and simple output``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.ReturnAnd<string>("ret_value", "name")()
+        let getter = OutParams.ReturnAnd<string>("ret_value", "name") builderParams
 
         getter.Create(command)
         command.Parameters.["ret_value"].Value <- 5
@@ -48,8 +48,7 @@ module OutParamsTests =
     let ``Return and record output``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.ReturnAnd<User>("ret_value", "user")()
+        let getter = OutParams.ReturnAnd<User>("ret_value", "user") builderParams
 
         getter.Create(command)
         command.Parameters.["ret_value"].Value <- 5

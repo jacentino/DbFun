@@ -5,13 +5,12 @@ open MoreSqlFun.Core
 open MoreSqlFun.Core.Builders
 open Microsoft.Data.SqlClient.Server
 open System.Linq.Expressions
-open System.Data
 
 type ITVParamSetter<'Arg> = GenericSetters.ISetter<SqlDataRecord, 'Arg>
 
 type ITVParamSetterProvider = GenericSetters.ISetterProvider<SqlDataRecord, SqlDataRecord>
 
-module TableValuedParams = 
+module TableValuedParamsImpl = 
 
     type IBuilder = GenericSetters.IBuilder<SqlDataRecord, SqlDataRecord>
 
@@ -75,17 +74,12 @@ module TableValuedParams =
                         command.SetValue(ordinal, this.GetArtificialValue<'Arg>())
                 }
 
+    let getDefaultBuilders(): IBuilder list = 
+        SimpleBuilder() :: GenericSetters.getDefaultBuilders()
 
-open TableValuedParams
-
-type TVParamBuilder(builders: IBuilder seq) = 
-    inherit GenericSetters.GenericSetterBuilder<SqlDataRecord, SqlDataRecord>(Seq.append builders [ SimpleBuilder() ])
-
-    interface GenericSetters.ISetterProvider<SqlDataRecord, SqlDataRecord> with
-        member this.Setter<'Arg>(name: string, prototype: SqlDataRecord): GenericSetters.ISetter<SqlDataRecord, 'Arg> = 
-            this.GetSetter<'Arg>(name, prototype)
-        member this.Setter(argType: Type, name: string, prototype: SqlDataRecord): obj = 
-            this.GetSetter(argType, name, prototype)    
+type TVParams() = 
+    inherit GenericSetters.GenericSetterBuilder<SqlDataRecord, SqlDataRecord>()
+           
 
 type TVParamOverride<'Arg> = GenericSetters.Override<SqlDataRecord, SqlDataRecord, 'Arg>
 

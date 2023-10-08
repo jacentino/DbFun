@@ -26,13 +26,10 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let pb = ParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
                
         let query = 
-            qb.Sql <| pb.Simple<int> "id" <| rs.One<User> ""
+            qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
             <| "select * from User where userId = @Id"
 
         let user = query  1 connector |> Async.RunSynchronously
@@ -68,13 +65,12 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let pb = ParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
 
+        let x = Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
+
         let query = 
-            qb.Sql <| pb.Simple<int>("id") <| rs.Multiple(rs.One<User>(""), rs.Many<string>("name"))
+            qb.Sql <| Params.Simple<int>("id") <| Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
             <| "select * from User where userId = @id;
                 select * from Role where userId = @id"
 
@@ -116,16 +112,13 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let pb = ParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
 
         let query = 
-            qb.Sql (pb.Simple<int>("id"))
-                   (rs.Many(rb.PK<int, UserWithRoles>("userId", "user")) 
-                    |> rs.Join (fun (u, rs) -> { u with roles = rs }) (rs.Many(rb.FK<int, string>("userId", "name")))
-                    |> rs.Map (Seq.map snd))
+            qb.Sql (Params.Simple<int>("id"))
+                   (Results.Many(Rows.PK<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join (fun (u, rs) -> { u with roles = rs }) (Results.Many(Rows.FK<int, string>("userId", "name")))
+                    |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
 
@@ -163,17 +156,14 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let pb = ParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
         let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
         let uwr = any<UserWithRoles>
 
         let query = 
-            qb.Sql (pb.Simple<int>("id"))
-                   (rs.Many(rb.PK<int, UserWithRoles>("userId", "user")) 
-                    |> rs.Join <@ uwr.roles @> (rs.Many(rb.FK<int, string>("userId", "name")))
-                    |> rs.Map (Seq.map snd))
+            qb.Sql (Params.Simple<int>("id"))
+                   (Results.Many(Rows.PK<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join <@ uwr.roles @> (Results.Many(Rows.FK<int, string>("userId", "name")))
+                    |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
 
@@ -202,13 +192,9 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let pb = ParamBuilder []
-        let opb = OutParamBuilder []
-        let rb = RowBuilder []
-        let rs = ResultBuilder rb
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder((fun () -> new SqlConnection()), executor)
                
-        let query = qb.Proc(pb.Simple<int> "id") (opb.Record<User>()) rs.Unit "getUser"
+        let query = qb.Proc(Params.Simple<int> "id") (OutParams.Record<User>()) Results.Unit "getUser"
 
         let _, user = query 1 connector |> Async.RunSynchronously
 

@@ -3,14 +3,22 @@
 open System
 open Xunit
 open Microsoft.Data.SqlClient
+open MoreSqlFun.Core.Builders
 open MoreSqlFun.MsSql.Builders
 open MoreSqlFun.TestTools.Models
 open MoreSqlFun.TestTools.Mocks
 open Microsoft.Data.SqlClient.Server
+open MoreSqlFun.Core.Builders.GenericSetters
+open System.Data
 
-module ParametersTests = 
+module ParamsTests = 
 
     let connection = new SqlConnection()
+
+    let makeBuilderParams(createConnection: unit -> IDbConnection) = 
+        let provider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.getDefaultBuilders(createConnection))
+        provider :> IParamSetterProvider, ()
+
 
     [<Fact>]
     let ``Record seq - explicit`` () =
@@ -27,8 +35,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -38,7 +45,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.TableValuedSeq<User>("users")()).SetValue([user], command)
+        (Params.TableValuedSeq<User>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -62,8 +69,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -73,7 +79,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.Simple<User seq>("users")()).SetValue([user], command)
+        (Params.Simple<User seq>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -97,8 +103,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -108,7 +113,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.TableValuedList<User>("users")()).SetValue([user], command)
+        (Params.TableValuedList<User>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -132,8 +137,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -143,7 +147,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.Simple<User list>("users")()).SetValue([user], command)
+        (Params.Simple<User list>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -167,8 +171,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -178,7 +181,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.TableValuedArray<User>("users")()).SetValue([| user |], command)
+        (Params.TableValuedArray<User>("users")(builderParams)).SetValue([| user |], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -202,8 +205,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -213,7 +215,7 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.Simple<User array>("users")()).SetValue([| user |], command)
+        (Params.Simple<User array>("users")(builderParams)).SetValue([| user |], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -237,8 +239,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -248,8 +249,8 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        let tvp = tvpBuilder.Record<User>()
-        (b.TableValuedSeq(tvp, "users")()).SetValue([user], command)
+        let tvp = TVParams.Record<User>()
+        (Params.TableValuedSeq(tvp, "users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -275,8 +276,7 @@ module ParametersTests =
                     ]                            
                 ]
 
-        let tvpBuilder = TVParamBuilder []
-        let b = ParamBuilder([], createConnection, tvpBuilder)
+        let builderParams = makeBuilderParams(createConnection)
         use command = connection.CreateCommand()
 
         let user = 
@@ -286,6 +286,6 @@ module ParametersTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (b.TableValuedSeq<User>("users", "USER_TVP")()).SetValue([user], command)
+        (Params.TableValuedSeq<User>("users", "USER_TVP")(builderParams)).SetValue([user], command)
 
         Assert.Equal("USER_TVP", command.Parameters.["users"].TypeName)

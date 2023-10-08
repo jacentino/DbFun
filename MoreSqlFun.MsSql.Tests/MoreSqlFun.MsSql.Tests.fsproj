@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <Compile Include="TableValuedParamsTests.fs" />
-    <Compile Include="ParametersTests.fs" />
+    <Compile Include="ParamsTests.fs" />
     <Compile Include="OutParamsTests.fs" />
     <Compile Include="QueryTests.fs" />
     <Compile Include="Program.fs" />

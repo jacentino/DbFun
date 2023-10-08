@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ParametersTests.fs" />
+    <Compile Include="ParamsTests.fs" />
     <Compile Include="OutParamsTests.fs" />
     <Compile Include="RowTests.fs" />
     <Compile Include="ResultTests.fs" />

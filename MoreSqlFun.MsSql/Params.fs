@@ -8,7 +8,7 @@ open MoreSqlFun.Core.Builders
 open Microsoft.Data.SqlClient.Server
 open Microsoft.Data.SqlClient
 
-module Params = 
+module ParamsImpl = 
 
     type TVPCollectionBuilder(createConnection: unit -> IDbConnection, tvpProvider: ITVParamSetterProvider) = 
 
@@ -73,7 +73,7 @@ module Params =
             }
 
         member this.CreateSeqSetter(name: string, tvpName: string option): IParamSetter<'ItemType seq> = 
-            let setter = fun prototype -> tvpProvider.Setter<'ItemType>(name, prototype)
+            let setter = fun (provider: ITVParamSetterProvider, prototype) -> provider.Setter<'ItemType>(name, prototype) 
             this.CreateSeqSetter(setter, name, tvpName)
 
         member this.CreateListSetter(name: string, tvpName: string option): IParamSetter<'ItemType list> = 
@@ -84,15 +84,15 @@ module Params =
             let seqSetter = this.CreateSeqSetter(name, tvpName)
             convertToArraySetter seqSetter
 
-        member __.CreateSeqSetter(setterBuilder: SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType seq> =            
+        member __.CreateSeqSetter(createRecordSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType seq> =            
             let tvpName = tvpName |> Option.defaultValue typeof<'ItemType>.Name
             let metadata = getMetaData(tvpName)
-            let setter = setterBuilder(SqlDataRecord(metadata))
-            let toSqlDataRecords = fun (data: 'ItemType seq) -> getRecSequence(metadata, setter, data)
+            let recordSetter = createRecordSetter(tvpProvider, SqlDataRecord(metadata))
+            let toSqlDataRecords = fun (data: 'ItemType seq) -> getRecSequence(metadata, recordSetter, data)
             let record = SqlDataRecord(metadata)
             let artificialValues = 
                 seq {
-                    setter.SetArtificial(record)
+                    recordSetter.SetArtificial(record)
                     yield record
                 }
             { new IParamSetter<'ItemType seq> with
@@ -115,15 +115,15 @@ module Params =
                     command.Parameters.Add param |> ignore                    
             }
 
-        member this.CreateListSetter(setterBuilder: SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType list> =
+        member this.CreateListSetter(setterBuilder: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType list> =
             let seqSetter = this.CreateSeqSetter(setterBuilder, name, tvpName)
             convertToListSetter seqSetter 
 
-        member this.CreateArraySetter(setterBuilder: SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType array> =
+        member this.CreateArraySetter(setterBuilder: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'ItemType>, name: string, tvpName: string option): IParamSetter<'ItemType array> =
             let seqSetter = this.CreateSeqSetter(setterBuilder, name, tvpName)
             convertToArraySetter seqSetter
 
-        interface Params.IBuilder with
+        interface ParamsImpl.IBuilder with
 
             member __.CanBuild(argType: Type): bool = 
                 Types.isCollectionType argType && FSharpType.IsRecord (Types.getElementType argType)
@@ -139,31 +139,34 @@ module Params =
                 let setter = createSetterMethod.Invoke(this, [| name; None |]) :?> IParamSetter<'Arg>
                 setter
 
+    let getDefaultBuilders(createConnection: unit -> IDbConnection): ParamsImpl.IBuilder list = 
+        let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        [ TVPCollectionBuilder(createConnection, tvpProvider) ] @ ParamsImpl.getDefaultBuilders()
 
-open Params
+open ParamsImpl
 
-type ParamBuilder(builders: IBuilder seq, createConnection: unit -> IDbConnection, tvpProvider: ITVParamSetterProvider) = 
-    inherit Builders.ParamBuilder(Seq.append builders [ TVPCollectionBuilder(createConnection, tvpProvider) ])
+type Params() = 
+    inherit Builders.Params()
         
-    member this.GetTvpBuilder<'Arg>() = 
-        match this.GetBuilder<'Arg>() with
+    static member GetTvpBuilder<'Arg>(provider: IParamSetterProvider) = 
+        match provider.Builder(typeof<'Arg>) with
         | Some builder -> builder :?> TVPCollectionBuilder
         | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
 
-    member this.TableValuedSeq<'Record>(name: string, ?tvpName: string): unit -> IParamSetter<'Record seq> =
-        fun () -> this.GetTvpBuilder<'Record seq>().CreateSeqSetter(name, tvpName)
+    static member TableValuedSeq<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record seq> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(name, tvpName)
 
-    member this.TableValuedList<'Record>(name: string, ?tvpName: string): unit -> IParamSetter<'Record list> =
-        fun () -> this.GetTvpBuilder<'Record list>().CreateListSetter(name, tvpName)
+    static member TableValuedList<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record list> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(name, tvpName)
 
-    member this.TableValuedArray<'Record>(name: string, ?tvpName: string): unit -> IParamSetter<'Record array> =
-        fun () -> this.GetTvpBuilder<'Record array>().CreateArraySetter(name, tvpName)
+    static member TableValuedArray<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record array> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(name, tvpName)
 
-    member this.TableValuedSeq<'Record>(tvpSetter: SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): unit -> IParamSetter<'Record seq> =
-        fun () -> this.GetTvpBuilder<'Record seq>().CreateSeqSetter(tvpSetter, name, tvpName)
+    static member TableValuedSeq<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record seq> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(createTvpSetter, name, tvpName)
 
-    member this.TableValuedList<'Record>(tvpSetter: SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): unit -> IParamSetter<'Record list> =
-        fun () -> this.GetTvpBuilder<'Record list>().CreateListSetter(tvpSetter, name, tvpName)
+    static member TableValuedList<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record list> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(createTvpSetter, name, tvpName)
 
-    member this.TableValuedArray<'Record>(tvpSetter: SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): unit -> IParamSetter<'Record array> =
-        fun () -> this.GetTvpBuilder<'Record array>().CreateArraySetter(tvpSetter, name, tvpName)
+    static member TableValuedArray<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record array> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(createTvpSetter, name, tvpName)

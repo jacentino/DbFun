@@ -6,52 +6,53 @@ open Microsoft.Data.SqlClient.Server
 open Xunit
 open MoreSqlFun.MsSql.Builders
 open MoreSqlFun.TestTools.Models
+open MoreSqlFun.Core.Builders.GenericSetters
 
 module TableValuedParamsTests = 
 
     [<Fact>]
     let ``Simple values``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("id", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Simple<int>("id") (record)
+        let setter = TVParams.Simple<int>("id") (tvpProvider, record)
         setter.SetValue(5, record)
         Assert.Equal(5, record.GetInt32(0))
 
 
     [<Fact>]
     let ``Char enums``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("status", SqlDbType.Char, 1) |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Simple<Status>("status") (record)
+        let setter = TVParams.Simple<Status>("status") (tvpProvider, record)
         setter.SetValue(Status.Blocked, record)
         Assert.Equal("B", record.GetString(0))
 
 
     [<Fact>]
     let ``Int enums``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("role", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Simple<Role>("role") (record)
+        let setter = TVParams.Simple<Role>("role") (tvpProvider, record)
         setter.SetValue(Role.Regular, record)
         Assert.Equal(2, record.GetInt32(0))
 
 
     [<Fact>]
     let ``String enums``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("access", SqlDbType.VarChar, 2) |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Simple<Access>("access") (record)
+        let setter = TVParams.Simple<Access>("access") (tvpProvider, record)
         setter.SetValue(Access.ReadWrite, record)
         Assert.Equal("RW", record.GetString(0))
 
 
     [<Fact>]
     let ``Records``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = 
             [| 
                 SqlMetaData("userId", SqlDbType.Int)
@@ -60,7 +61,7 @@ module TableValuedParamsTests =
                 SqlMetaData("created", SqlDbType.DateTime)
             |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Record<User>() (record)
+        let setter = TVParams.Record<User>() (tvpProvider, record)
         let user = 
             {
                 User.userId = 3
@@ -77,7 +78,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Records with overrides``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = 
             [| 
                 SqlMetaData("id", SqlDbType.Int)
@@ -87,7 +88,7 @@ module TableValuedParamsTests =
             |]
         let u = Unchecked.defaultof<User>
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Record<User>(TVParamOverride(<@ u.userId @>, tvpBuilder.Simple<int>("id"))) (record)
+        let setter = TVParams.Record<User>(TVParamOverride(<@ u.userId @>, TVParams.Simple<int>("id"))) (tvpProvider, record)
         let user = 
             {
                 User.userId = 3
@@ -104,7 +105,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Tuples``() =         
-        let tvpBuilder = TVParamBuilder []
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = 
             [| 
                 SqlMetaData("userId", SqlDbType.Int)
@@ -112,7 +113,7 @@ module TableValuedParamsTests =
                 SqlMetaData("email", SqlDbType.VarChar, 100)
             |]
         let record = SqlDataRecord(metadata)
-        let setter = tvpBuilder.Tuple<int, string, string>("userId", "name", "email") (record)
+        let setter = TVParams.Tuple<int, string, string>("userId", "name", "email") (tvpProvider, record)
         let user = 3, "jacentino", "jacentino@gmail.com"
         setter.SetValue(user, record)
         Assert.Equal(3, record.GetInt32(0))

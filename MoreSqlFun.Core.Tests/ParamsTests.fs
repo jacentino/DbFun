@@ -5,18 +5,21 @@ open Xunit
 open Microsoft.Data.SqlClient
 open MoreSqlFun.Core.Builders
 open MoreSqlFun.TestTools.Models
+open MoreSqlFun.Core.Builders.GenericSetters
+open System.Data
 
-module ParametersTests = 
+module ParamsTests = 
 
     let connection = new SqlConnection()
+    let provider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.getDefaultBuilders())
+    let builderParams = provider :> IParamSetterProvider, ()
 
     [<Fact>]
     let ``Simple types`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<int>("userId")()).SetValue(1, command)
+        (Params.Simple<int>("userId")(builderParams)).SetValue(1, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -25,10 +28,9 @@ module ParametersTests =
     [<Fact>]
     let ``Unit`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<unit>("userId")()).SetValue((), command)
+        (Params.Simple<unit>("userId")(builderParams)).SetValue((), command)
 
         Assert.Equal(0, command.Parameters.Count)
 
@@ -36,11 +38,10 @@ module ParametersTests =
     [<Fact>]
     let ``Collections - list`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where userId in (@userId)"
 
-        (b.Simple<int list>("userId")()).SetValue([ 5; 6; 7 ], command)
+        (Params.Simple<int list>("userId")(builderParams)).SetValue([ 5; 6; 7 ], command)
 
         Assert.Equal(3, command.Parameters.Count)
         Assert.Contains("(@userId0, @userId1, @userId2)", command.CommandText)
@@ -48,11 +49,11 @@ module ParametersTests =
     [<Fact>]
     let ``Collections - array`` () =
     
-        let b = ParamBuilder([])
+        let b = Params()
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where userId in (@userId)"
 
-        (b.Simple<int array>("userId")()).SetValue([| 5; 6; 7 |], command)
+        (Params.Simple<int array>("userId")(builderParams)).SetValue([| 5; 6; 7 |], command)
 
         Assert.Equal(3, command.Parameters.Count)
         Assert.Contains("(@userId0, @userId1, @userId2)", command.CommandText)
@@ -61,11 +62,10 @@ module ParametersTests =
     [<Fact>]
     let ``Collections - seq`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where userId in (@userId)"
 
-        (b.Simple<int seq>("userId")()).SetValue(Seq.singleton 5, command)
+        (Params.Simple<int seq>("userId")(builderParams)).SetValue(Seq.singleton 5, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@userId0)", command.CommandText)
@@ -74,11 +74,10 @@ module ParametersTests =
     [<Fact>]
     let ``Collections of records`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
         command.CommandText <- "insert into User (id, name, email, created) values (@id, @name, @email, @created)"
 
-        (b.Simple<User seq>("users")()).SetValue([], command)
+        (Params.Simple<User seq>("users")(builderParams)).SetValue([], command)
 
         Assert.Equal(0, command.Parameters.Count)
 
@@ -86,11 +85,10 @@ module ParametersTests =
     [<Fact>]
     let ``Collections of tuples`` () =
     
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
         command.CommandText <- "insert into User (id, name, email, created) values (@id, @name, @email, @created)"
 
-        (b.Simple<(int * string * string * DateTime) seq>("users")()).SetValue([], command)
+        (Params.Simple<(int * string * string * DateTime) seq>("users")(builderParams)).SetValue([], command)
 
         Assert.Equal(0, command.Parameters.Count)
     
@@ -98,10 +96,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of simple types``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple<int, string>("userId", "name")()).SetValue((1, "jacenty"), command)
+        (Params.Tuple<int, string>("userId", "name")(builderParams)).SetValue((1, "jacenty"), command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -111,10 +108,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of simple types - Some``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional<int>("userId")()).SetValue(Some 1, command)
+        (Params.Optional<int>("userId")(builderParams)).SetValue(Some 1, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Equal(box  1, command.Parameters.["userId"].Value)
@@ -123,10 +119,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of simple types - None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional<int>("userId")()).SetValue(None, command)
+        (Params.Optional<int>("userId")(builderParams)).SetValue(None, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Equal(box  DBNull.Value, command.Parameters.["userId"].Value)
@@ -135,10 +130,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of tuples of simple types - Some``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Tuple<int, string>("userId", "name"))()).SetValue(Some (1, "jacenty"), command)
+        (Params.Optional(Params.Tuple<int, string>("userId", "name"))(builderParams)).SetValue(Some (1, "jacenty"), command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -148,10 +142,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of tuples of simple types - None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Tuple<int, string>("userId", "name"))()).SetValue(None, command)
+        (Params.Optional(Params.Tuple<int, string>("userId", "name"))(builderParams)).SetValue(None, command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box DBNull.Value, command.Parameters.["userId"].Value)
@@ -161,10 +154,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of options of simple types - Some``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple(b.Optional<int>("userId"), b.Optional<string>("name"))()).SetValue((Some 1, Some "jacenty"), command)
+        (Params.Tuple(Params.Optional<int>("userId"), Params.Optional<string>("name"))(builderParams)).SetValue((Some 1, Some "jacenty"), command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -174,10 +166,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of options of simple types - None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple(b.Optional<int>("userId"), b.Optional<string>("name"))()).SetValue((None, None), command)
+        (Params.Tuple(Params.Optional<int>("userId"), Params.Optional<string>("name"))(builderParams)).SetValue((None, None), command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box DBNull.Value, command.Parameters.["userId"].Value)
@@ -187,10 +178,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of options of simple types - Some/None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple(b.Optional<int>("userId"), b.Optional<string>("name"))()).SetValue((Some 1, None), command)
+        (Params.Tuple(Params.Optional<int>("userId"), Params.Optional<string>("name"))(builderParams)).SetValue((Some 1, None), command)
 
         Assert.Equal(2, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -200,10 +190,9 @@ module ParametersTests =
     [<Fact>]
     let ``Flat records``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Record<User>()()).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (Params.Record<User>()(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -215,10 +204,9 @@ module ParametersTests =
     [<Fact>]
     let ``Flat records - name prefixes``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Record<User>("user_")()).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (Params.Record<User>("user_")(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["user_userId"].Value)
@@ -230,11 +218,10 @@ module ParametersTests =
     [<Fact>]
     let ``Flat records - overrides``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
         let u = Unchecked.defaultof<User>
 
-        let setter = b.Record<User>(ParamOverride<int>(<@ u.userId @>, b.Simple<int>("id")))()
+        let setter = Params.Record<User>(ParamOverride<int>(<@ u.userId @>, Params.Simple<int>("id")))(builderParams)
 
         setter.SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
@@ -248,10 +235,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of flat records - Some``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Record<User>())()).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (Params.Optional(Params.Record<User>())(builderParams)).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -263,10 +249,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of flat records - None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional(b.Record<User>())()).SetValue(None, command)
+        (Params.Optional(Params.Record<User>())(builderParams)).SetValue(None, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box DBNull.Value, command.Parameters.["userId"].Value)
@@ -278,10 +263,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of flat records - implicit underlying assigner - Some``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional<User>("user")()).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (Params.Optional<User>("user")(builderParams)).SetValue(Some { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -293,10 +277,9 @@ module ParametersTests =
     [<Fact>]
     let ``Options of flat records - implicit underlying assigner - None``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Optional<User>("user")()).SetValue(None, command)
+        (Params.Optional<User>("user")(builderParams)).SetValue(None, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box DBNull.Value, command.Parameters.["userId"].Value)
@@ -308,10 +291,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of flat records``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple(b.Simple<int>("orgId"), b.Record<User>())()).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
+        (Params.Tuple(Params.Simple<int>("orgId"), Params.Record<User>())(builderParams)).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
 
         Assert.Equal(5, command.Parameters.Count)
         Assert.Equal(box 10, command.Parameters.["orgId"].Value)
@@ -324,10 +306,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples of flat records - implicit underlying assigner``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple<int, User>("orgId", "user")()).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
+        (Params.Tuple<int, User>("orgId", "user")(builderParams)).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
 
         Assert.Equal(5, command.Parameters.Count)
         Assert.Equal(box 10, command.Parameters.["orgId"].Value)
@@ -340,10 +321,9 @@ module ParametersTests =
     [<Fact>]
     let ``Converters``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<DateOnly>("date")()).SetValue(DateOnly.FromDateTime(DateTime.Today), command)
+        (Params.Simple<DateOnly>("date")(builderParams)).SetValue(DateOnly.FromDateTime(DateTime.Today), command)
 
         Assert.Equal(box DateTime.Today, command.Parameters["date"].Value)
 
@@ -351,10 +331,9 @@ module ParametersTests =
     [<Fact>]
     let ``Tuples & Converters``() = 
 
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Tuple<int, DateOnly>("id", "date")()).SetValue((1, DateOnly.FromDateTime(DateTime.Today)), command)
+        (Params.Tuple<int, DateOnly>("id", "date")(builderParams)).SetValue((1, DateOnly.FromDateTime(DateTime.Today)), command)
 
         Assert.Equal(box 1, command.Parameters["id"].Value)
         Assert.Equal(box DateTime.Today, command.Parameters["date"].Value)
@@ -362,28 +341,25 @@ module ParametersTests =
 
     [<Fact>]
     let ``Char enums``() =
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<Status>("status")()).SetValue(Status.Active, command)
+        (Params.Simple<Status>("status")(builderParams)).SetValue(Status.Active, command)
 
         Assert.Equal(box 'A', command.Parameters["status"].Value)
 
     [<Fact>]
     let ``Int enums``() =
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<Role>("role")()).SetValue(Role.Admin, command)
+        (Params.Simple<Role>("role")(builderParams)).SetValue(Role.Admin, command)
 
         Assert.Equal(box 3, command.Parameters["role"].Value)
 
 
     [<Fact>]
     let ``Attribute enums``() =
-        let b = ParamBuilder([])
         use command = connection.CreateCommand()
 
-        (b.Simple<Access>("access")()).SetValue(Access.Read, command)
+        (Params.Simple<Access>("access")(builderParams)).SetValue(Access.Read, command)
 
         Assert.Equal(box "RD", command.Parameters["access"].Value)

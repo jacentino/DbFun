@@ -8,7 +8,7 @@ type IParamSetter<'Arg> = GenericSetters.ISetter<IDbCommand, 'Arg>
 
 type IParamSetterProvider = GenericSetters.ISetterProvider<unit, IDbCommand>
 
-module Params = 
+module ParamsImpl = 
 
     type IBuilder = GenericSetters.IBuilder<unit, IDbCommand>
 
@@ -96,10 +96,10 @@ module Params =
                         artificialSetter(command)
                 }
 
+    let getDefaultBuilders(): IBuilder list = 
+        [ SimpleBuilder(); SimpleCollectionBuilder() ] @ GenericSetters.getDefaultBuilders()
 
-open Params
-
-type ParamBuilder(builders: IBuilder seq) = 
-    inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>(Seq.append builders [ SimpleBuilder(); SimpleCollectionBuilder() ])
+type Params() = 
+    inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()
 
 type ParamOverride<'Arg> = GenericSetters.Override<unit, IDbCommand, 'Arg>

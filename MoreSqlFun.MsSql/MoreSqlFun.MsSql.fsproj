@@ -7,8 +7,9 @@
 
   <ItemGroup>
     <Compile Include="TableValuedParams.fs" />
-    <Compile Include="Parameters.fs" />
+    <Compile Include="Params.fs" />
     <Compile Include="OutParams.fs" />
+    <Compile Include="Query.fs" />
   </ItemGroup>
 
   <ItemGroup>

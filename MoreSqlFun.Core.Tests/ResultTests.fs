@@ -5,10 +5,13 @@ open Xunit
 open MoreSqlFun.Core.Builders
 open MoreSqlFun.TestTools.Models
 open MoreSqlFun.TestTools.Mocks
+open MoreSqlFun.Core.Builders.GenericGetters
+open System.Data
 
 module ResultTests = 
 
-
+    let provider = BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders())
+    
     [<Fact>]
     let ``One record``() = 
 
@@ -21,9 +24,8 @@ module ResultTests =
                             
                         ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
-        let result = rs.One<User>("") reader
+        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let result = Results.One<User>("") (builderParams)
         let value = result.Read(reader)
 
         let expected = 
@@ -49,9 +51,9 @@ module ResultTests =
                             
                         ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
-        let result = rs.Many<User>("") reader
+        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+
+        let result = Results.Many<User>("") builderParams
         let value = result.Read(reader) |> Seq.toList
 
         let expected = 
@@ -83,9 +85,8 @@ module ResultTests =
                             ]                            
                         ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
-        let result = rs.TryOne<User>("") reader
+        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let result = Results.TryOne<User>("") builderParams
         let value = result.Read(reader)
 
         let expected = 
@@ -107,9 +108,8 @@ module ResultTests =
                             [ ]                            
                         ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
-        let result = rs.TryOne<User>("") reader
+        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let result = Results.TryOne<User>("") builderParams
         let value = result.Read(reader)
 
         Assert.Equal(None, value)
@@ -132,13 +132,12 @@ module ResultTests =
                     ]
                 ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
+        let builderParams = provider :> IRowGetterProvider, prototype :> IDataReader
         let result = 
-            rs.Multiple(
-                rs.One<User>(""),
-                rs.Many (rb.Tuple<int, string>("roleId", "name")))        
-                prototype
+            Results.Multiple(
+                Results.One<User>(""),
+                Results.Many (Rows.Tuple<int, string>("roleId", "name")))        
+                builderParams
         
         let user, roles = result.Read(regular) 
         
@@ -176,14 +175,13 @@ module ResultTests =
                     ]
                 ]
 
-        let rb = RowBuilder([])
-        let rs = ResultBuilder(rb)
+        let builderParams = provider :> IRowGetterProvider, prototype :> IDataReader
         let result = 
-            (rs.Multiple(
-                rs.One<User>(""), 
-                rs.Many (rb.Tuple<int, string>("roleId", "name"))
-            ) |> rs.Map (fun (u, r) -> { userId = u.userId; name = u.name; email = u.email; created = u.created; roles = r |> Seq.map snd |> List.ofSeq })
-            ) prototype
+            (Results.Multiple(
+                Results.One<User>(""), 
+                Results.Many (Rows.Tuple<int, string>("roleId", "name"))
+            ) |> Results.Map (fun (u, r) -> { userId = u.userId; name = u.name; email = u.email; created = u.created; roles = r |> Seq.map snd |> List.ofSeq })
+            ) builderParams
 
         let value = result.Read(regular)
 

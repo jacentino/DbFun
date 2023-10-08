@@ -9,7 +9,7 @@ type IRowGetter<'Result> = GenericGetters.IGetter<IDataRecord, 'Result>
 
 type IRowGetterProvider = GenericGetters.IGetterProvider<IDataRecord, IDataRecord>
 
-module Rows = 
+module RowsImpl = 
 
     type IBuilder = GenericGetters.IBuilder<IDataRecord, IDataRecord>
 
@@ -73,15 +73,18 @@ module Rows =
             member __.Foreign = foreign
 
 
-open Rows
+    let getDefaultBuilders(): IBuilder list = 
+        SimpleColumnBuilder() :: GenericGetters.getDefaultBuilders()
 
-type RowBuilder(builders: IBuilder seq) = 
-    inherit GenericGetters.GenericGetterBuilder<IDataRecord, IDataRecord>(Seq.append builders [ SimpleColumnBuilder()])
+open RowsImpl
 
-    member this.Key<'Result1, 'Result2>(name1: string, name2: string): IDataRecord -> IRowGetter<KeySpecifier<'Result1, 'Result2>> =
-        fun (prototype: IDataRecord) ->
-            let getter1 = this.CreateGetter<'Result1>(name1, prototype)
-            let getter2 = this.CreateGetter<'Result2>(name2, prototype)
+type Rows() = 
+    inherit GenericGetters.GenericGetterBuilder<IDataRecord, IDataRecord>()
+
+    static member Key<'Result1, 'Result2>(name1: string, name2: string): IRowGetterProvider * IDataRecord -> IRowGetter<KeySpecifier<'Result1, 'Result2>> =
+        fun (provider: IRowGetterProvider, prototype: IDataRecord) ->
+            let getter1 = provider.Getter<'Result1>(name1, prototype)
+            let getter2 = provider.Getter<'Result2>(name2, prototype)
             { new IRowGetter<KeySpecifier<'Result1, 'Result2>> with
                 member __.IsNull(record: IDataRecord): bool = 
                     getter1.IsNull(record) && getter2.IsNull(record)
@@ -92,10 +95,13 @@ type RowBuilder(builders: IBuilder seq) =
                     getter2.Create(record)
             }
 
-    member __.Key<'Result1, 'Result2>(provider1: IDataRecord -> IRowGetter<'Result1>, provider2: IDataRecord -> IRowGetter<'Result2>): IDataRecord -> IRowGetter<KeySpecifier<'Result1, 'Result2>> = 
-        fun (prototype: IDataRecord) ->
-            let getter1 = provider1(prototype)
-            let getter2 = provider2(prototype)
+    static member Key<'Result1, 'Result2>(
+            createGetter1: IRowGetterProvider * IDataRecord -> IRowGetter<'Result1>, 
+            createGetter2: IRowGetterProvider * IDataRecord -> IRowGetter<'Result2>)
+            : IRowGetterProvider * IDataRecord -> IRowGetter<KeySpecifier<'Result1, 'Result2>> = 
+        fun (provider: IRowGetterProvider, prototype: IDataRecord) ->
+            let getter1 = createGetter1(provider, prototype)
+            let getter2 = createGetter2(provider, prototype)
             { new IRowGetter<KeySpecifier<'Result1, 'Result2>> with
                 member __.IsNull(record: IDataRecord): bool = 
                     getter1.IsNull(record) && getter2.IsNull(record)
@@ -106,37 +112,35 @@ type RowBuilder(builders: IBuilder seq) =
                     getter2.Create(record)
             }
 
-    member this.Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
-        this.Tuple(this.Key<'Primary, 'Foreign>(primaryName, foreignName), this.Simple<'Result>(resultName))
+    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
+        Rows.Tuple(Rows.Key<'Primary, 'Foreign>(primaryName, foreignName), Rows.Simple<'Result>(resultName))
 
-    member this.Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key<'Primary, 'Foreign>(primaryName, foreignName), result)
+    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key<'Primary, 'Foreign>(primaryName, foreignName), result)
 
-    member this.Keyed<'Primary, 'Foreign, 'Result>(primary: IDataRecord -> IRowGetter<'Primary>, foreign: IDataRecord -> IRowGetter<'Foreign>, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key(primary, foreign), result)
+    static member Keyed<'Primary, 'Foreign, 'Result>(
+            primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, 
+            foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, 
+            result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key(primary, foreign), result)
 
-    member this.PK<'Primary, 'Result>(primaryName: string, resultName: string) = 
-        this.Tuple(this.Key<'Primary, unit>(primaryName, ""), this.Simple<'Result>(resultName))
+    static member PK<'Primary, 'Result>(primaryName: string, resultName: string) = 
+        Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), Rows.Simple<'Result>(resultName))
 
-    member this.PK<'Primary, 'Result>(primaryName: string, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key<'Primary, unit>(primaryName, ""), result)
+    static member PK<'Primary, 'Result>(primaryName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), result)
 
-    member this.PK<'Primary, 'Result>(primary: IDataRecord -> IRowGetter<'Primary>, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key<'Primary, unit>(primary, this.Simple<unit>("")), result)
+    static member PK<'Primary, 'Result>(primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key<'Primary, unit>(primary, Rows.Simple<unit>("")), result)
 
-    member this.FK<'Foreign, 'Result>(foreignName: string, resultName: string) = 
-        this.Tuple(this.Key<unit, 'Foreign>("", foreignName), this.Simple<'Result>(resultName))
+    static member FK<'Foreign, 'Result>(foreignName: string, resultName: string) = 
+        Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), Rows.Simple<'Result>(resultName))
 
-    member this.FK<'Foreign, 'Result>(foreignName: string, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key<unit, 'Foreign>("", foreignName), result)
+    static member FK<'Foreign, 'Result>(foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), result)
 
-    member this.FK<'Foreign, 'Result>(foreign: IDataRecord -> IRowGetter<'Foreign>, result: IDataRecord -> IRowGetter<'Result>) = 
-        this.Tuple(this.Key<unit, 'Foreign>(this.Simple<unit>(""), foreign), result)
+    static member FK<'Foreign, 'Result>(foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+        Rows.Tuple(Rows.Key<unit, 'Foreign>(Rows.Simple<unit>(""), foreign), result)
 
-    interface IRowGetterProvider with
-        member this.Getter(resType: Type, name: string, record: IDataRecord): obj = 
-            this.CreateGetter(resType, name, record)
-        member this.Getter<'Result>(name: string, record: IDataRecord): IRowGetter<'Result> =                
-            this.CreateGetter<'Result>(name, record)
 
 type RowOverride<'Arg> = GenericGetters.Override<IDataRecord, IDataRecord, 'Arg>

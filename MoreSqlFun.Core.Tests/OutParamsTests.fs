@@ -5,17 +5,19 @@ open Xunit
 open Microsoft.Data.SqlClient
 open MoreSqlFun.Core.Builders
 open MoreSqlFun.TestTools.Models
+open System.Data
 
 module OutParamsTests = 
 
     let connection = new SqlConnection()
+    let provider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders())
+    let builderParams = provider :> IOutParamGetterProvider, ()
 
     [<Fact>]
     let ``Simple types``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Simple<int>("id")()
+        let getter = OutParams.Simple<int>("id") builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 5
@@ -28,8 +30,7 @@ module OutParamsTests =
     let ``Char enum types``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Simple<Status>("status")()
+        let getter = OutParams.Simple<Status>("status") builderParams
 
         getter.Create(command)
         command.Parameters.["status"].Value <- 'A'
@@ -42,8 +43,7 @@ module OutParamsTests =
     let ``Int enum types``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Simple<Role>("role")()
+        let getter = OutParams.Simple<Role>("role") builderParams
 
         getter.Create(command)
         command.Parameters.["role"].Value <- 1
@@ -56,8 +56,7 @@ module OutParamsTests =
     let ``Attr enum types``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Simple<Access>("access")()
+        let getter = OutParams.Simple<Access>("access") builderParams
 
         getter.Create(command)
         command.Parameters.["access"].Value <- "RW"
@@ -70,8 +69,7 @@ module OutParamsTests =
     let ``Simple type options - Some``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Optional<int>("id")()
+        let getter = OutParams.Optional<int>("id") builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 1
@@ -84,8 +82,7 @@ module OutParamsTests =
     let ``Simple type options - None``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Optional<int>("id")()
+        let getter = OutParams.Optional<int>("id") builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- DBNull.Value
@@ -98,8 +95,7 @@ module OutParamsTests =
     let ``Simple type tuples``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Tuple<int, string>("id", "name")()
+        let getter = OutParams.Tuple<int, string>("id", "name") builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2
@@ -113,8 +109,7 @@ module OutParamsTests =
     let ``Flat records``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Record<User>()()
+        let getter = OutParams.Record<User>() builderParams
 
         getter.Create(command)
         command.Parameters.["userId"].Value <- 2
@@ -137,8 +132,7 @@ module OutParamsTests =
     let ``Flat records - prefixed names``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
-        let getter = b.Record<User>("user_")()
+        let getter = OutParams.Record<User>("user_") builderParams
 
         getter.Create(command)
         command.Parameters.["user_userId"].Value <- 2
@@ -161,9 +155,8 @@ module OutParamsTests =
     let ``Flat records - overrides``() = 
 
         let command = connection.CreateCommand()
-        let b = OutParamBuilder []
         let u = Unchecked.defaultof<User>
-        let getter = b.Record<User>(OutParamOverride<int>(<@ u.userId @>, b.Simple<int>("id")))()
+        let getter = OutParams.Record<User>(OutParamOverride<int>(<@ u.userId @>, OutParams.Simple<int>("id"))) builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2

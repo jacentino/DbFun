@@ -9,7 +9,7 @@ module OutParams =
 
     type ReturnBuilder() = 
 
-        interface OutParams.IBuilder with
+        interface OutParamsImpl.IBuilder with
                 
             member __.CanBuild(argType: Type): bool = argType = typeof<int>
                     
@@ -35,15 +35,21 @@ module OutParams =
                         param.Value = DBNull.Value
                 }
 
-type OutParamBuilder(builders: OutParams.IBuilder seq) =
-    inherit Builders.OutParamBuilder(builders)
+type OutParams() =
+    inherit Builders.OutParams()
 
-    let returnBuilder = OutParams.ReturnBuilder() :> OutParams.IBuilder
+    // TODO: should be possible to solve it better way
+    static let returnBuilder = OutParams.ReturnBuilder() :> OutParamsImpl.IBuilder
 
-    member this.Return(name: string): unit -> IOutParamGetter<int> = 
-        returnBuilder.Build<int>(this, name)
+    static member Return(name: string): IOutParamGetterProvider * unit -> IOutParamGetter<int> = 
+        fun (provider, _) -> returnBuilder.Build<int>(provider, name) ()
 
-    member this.ReturnAnd<'Arg>(retName: string, argName: string): unit -> IOutParamGetter<int * 'Arg> =
-        this.Tuple<int, 'Arg>(returnBuilder.Build<int>(this, retName), this.Simple<'Arg>(argName))
+    static member ReturnAnd<'Arg>(retName: string, argName: string): IOutParamGetterProvider * unit -> IOutParamGetter<int * 'Arg> =
+        fun (provider, _) -> 
+            let retp = fun (provider, ()) -> returnBuilder.Build<int>(provider, retName) ()
+            let outp = OutParams.Simple<'Arg>(argName)
+            let createGetter = OutParams.Tuple<int, 'Arg>(retp, outp) 
+            createGetter(provider, ())
+            
         
         
