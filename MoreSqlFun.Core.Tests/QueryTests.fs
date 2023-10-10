@@ -8,6 +8,7 @@ open MoreSqlFun.TestTools.Models
 open MoreSqlFun.TestTools.Mocks
 open Microsoft.Data.SqlClient
 open System.Data
+open MoreSqlFun.Core.Diagnostics
 
 module QueryTests = 
 
@@ -207,3 +208,77 @@ module QueryTests =
             }
 
         Assert.Equal(expected, user)
+
+    [<Fact>]
+    let ``Compile-time errors - immediately``() = 
+
+        let executor = createCommandExecutorMock
+                        [ "wrongName", DbType.Int32 ]
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]
+                            
+                        ]
+
+        let qb = QueryBuilder((fun () -> new SqlConnection()), executor)
+               
+        let ex = 
+            Assert.Throws<CompileTimeException>(fun () -> 
+                qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+                       <| "select * from User where userId = @Id"
+                |> ignore)
+        Assert.Contains("QueryTests.fs", ex.Message)
+        Assert.Contains("line: 229", ex.Message)
+
+
+    [<Fact>]
+    let ``Compile-time errors - logging``() = 
+
+        let executor = createCommandExecutorMock
+                        [ "wrongName", DbType.Int32 ]
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]
+                            
+                        ]
+
+        let qb = QueryBuilder((fun () -> new SqlConnection()), executor).LogCompileTimeErrors()
+               
+        qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+                <| "select * from User where userId = @Id"
+        |> ignore
+
+        let line, file, _ = qb.CompileTimeErrorLog |> List.head
+
+        Assert.Equal(251, line)
+        Assert.Contains("QueryTests.fs", file)
+
+
+    [<Fact>]
+    let ``Compile-time errors - deferred throw``() = 
+
+        let executor = createCommandExecutorMock
+                        [ "wrongName", DbType.Int32 ]
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]
+                            
+                        ]
+
+        let qb = QueryBuilder((fun () -> new SqlConnection()), executor).LogCompileTimeErrors()
+               
+        let query = 
+            qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+                   <| "select * from User where userId = @Id"
+
+        let connector = new Connector(new SqlConnection(), null)
+
+        let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
+        Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 277", ex.InnerExceptions.[0].Message)

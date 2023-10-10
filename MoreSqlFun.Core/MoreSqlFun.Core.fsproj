@@ -15,6 +15,7 @@
     <Compile Include="Row.fs" />
     <Compile Include="Result.fs" />
     <Compile Include="Connector.fs" />
+    <Compile Include="Diagnostics.fs" />
     <Compile Include="Query.fs" />
   </ItemGroup>
 
