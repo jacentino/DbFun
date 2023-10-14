@@ -219,9 +219,9 @@ module ParamsTests =
     let ``Flat records - overrides``() = 
 
         use command = connection.CreateCommand()
-        let u = Unchecked.defaultof<User>
+        let u = any<User>
 
-        let setter = Params.Record<User>(ParamOverride<int>(<@ u.userId @>, Params.Simple<int>("id")))(builderParams)
+        let setter = Params.Record<User>(ParamOverride<int>(u.userId, Params.Simple<int>("id")))(builderParams)
 
         setter.SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 

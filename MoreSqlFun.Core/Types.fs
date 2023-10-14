@@ -20,4 +20,3 @@ module Types =
             collectionType.GetElementType()
         else
             collectionType.GetGenericArguments().[0]
-        

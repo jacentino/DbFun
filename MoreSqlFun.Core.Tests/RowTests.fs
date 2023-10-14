@@ -295,8 +295,8 @@ module RowTests =
                         ]
         let builderParams = provider :> IRowGetterProvider, record
 
-        let u = Unchecked.defaultof<User>
-        let getter = Rows.Record<User>(RowOverride<int>(<@ u.userId @>, Rows.Simple<int>("id"))) builderParams
+        let u = any<User>
+        let getter = Rows.Record<User>(RowOverride<int>(u.userId, Rows.Simple<int>("id"))) builderParams
         let value = getter.Get(record)
 
         let expected = 

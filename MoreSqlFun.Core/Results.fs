@@ -173,14 +173,14 @@ type Results() =
         let construct = Results.GenerateMerge(propChain, result1Param, result2Param)
         Expression.Lambda<Func<'Result1, 'Result2, 'Result1>>(construct, result1Param, result2Param).Compile()
 
-    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(target: Expr<'Result2 list>): 
+    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 list>): 
             (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
             (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
             IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
 
-    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(target: Expr<'Result2 array>): 
+    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 array>): 
             (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
             (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
             IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 

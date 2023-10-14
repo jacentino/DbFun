@@ -155,8 +155,8 @@ module OutParamsTests =
     let ``Flat records - overrides``() = 
 
         let command = connection.CreateCommand()
-        let u = Unchecked.defaultof<User>
-        let getter = OutParams.Record<User>(OutParamOverride<int>(<@ u.userId @>, OutParams.Simple<int>("id"))) builderParams
+        let u = any<User>
+        let getter = OutParams.Record<User>(OutParamOverride<int>(u.userId, OutParams.Simple<int>("id"))) builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2

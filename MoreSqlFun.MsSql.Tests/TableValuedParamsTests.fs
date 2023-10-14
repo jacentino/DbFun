@@ -7,6 +7,7 @@ open Xunit
 open MoreSqlFun.MsSql.Builders
 open MoreSqlFun.TestTools.Models
 open MoreSqlFun.Core.Builders.GenericSetters
+open MoreSqlFun.Core.Builders
 
 module TableValuedParamsTests = 
 
@@ -86,9 +87,9 @@ module TableValuedParamsTests =
                 SqlMetaData("email", SqlDbType.VarChar, 100)
                 SqlMetaData("created", SqlDbType.DateTime)
             |]
-        let u = Unchecked.defaultof<User>
+        let u = any<User>
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Record<User>(TVParamOverride(<@ u.userId @>, TVParams.Simple<int>("id"))) (tvpProvider, record)
+        let setter = TVParams.Record<User>(TVParamOverride(u.userId, TVParams.Simple<int>("id"))) (tvpProvider, record)
         let user = 
             {
                 User.userId = 3

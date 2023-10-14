@@ -7,13 +7,14 @@
 
   <ItemGroup>
     <Compile Include="Types.fs" />
+    <Compile Include="Any.fs" />
     <Compile Include="Models.fs" />
     <Compile Include="GenericGetters.fs" />
     <Compile Include="GenericSetters.fs" />
     <Compile Include="Params.fs" />
     <Compile Include="OutParams.fs" />
     <Compile Include="Row.fs" />
-    <Compile Include="Result.fs" />
+    <Compile Include="Results.fs" />
     <Compile Include="Connector.fs" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Query.fs" />

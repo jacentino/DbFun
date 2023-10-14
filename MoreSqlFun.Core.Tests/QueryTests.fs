@@ -91,8 +91,6 @@ module QueryTests =
         Assert.Equal<string seq>(["Administrator"; "Guest"], roles)
 
 
-    let any<'R> : 'R = Unchecked.defaultof<'R>
-
     [<Fact>]
     let ``Joins with lambda merge``() =
         
@@ -163,7 +161,7 @@ module QueryTests =
         let query = 
             qb.Sql (Params.Simple<int>("id"))
                    (Results.Many(Rows.PK<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join <@ uwr.roles @> (Results.Many(Rows.FK<int, string>("userId", "name")))
+                    |> Results.Join uwr.roles (Results.Many(Rows.FK<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -230,7 +228,7 @@ module QueryTests =
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 229", ex.Message)
+        Assert.Contains("line: 227", ex.Message)
 
 
     [<Fact>]
@@ -254,7 +252,7 @@ module QueryTests =
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(251, line)
+        Assert.Equal(249, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -281,4 +279,4 @@ module QueryTests =
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 277", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 275", ex.InnerExceptions.[0].Message)

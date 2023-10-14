@@ -40,7 +40,7 @@ module GenericSetters =
             | PropertyGet (Some inner, property, _) -> getPropChain(inner) @ [ property.Name ]
             | _ -> []
 
-        new (path: Expr<'Arg>, setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>) = 
+        new ([<ReflectedDefinition>] path: Expr<'Arg>, setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>) = 
             Override(getPropChain(path), setter)
 
         interface IOverride<'Prototype, 'DbObject> with
