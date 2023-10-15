@@ -14,6 +14,10 @@ type IResultReader<'Result> =
 
 type Results() = 
 
+    static let advance (resultTypes: Type seq) (reader: IDataReader) = 
+        if not (reader.NextResult()) then
+            failwithf "Not enough results when reading %A" resultTypes
+
     static member private EmptyReader<'Result>() =
         { new IResultReader<'Result> with
                 member __.Read(_: IDataReader): 'Result = 
@@ -92,15 +96,14 @@ type Results() =
             builder2: IRowGetterProvider * IDataReader -> IResultReader<'Result2>)
             : IRowGetterProvider * IDataReader -> IResultReader<'Result1 * 'Result2> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let advance = advance [ typeof<'Result1>; typeof<'Result2> ]
             let reader1 = builder1(provider, prototype)
-            if not (prototype.NextResult()) then
-                failwithf "Not enough results when reading %A, %A" typeof<'Result1> typeof<'Result2>
+            advance(prototype)
             let reader2 = builder2(provider, prototype)
             { new IResultReader<'Result1 * 'Result2> with
                 member __.Read(reader: IDataReader) = 
                     let result1 = reader1.Read(reader)
-                    if not (reader.NextResult()) then
-                        failwithf "Not enough results when reading %A, %A" typeof<'Result1> typeof<'Result2>
+                    advance(reader)
                     let result2 = reader2.Read(reader)
                     result1, result2
             }
@@ -121,15 +124,14 @@ type Results() =
         fun (builder2: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
             (builder1: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
             (provider: IRowGetterProvider, prototype: IDataReader) ->
+                let advance = advance [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ]
                 let reader1 = builder1(provider, prototype)
-                if not (prototype.NextResult()) then
-                    failwithf "Not enough results when reading %A, %A" typeof<'Key * 'Result1> typeof<'Key * 'Result2>
+                advance(prototype)
                 let reader2 = builder2(provider, prototype)
                 { new IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> with
                     member __.Read(reader: IDataReader) = 
                         let result1 = reader1.Read(reader) 
-                        if not (reader.NextResult()) then
-                            failwithf "Not enough results when reading %A, %A" typeof<'Result1> typeof<'Result2>
+                        advance(reader)
                         let result2 = reader2.Read(reader) |> Seq.groupBy (fun (k, r) -> k.Foreign) |> readOnlyDict
                         let merged = result1 |> Seq.map (fun (k, r1) -> k, merge(r1, result2.TryGetValue k.Primary |> (function (true, r2s) -> r2s |> Seq.map snd | (false, _) -> Seq.empty)))
                         merged

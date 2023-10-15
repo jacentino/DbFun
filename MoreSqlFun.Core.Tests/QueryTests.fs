@@ -12,6 +12,10 @@ open MoreSqlFun.Core.Diagnostics
 
 module QueryTests = 
 
+    let connector = new Connector(new SqlConnection(), null)
+
+    let createConfig executor = { QueryConfig.Default(fun () -> new SqlConnection()) with Executor = executor }
+
     [<Fact>]
     let ``Simple queries``() = 
 
@@ -25,9 +29,7 @@ module QueryTests =
                             
                         ]
 
-        let connector = new Connector(new SqlConnection(), null)
-
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
                
         let query = 
             qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
@@ -64,9 +66,7 @@ module QueryTests =
                             
                         ]
 
-        let connector = new Connector(new SqlConnection(), null)
-
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
 
         let x = Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
 
@@ -109,9 +109,7 @@ module QueryTests =
                             
                         ]
 
-        let connector = new Connector(new SqlConnection(), null)
-
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
 
         let query = 
             qb.Sql (Params.Simple<int>("id"))
@@ -153,9 +151,7 @@ module QueryTests =
                             
                         ]
 
-        let connector = new Connector(new SqlConnection(), null)
-
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
         let uwr = any<UserWithRoles>
 
         let query = 
@@ -189,9 +185,7 @@ module QueryTests =
                             "created", box (DateTime(2023, 1, 1))
                         ]
 
-        let connector = new Connector(new SqlConnection(), null)
-
-        let qb = QueryBuilder((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
                
         let query = qb.Proc(Params.Simple<int> "id") (OutParams.Record<User>()) Results.Unit "getUser"
 
@@ -220,7 +214,7 @@ module QueryTests =
                             
                         ]
 
-        let qb = QueryBuilder((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder (createConfig executor)
                
         let ex = 
             Assert.Throws<CompileTimeException>(fun () -> 
@@ -228,7 +222,7 @@ module QueryTests =
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 227", ex.Message)
+        Assert.Contains("line: 221", ex.Message)
 
 
     [<Fact>]
@@ -244,7 +238,7 @@ module QueryTests =
                             
                         ]
 
-        let qb = QueryBuilder((fun () -> new SqlConnection()), executor).LogCompileTimeErrors()
+        let qb = QueryBuilder(createConfig executor).LogCompileTimeErrors()
                
         qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
                 <| "select * from User where userId = @Id"
@@ -252,7 +246,7 @@ module QueryTests =
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(249, line)
+        Assert.Equal(243, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -269,14 +263,12 @@ module QueryTests =
                             
                         ]
 
-        let qb = QueryBuilder((fun () -> new SqlConnection()), executor).LogCompileTimeErrors()
+        let qb = QueryBuilder(createConfig executor).LogCompileTimeErrors()
                
         let query = 
             qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
                    <| "select * from User where userId = @Id"
 
-        let connector = new Connector(new SqlConnection(), null)
-
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 275", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 269", ex.InnerExceptions.[0].Message)

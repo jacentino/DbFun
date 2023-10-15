@@ -293,7 +293,7 @@ module ParamsTests =
 
         use command = connection.CreateCommand()
 
-        (Params.Tuple(Params.Simple<int>("orgId"), Params.Record<User>())(builderParams)).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
+        (Params.Tuple(Params.Int("orgId"), Params.Record<User>())(builderParams)).SetValue((10, { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }), command)
 
         Assert.Equal(5, command.Parameters.Count)
         Assert.Equal(box 10, command.Parameters.["orgId"].Value)

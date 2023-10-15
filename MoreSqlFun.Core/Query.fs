@@ -31,41 +31,53 @@ module Queries =
                     return reader
                 }
 
-type QueryBuilder(
-    createConnection    : unit -> DbConnection, 
-    ?executor           : Queries.ICommandExecutor,
-    ?paramBuilders      : ParamsImpl.IBuilder list,
-    ?outParamBuilders   : OutParamsImpl.IBuilder list,
-    ?rowBuilders        : RowsImpl.IBuilder list,
-    ?timeout            : int,
-    ?compileTimeErrorLog    : CompileTimeErrorLog Ref) =
+type QueryConfig = 
+    {
+        CreateConnection    : unit -> DbConnection
+        Executor            : Queries.ICommandExecutor
+        ParamBuilders       : ParamsImpl.IBuilder list
+        OutParamBuilders    : OutParamsImpl.IBuilder list
+        RowBuilders         : RowsImpl.IBuilder list
+        Timeout             : int option
+        LogCompileTimeErrors: bool
+    }
+    with static member Default(createConnection): QueryConfig = 
+            {
+                CreateConnection    = createConnection
+                Executor            = Queries.DefaultExecutor()
+                ParamBuilders       = ParamsImpl.getDefaultBuilders()
+                OutParamBuilders    = OutParamsImpl.getDefaultBuilders()
+                RowBuilders         = RowsImpl.getDefaultBuilders()
+                Timeout             = None
+                LogCompileTimeErrors= false
+            }
 
-    let executor = defaultArg executor (Queries.DefaultExecutor())
-    let paramBuilders = defaultArg paramBuilders (ParamsImpl.getDefaultBuilders())
-    let outParamBuilders = defaultArg outParamBuilders (OutParamsImpl.getDefaultBuilders())
-    let rowBuilders = defaultArg rowBuilders (RowsImpl.getDefaultBuilders())
-        
+
+type QueryBuilder(config: QueryConfig) =
+
+    let compileTimeErrorLog = if config.LogCompileTimeErrors then Some (ref<CompileTimeErrorLog> []) else None
+
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: DbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
-        use connection = createConnection()
-        executor.OpenConnection(connection)
+        use connection = config.CreateConnection()
+        config.Executor.OpenConnection(connection)
         use command = connection.CreateCommand()
         command.CommandType <- commandType
         command.CommandText <- commandText
         setParams(command)
-        use prototype = executor.Execute(command, CommandBehavior.SchemaOnly)
+        use prototype = config.Executor.Execute(command, CommandBehavior.SchemaOnly)
         resultReaderBuilder(prototype)
 
     let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: DbCommand -> unit) = 
         async {
-            use command = executor.CreateCommand(provider.Connection)
+            use command = config.Executor.CreateCommand(provider.Connection)
             command.CommandType <- CommandType.Text
             command.CommandText <- commandText
             command.Transaction <- provider.Transaction
-            match timeout with
+            match config.Timeout with
             | Some timeout -> command.CommandTimeout <- timeout
             | None -> ()
             setParams(command)
-            use! dataReader = executor.ExecuteAsync(command, CommandBehavior.Default)
+            use! dataReader = config.Executor.ExecuteAsync(command, CommandBehavior.Default)
             return resultReader.Read(dataReader)
         }
 
@@ -77,7 +89,7 @@ type QueryBuilder(
             command.Transaction <- provider.Transaction
             setParams(command)
             outParamGetter.Create(command)
-            use! dataReader = executor.ExecuteAsync(command, CommandBehavior.Default) 
+            use! dataReader = config.Executor.ExecuteAsync(command, CommandBehavior.Default) 
             return resultReader.Read(dataReader), outParamGetter.Get(command)
         }
 
@@ -92,32 +104,21 @@ type QueryBuilder(
         | None ->
             raise <| CompileTimeException($"Cannot compile query in {sourcePath}, line: {sourceLine}", ex)
 
+    new(createConnection: unit -> DbConnection) = 
+        QueryBuilder(QueryConfig.Default(createConnection))
 
-    member __.Executor              = executor
-    member __.ParamBuilders         = paramBuilders
-    member __.OutParamBuilders      = outParamBuilders
-    member __.RowBuilders           = rowBuilders
-    member __.CompileTimeErrorLog   = compileTimeErrorLog |> Option.map (fun r -> r.Value) |> Option.defaultValue []
+    member __.Config = config
 
-    member this.Timeout(timeout: int) = 
-        QueryBuilder(
-            createConnection,
-            executor,
-            paramBuilders           = this.ParamBuilders,
-            outParamBuilders        = this.OutParamBuilders,
-            rowBuilders             = this.RowBuilders,
-            ?compileTimeErrorLog    = compileTimeErrorLog,
-            timeout                 = timeout)
+    member __.Timeout(timeout: int) = 
+        QueryBuilder({ config with Timeout = Some timeout })
 
-    member this.LogCompileTimeErrors() = 
-        QueryBuilder(
-            createConnection,
-            executor,
-            paramBuilders           = this.ParamBuilders,
-            outParamBuilders        = this.OutParamBuilders,
-            rowBuilders             = this.RowBuilders,
-            compileTimeErrorLog     = ref<CompileTimeErrorLog> [],
-            ?timeout                = timeout)
+    member __.LogCompileTimeErrors() = 
+        QueryBuilder({ config with LogCompileTimeErrors = true })
+
+    member __.CompileTimeErrorLog = 
+        match compileTimeErrorLog with
+        | Some log -> log.Value
+        | None -> []
 
     member __.Sql (createParamSetter: IParamSetterProvider * unit -> IParamSetter<'Params>, 
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
@@ -125,11 +126,11 @@ type QueryBuilder(
                    : (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result> =         
         fun (createResultReader: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
             try
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(paramBuilders)
+                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                        
                 let paramSetter = createParamSetter (builderParams)
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(rowBuilders)
+                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
                 let resultReader = executePrototypeQuery(CommandType.Text, commandText, paramSetter.SetArtificial, createResultReader')
 
@@ -145,12 +146,12 @@ type QueryBuilder(
                    : (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
         fun (createResultReader: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
             try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(paramBuilders)
+                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                        
                 let paramSetter1 = createParamSetter1(builderParams)
                 let paramSetter2 = createParamSetter2(builderParams)
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(rowBuilders)
+                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
                 let resultReader = executePrototypeQuery(CommandType.Text, commandText, (fun cmd -> paramSetter1.SetArtificial cmd; paramSetter2.SetArtificial cmd), createResultReader')
 
@@ -169,11 +170,11 @@ type QueryBuilder(
                     : (IOutParamGetterProvider * unit -> IOutParamGetter<'OutParams>) -> (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
         fun (outParamGetter: IOutParamGetterProvider * unit -> IOutParamGetter<'OutParams>) (resultReaderBuilder: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
             try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(paramBuilders)
+                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                       
                 let paramSetter = paramSetter(builderParams)
                         
-                let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(outParamBuilders)
+                let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
                 let builderParams = outParamProvider :> IOutParamGetterProvider, ()                        
                 let outParamGetter = outParamGetter(builderParams)
 
@@ -181,7 +182,7 @@ type QueryBuilder(
                     paramSetter.SetArtificial(command)
                     outParamGetter.Create(command)
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(rowBuilders)
+                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let resultReaderBuilder' prototype = resultReaderBuilder(rowGetterProvider, prototype)
 
                 let resultReader = executePrototypeQuery(CommandType.StoredProcedure, commandText, setArtificialParams, resultReaderBuilder')

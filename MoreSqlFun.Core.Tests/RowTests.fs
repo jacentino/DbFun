@@ -52,13 +52,13 @@ module RowTests =
 
         let builderParams = provider :> IRowGetterProvider, record
 
-        let idGetter = Rows.Simple<int> "id" builderParams
+        let idGetter = Rows.Int "id" builderParams
         let id = idGetter.Get(record)
-        let nameGetter = Rows.Simple<string> "name" builderParams
+        let nameGetter = Rows.String "name" builderParams
         let name = nameGetter.Get(record)
-        let activeGetter = Rows.Simple "active" builderParams
+        let activeGetter = Rows.Bool "active" builderParams
         let active = activeGetter.Get(record)
-        let createdGetter = Rows.Simple<DateTime> "created" builderParams
+        let createdGetter = Rows.DateTime "created" builderParams
         let created = createdGetter.Get(record)
         let avaterGetter = Rows.Simple<byte array>("avatar") builderParams
         let avatar = avaterGetter.Get(record)
@@ -118,10 +118,10 @@ module RowTests =
                         ]
         let builderParams = provider :> IRowGetterProvider, record
 
-        let createdGetter = Rows.Optional(Rows.Simple<DateTime>("created")) builderParams
+        let createdGetter = Rows.Optional(Rows.DateTime("created")) builderParams
         let created = createdGetter.Get(record)
 
-        let updatedGetter = Rows.Optional(Rows.Simple<DateTime>("updated")) builderParams
+        let updatedGetter = Rows.Optional(Rows.DateTime("updated")) builderParams
         let updated = updatedGetter.Get(record)
         
         Assert.Equal(Some (DateTime(2023, 1, 1)), created)

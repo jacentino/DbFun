@@ -25,7 +25,7 @@ module QueryTests =
 
         let connector = new Connector(new SqlConnection(), null)
 
-        let qb = QueryBuilder ((fun () -> new SqlConnection()), executor)
+        let qb = QueryBuilder ({ QueryConfig.MsSqlDefault(fun () -> new SqlConnection()) with Executor = executor })
                
         let query = qb.Proc(Params.Simple<int> "id") (OutParams.ReturnAnd<User>("ret_val", "user")) Results.Unit "getUser"
 
@@ -60,7 +60,7 @@ module QueryTests =
                 ]
 
         let connector = new Connector(new SqlConnection(), null)
-        let qb = QueryBuilder((fun () -> new SqlConnection()), executor, paramBuilders = ParamsImpl.getDefaultBuilders(createConnection))
+        let qb = QueryBuilder({ QueryConfig.MsSqlDefault(fun () -> new SqlConnection()) with Executor = executor; ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection) })
         let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"

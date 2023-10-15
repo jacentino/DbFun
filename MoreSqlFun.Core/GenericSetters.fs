@@ -61,7 +61,7 @@ module GenericSetters =
         member this.GetSetter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>) with
             | Some builder -> builder.Build(this, name) prototype
-            | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
+            | None -> failwithf "Could not find a setter builder for type: %A" typeof<'Arg>
 
         interface ISetterProvider<'Prototype, 'DbObject> with
             member this.Setter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
@@ -318,6 +318,45 @@ module GenericSetters =
 
         static member Simple<'Arg> (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
             provider.Setter<'Arg>(name, prototype)
+
+        static member Int (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<int>(name, prototype)
+
+        static member Int64 (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<int64>(name, prototype)
+
+        static member Byte (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<byte>(name, prototype)
+
+        static member Char (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<char>(name, prototype)
+
+        static member String (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<string>(name, prototype)
+
+        static member DateTime (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<DateTime>(name, prototype)
+
+        static member DateOnly (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<DateOnly>(name, prototype)
+
+        static member TimeOnly (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<TimeOnly>(name, prototype)
+
+        static member Decimal (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<decimal>(name, prototype)
+
+        static member Float (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<float>(name, prototype)
+
+        static member Double (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<double>(name, prototype)
+
+        static member Bool (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<bool>(name, prototype)
+
+        static member ByteArray (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+            provider.Setter<byte array>(name, prototype)
 
         static member Optional<'Arg> (createUnderlyingSetter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->

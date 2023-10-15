@@ -61,7 +61,7 @@ module GenericGetters =
         member this.GetGetter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with
             | Some builder -> builder.Build(this, name) prototype
-            | None -> failwithf "Could not found param builder for type: %A" typeof<'Result>
+            | None -> failwithf "Could not find a getter builder for type: %A" typeof<'Result>
 
         interface IGetterProvider<'Prototype, 'DbObject> with
             member this.Getter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
@@ -334,6 +334,45 @@ module GenericGetters =
 
         static member Simple<'Result>(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
             provider.Getter<'Result>(name, prototype)
+
+        static member Int(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, int> = 
+            provider.Getter<int>(name, prototype)
+
+        static member Int64(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, int64> = 
+            provider.Getter<int64>(name, prototype)
+
+        static member Byte(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, byte> = 
+            provider.Getter<byte>(name, prototype)
+
+        static member Char(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, char> = 
+            provider.Getter<char>(name, prototype)
+
+        static member String(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, string> = 
+            provider.Getter<string>(name, prototype)
+
+        static member DateTime(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, DateTime> = 
+            provider.Getter<DateTime>(name, prototype)
+
+        static member DateOnly(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, DateOnly> = 
+            provider.Getter<DateOnly>(name, prototype)
+
+        static member TimeOnly(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, TimeOnly> = 
+            provider.Getter<TimeOnly>(name, prototype)
+
+        static member Decimal(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, decimal> = 
+            provider.Getter<decimal>(name, prototype)
+
+        static member Float(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, float> = 
+            provider.Getter<float>(name, prototype)
+
+        static member Double(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, double> = 
+            provider.Getter<double>(name, prototype)
+
+        static member Bool(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, bool> = 
+            provider.Getter<bool>(name, prototype)
+
+        static member ByteArray(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, byte array> = 
+            provider.Getter<byte array>(name, prototype)
 
         static member Optional<'Result>(name: string):  IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result option> =            
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
