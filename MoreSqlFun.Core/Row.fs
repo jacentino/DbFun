@@ -35,11 +35,13 @@ module RowsImpl =
 
         static let getValueMethod = typeof<IDataRecord>.GetMethod("GetValue")
 
+        member __.GetChar(value: string) = value.[0]
+
         interface IBuilder with
                 
             member __.CanBuild(argType: Type): bool = Types.isSimpleType argType
                     
-            member __.Build(_, name: string) (prototype: IDataRecord): IRowGetter<'Result> = 
+            member this.Build(_, name: string) (prototype: IDataRecord): IRowGetter<'Result> = 
                 let ordinal = 
                     try
                         prototype.GetOrdinal(name)
@@ -49,7 +51,10 @@ module RowsImpl =
                 let recParam = Expression.Parameter(typeof<IDataRecord>)
                 let call = Expression.Call(recParam, colGetter, Expression.Constant(ordinal))
                 let convertedCall = 
-                    if typeof<'Result> <> call.Type then
+                    if typeof<'Result> = typeof<char> && call.Type = typeof<string> then
+                        let getCharMethod = this.GetType().GetMethod("GetChar")
+                        Expression.Call(Expression.Constant(this), getCharMethod, call) :> Expression
+                    elif typeof<'Result> <> call.Type then
                         try
                             Expression.Convert(call, typeof<'Result>) :> Expression
                         with :? InvalidOperationException as ex ->
@@ -124,22 +129,22 @@ type Rows() =
             result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
         Rows.Tuple(Rows.Key(primary, foreign), result)
 
-    static member PK<'Primary, 'Result>(primaryName: string, resultName: string) = 
+    static member PKeyed<'Primary, 'Result>(primaryName: string, resultName: string) = 
         Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), Rows.Simple<'Result>(resultName))
 
-    static member PK<'Primary, 'Result>(primaryName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primaryName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
         Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), result)
 
-    static member PK<'Primary, 'Result>(primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
         Rows.Tuple(Rows.Key<'Primary, unit>(primary, Rows.Simple<unit>("")), result)
 
-    static member FK<'Foreign, 'Result>(foreignName: string, resultName: string) = 
+    static member FKeyed<'Foreign, 'Result>(foreignName: string, resultName: string) = 
         Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), Rows.Simple<'Result>(resultName))
 
-    static member FK<'Foreign, 'Result>(foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
         Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), result)
 
-    static member FK<'Foreign, 'Result>(foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
         Rows.Tuple(Rows.Key<unit, 'Foreign>(Rows.Simple<unit>(""), foreign), result)
 
 

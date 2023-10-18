@@ -4,6 +4,7 @@ open System
 open Xunit
 open MoreSqlFun.Core
 open MoreSqlFun.Core.Builders
+open MoreSqlFun.Core.Builders.MultipleResults
 open MoreSqlFun.TestTools.Models
 open MoreSqlFun.TestTools.Mocks
 open Microsoft.Data.SqlClient
@@ -68,8 +69,6 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig executor)
 
-        let x = Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
-
         let query = 
             qb.Sql <| Params.Simple<int>("id") <| Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
             <| "select * from User where userId = @id;
@@ -88,6 +87,48 @@ module QueryTests =
         Assert.Equal(expected, user)
             
 
+        Assert.Equal<string seq>(["Administrator"; "Guest"], roles)
+
+
+    [<Fact>]
+    let ``Multiple results applicative``() =
+        
+        let executor = createCommandExecutorMock
+                        [ "id", DbType.Int32 ]
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]
+                            [ col<int> "userId"; col<string> "name";  ],
+                            [
+                                [ 1; "Administrator" ]
+                                [ 1; "Guest" ]
+                            ]
+                            
+                        ]
+
+        let qb = QueryBuilder (createConfig executor)
+
+        let query = 
+            qb.Sql(Params.Simple<int>("id"))
+                  (Results.Combine(fun user roles -> user, roles)
+                    <*> Results.One<User>("") 
+                    <*> Results.Many<string>("name"))
+                "select * from User where userId = @id;
+                 select * from Role where userId = @id"
+
+        let user, roles = query 1 connector |> Async.RunSynchronously
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+
+        Assert.Equal(expected, user)
         Assert.Equal<string seq>(["Administrator"; "Guest"], roles)
 
 
@@ -113,8 +154,8 @@ module QueryTests =
 
         let query = 
             qb.Sql (Params.Simple<int>("id"))
-                   (Results.Many(Rows.PK<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join (fun (u, rs) -> { u with roles = rs }) (Results.Many(Rows.FK<int, string>("userId", "name")))
+                   (Results.Many(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join (fun (u, rs) -> { u with roles = rs }) (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -156,8 +197,8 @@ module QueryTests =
 
         let query = 
             qb.Sql (Params.Simple<int>("id"))
-                   (Results.Many(Rows.PK<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join uwr.roles (Results.Many(Rows.FK<int, string>("userId", "name")))
+                   (Results.Many(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join uwr.roles (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -222,7 +263,7 @@ module QueryTests =
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 221", ex.Message)
+        Assert.Contains("line: 262", ex.Message)
 
 
     [<Fact>]
@@ -241,12 +282,12 @@ module QueryTests =
         let qb = QueryBuilder(createConfig executor).LogCompileTimeErrors()
                
         qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
-                <| "select * from User where userId = @Id"
+               <| "select * from User where userId = @Id"
         |> ignore
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(243, line)
+        Assert.Equal(284, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -271,4 +312,4 @@ module QueryTests =
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 269", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 310", ex.InnerExceptions.[0].Message)
