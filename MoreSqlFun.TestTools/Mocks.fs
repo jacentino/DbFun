@@ -2,18 +2,16 @@
 
 open System
 open System.Data
-open System.Data.Common
 open Microsoft.Data.SqlClient
 
 open Moq
-open MoreSqlFun.Core.Builders.Queries
 
 
 module Mocks = 
 
     let col<'t> (name: string) = name, typeof<'t>
 
-    let createDataReaderMock (data: ((string * Type) list * (obj list) list) list): DbDataReader = 
+    let createDataReaderMock (data: ((string * Type) list * (obj list) list) list): IDataReader = 
         
         let rsIndex = ref 0
         let rowIndex = ref -1
@@ -24,7 +22,17 @@ module Mocks =
 
         let get(index: int): obj = currents().row.[index]
 
-        { new DbDataReader() with
+        { new IDataReader with
+            member this.Dispose(): unit = 
+                ()
+            member this.GetData(i: int): IDataReader = 
+                raise (System.NotImplementedException())
+            member this.Item
+                with get (i: int): obj = 
+                    raise (System.NotImplementedException())
+            member this.Item
+                with get (name: string): obj = 
+                    raise (System.NotImplementedException())
             member this.Close(): unit = ()
             member this.Depth: int = 
                 raise (System.NotImplementedException())
@@ -76,12 +84,6 @@ module Mocks =
                 raise (System.NotImplementedException())
             member this.IsDBNull(i: int): bool = 
                 get(i) = null
-            member this.Item
-                with get (i: int): obj = 
-                    raise (System.NotImplementedException())
-            member this.Item
-                with get (name: string): obj = 
-                    raise (System.NotImplementedException())
             member this.NextResult(): bool = 
                 if rsIndex.Value < data.Length - 1 then
                     rsIndex.Value <- rsIndex.Value + 1
@@ -97,58 +99,75 @@ module Mocks =
                     false
             member this.RecordsAffected: int = 
                   raise (System.NotImplementedException())
-            member this.HasRows: bool = 
-                  raise (System.NotImplementedException())
-            member this.GetEnumerator(): Collections.IEnumerator = 
-                  raise (System.NotImplementedException())
         }
 
     let createPrototypeAndRegular data = 
         createDataReaderMock(data), createDataReaderMock(data)
 
-    let createCommandExecutorMock (args: (string * DbType) list) data = 
-
-        let checkParams (command: DbCommand) = 
-            for name, dbType in args do
-                let param = command.Parameters.[name]
-                if param.DbType <> dbType then
-                    raise (ArgumentException(sprintf "Parameter %s has incorrect type. Expected: %A, actual: %A " name dbType param.DbType))
-
-        { new ICommandExecutor with
-            member __.OpenConnection(_: DbConnection): unit = 
-                ()
-            member __.CreateCommand(connection: DbConnection): DbCommand = 
-                connection.CreateCommand()
-            member __.Execute(command: DbCommand, _: CommandBehavior): IDataReader = 
-                checkParams(command)
-                createDataReaderMock(data)
-            member __.ExecuteAsync(command: DbCommand, _: CommandBehavior): Async<IDataReader> = 
-                checkParams(command)
-                async.Return (createDataReaderMock(data))
+    let createMockParameterCollection() = 
+        let container = System.Collections.ArrayList()
+        { new IDataParameterCollection with
+              member this.Add(value: obj): int = container.Add(value)
+              member this.Clear(): unit = container.Clear()
+              member this.Contains(parameterName: string): bool = this.IndexOf(parameterName) <> -1
+              member this.Contains(value: obj): bool = container.Contains(value)
+              member this.CopyTo(array: Array, index: int): unit = container.CopyTo(array, index)
+              member this.Count: int = container.Count
+              member this.GetEnumerator(): Collections.IEnumerator = container.GetEnumerator()                  
+              member this.IndexOf(parameterName: string): int = 
+                    let mutable found = -1
+                    for i in 0..container.Count - 1 do
+                        if (container.[i] :?> IDataParameter).ParameterName = parameterName then
+                            found <- i
+                    found
+              member this.IndexOf(value: obj): int = container.IndexOf(value)
+              member this.Insert(index: int, value: obj): unit = container.Insert(index, value)
+              member this.IsFixedSize: bool = container.IsFixedSize
+              member this.IsReadOnly: bool = container.IsReadOnly
+              member this.IsSynchronized: bool = container.IsSynchronized
+              member this.Item
+                  with get (parameterName: string): obj = container.[this.IndexOf(parameterName)]
+                  and set (parameterName: string) (v: obj): unit = container.[this.IndexOf(parameterName)] <- v
+              member this.Item
+                  with get (index: int): obj = container.[index]
+                  and set (index: int) (v: obj): unit = container.[index] <- v
+              member this.Remove(value: obj): unit = container.Remove(value)
+              member this.RemoveAt(parameterName: string): unit = container.RemoveAt(this.IndexOf(parameterName))
+              member this.RemoveAt(index: int): unit = container.RemoveAt(index)
+              member this.SyncRoot: obj = container.SyncRoot                  
         }
 
     let setupCommandOutParams (data: (string * obj) seq) = 
-        { new ICommandExecutor with
-            member __.OpenConnection(_: DbConnection): unit = 
-                ()
-            member __.CreateCommand(connection: DbConnection): DbCommand = 
-                connection.CreateCommand()
-            member __.Execute(command: DbCommand, _: CommandBehavior): IDataReader = 
-                for name, value in data do
-                    command.Parameters.[name].Value <- value
-                createDataReaderMock []
-            member __.ExecuteAsync(command: DbCommand, _: CommandBehavior): Async<IDataReader> = 
-                for name, value in data do
-                    command.Parameters.[name].Value <- value
-                async.Return (createDataReaderMock [])
-        }
-
-
-    let createConnectionMock data = 
         let connection = Mock<IDbConnection>()
         let command = Mock<IDbCommand>()
-        command.Setup(fun x -> x.CreateParameter()).Returns(SqlParameter()) |> ignore
-        command.SetupGet(fun x -> x.Parameters).Returns(Mock<IDataParameterCollection>().Object) |> ignore
+        command.Setup(fun x -> x.CreateParameter()).Returns(Func<IDbDataParameter>(fun () -> SqlParameter())) |> ignore
+        let parameters = createMockParameterCollection()
+        command.SetupGet(fun x -> x.Parameters).Returns(parameters) |> ignore
+        command
+            .Setup(fun x -> x.ExecuteReader(It.IsAny<CommandBehavior>())).Returns(createDataReaderMock []) 
+            .Callback(fun () -> 
+                for name, value in data do
+                    (parameters.[name] :?> IDataParameter).Value <- value)
+            |> ignore
+        connection.Setup(fun x -> x.CreateCommand()).Returns(command.Object) |> ignore
+        connection.Object
+
+    let createConnectionMock (args: (string * DbType) list) data = 
+        let connection = Mock<IDbConnection>()
+        let command = Mock<IDbCommand>()
+        command.Setup(fun x -> x.CreateParameter()).Returns(Func<IDbDataParameter>(fun () -> SqlParameter())) |> ignore
+        let parameters = createMockParameterCollection()
+        command.SetupGet(fun x -> x.Parameters).Returns(parameters) |> ignore
+        command
+            .Setup(fun x -> x.ExecuteReader(It.IsAny<CommandBehavior>()))
+            .Callback(fun () ->
+                for name, dbType in args do
+                    let param = parameters.[name] :?> IDataParameter
+                    if param.DbType <> dbType then
+                        raise (ArgumentException(sprintf "Parameter %s has incorrect type. Expected: %A, actual: %A " name dbType param.DbType))
+            )
+            .Returns(createDataReaderMock data) 
+        |> ignore
         command.Setup(fun x -> x.ExecuteReader()).Returns(createDataReaderMock data) |> ignore
         connection.Setup(fun x -> x.CreateCommand()).Returns(command.Object) |> ignore
         connection.Object

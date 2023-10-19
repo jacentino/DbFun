@@ -24,7 +24,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.One<User>("") (builderParams)
         let value = result.Read(reader)
 
@@ -51,7 +51,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, reader 
 
         let result = Results.Many<User>("") builderParams
         let value = result.Read(reader) |> Seq.toList
@@ -85,7 +85,7 @@ module ResultTests =
                             ]                            
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.TryOne<User>("") builderParams
         let value = result.Read(reader)
 
@@ -108,7 +108,7 @@ module ResultTests =
                             [ ]                            
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.TryOne<User>("") builderParams
         let value = result.Read(reader)
 
@@ -132,7 +132,7 @@ module ResultTests =
                     ]
                 ]
 
-        let builderParams = provider :> IRowGetterProvider, prototype :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, prototype 
         let result = 
             Results.Multiple(
                 Results.One<User>(""),
@@ -175,7 +175,7 @@ module ResultTests =
                     ]
                 ]
 
-        let builderParams = provider :> IRowGetterProvider, prototype :> IDataReader
+        let builderParams = provider :> IRowGetterProvider, prototype 
         let result = 
             (Results.Multiple(
                 Results.One<User>(""), 

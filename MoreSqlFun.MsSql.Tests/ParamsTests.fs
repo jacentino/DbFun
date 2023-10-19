@@ -24,7 +24,8 @@ module ParamsTests =
     let ``Record seq - explicit`` () =
     
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock                
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -59,6 +60,7 @@ module ParamsTests =
     
         let createConnection () = 
             createConnectionMock                         
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -93,6 +95,7 @@ module ParamsTests =
     
         let createConnection () = 
             createConnectionMock                         
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -126,7 +129,8 @@ module ParamsTests =
     let ``Record list - implicit`` () =
     
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock       
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -160,7 +164,8 @@ module ParamsTests =
     let ``Record array - explicit`` () =
     
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock           
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -194,7 +199,8 @@ module ParamsTests =
     let ``Record array - implicit`` () =
     
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -228,7 +234,8 @@ module ParamsTests =
     let ``Record seq - super explicit`` () =
     
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock              
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -266,6 +273,7 @@ module ParamsTests =
     
         let createConnection () = 
             createConnectionMock                         
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [

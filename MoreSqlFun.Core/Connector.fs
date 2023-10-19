@@ -2,12 +2,13 @@
 
 open System.Data.Common
 open System
+open System.Data
 
 type IConnector = 
-    abstract member Connection: DbConnection
-    abstract member Transaction: DbTransaction
+    abstract member Connection: IDbConnection
+    abstract member Transaction: IDbTransaction
 
-type Connector(connection: DbConnection, transaction: DbTransaction) = 
+type Connector(connection: IDbConnection, transaction: IDbTransaction) = 
 
     member __.BeginTransaction() =
         new Connector(connection, connection.BeginTransaction())
@@ -16,8 +17,8 @@ type Connector(connection: DbConnection, transaction: DbTransaction) =
         transaction.Commit()
 
     interface IConnector with
-        member __.Connection: DbConnection = connection
-        member __.Transaction: DbTransaction = transaction
+        member __.Connection: IDbConnection = connection
+        member __.Transaction: IDbTransaction = transaction
     interface IDisposable with
         member __.Dispose() =
             if transaction <> null then

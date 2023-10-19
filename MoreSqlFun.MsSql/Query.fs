@@ -3,12 +3,13 @@
 open System.Data.Common
 open MoreSqlFun.Core.Builders
 open MoreSqlFun.MsSql.Builders
+open System.Data
 
 [<AutoOpen>]
 module Extensions = 
 
     type QueryConfig with
-        static member MsSqlDefault(createConnection: unit -> DbConnection): QueryConfig = 
+        static member MsSqlDefault(createConnection: unit -> IDbConnection): QueryConfig = 
             { QueryConfig.Default(createConnection) with
                 ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection >> unbox)
             }
@@ -16,7 +17,7 @@ module Extensions =
 type QueryBuilder(config: QueryConfig) =
     inherit MoreSqlFun.Core.Builders.QueryBuilder(config)
 
-    new(createConnection: unit -> DbConnection) = 
+    new(createConnection: unit -> IDbConnection) = 
         QueryBuilder(QueryConfig.MsSqlDefault(createConnection))
 
     member this.Timeout(timeout: int) = 

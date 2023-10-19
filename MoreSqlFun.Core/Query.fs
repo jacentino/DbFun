@@ -8,33 +8,9 @@ open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System
 
-module Queries = 
-
-    type ICommandExecutor = 
-        abstract member OpenConnection: DbConnection -> unit
-        abstract member CreateCommand: DbConnection -> DbCommand
-        abstract member Execute: DbCommand * CommandBehavior -> IDataReader
-        abstract member ExecuteAsync: DbCommand * CommandBehavior  -> Async<IDataReader>
-
-    type DefaultExecutor() = 
-        interface ICommandExecutor with
-            member __.OpenConnection(connection: DbConnection) = 
-                connection.Open()
-            member __.CreateCommand(connection: DbConnection): DbCommand = 
-                connection.CreateCommand()
-            member __.Execute(command: DbCommand, behavior: CommandBehavior): IDataReader = 
-                command.ExecuteReader(behavior)
-            member __.ExecuteAsync(command: DbCommand, behavior: CommandBehavior): Async<IDataReader> = 
-                async {
-                    let! token = Async.CancellationToken
-                    let! reader = command.ExecuteReaderAsync(behavior, token) |> Async.AwaitTask
-                    return reader
-                }
-
 type QueryConfig = 
     {
-        CreateConnection    : unit -> DbConnection
-        Executor            : Queries.ICommandExecutor
+        CreateConnection    : unit -> IDbConnection
         ParamBuilders       : ParamsImpl.IBuilder list
         OutParamBuilders    : OutParamsImpl.IBuilder list
         RowBuilders         : RowsImpl.IBuilder list
@@ -44,7 +20,6 @@ type QueryConfig =
     with static member Default(createConnection): QueryConfig = 
             {
                 CreateConnection    = createConnection
-                Executor            = Queries.DefaultExecutor()
                 ParamBuilders       = ParamsImpl.getDefaultBuilders()
                 OutParamBuilders    = OutParamsImpl.getDefaultBuilders()
                 RowBuilders         = RowsImpl.getDefaultBuilders()
@@ -57,19 +32,19 @@ type QueryBuilder(config: QueryConfig) =
 
     let compileTimeErrorLog = if config.LogCompileTimeErrors then Some (ref<CompileTimeErrorLog> []) else None
 
-    let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: DbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
+    let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         use connection = config.CreateConnection()
-        config.Executor.OpenConnection(connection)
+        connection.Open()
         use command = connection.CreateCommand()
         command.CommandType <- commandType
         command.CommandText <- commandText
         setParams(command)
-        use prototype = config.Executor.Execute(command, CommandBehavior.SchemaOnly)
+        use prototype = command.ExecuteReader(CommandBehavior.SchemaOnly)
         resultReaderBuilder(prototype)
 
-    let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: DbCommand -> unit) = 
+    let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
-            use command = config.Executor.CreateCommand(provider.Connection)
+            use command = provider.Connection.CreateCommand()
             command.CommandType <- CommandType.Text
             command.CommandText <- commandText
             command.Transaction <- provider.Transaction
@@ -77,11 +52,11 @@ type QueryBuilder(config: QueryConfig) =
             | Some timeout -> command.CommandTimeout <- timeout
             | None -> ()
             setParams(command)
-            use! dataReader = config.Executor.ExecuteAsync(command, CommandBehavior.Default)
+            use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default)
             return resultReader.Read(dataReader)
         }
 
-    let executeProcedure (provider: IConnector, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: DbCommand -> unit) = 
+    let executeProcedure (provider: IConnector, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
             use command = provider.Connection.CreateCommand()
             command.CommandType <- CommandType.StoredProcedure
@@ -89,7 +64,7 @@ type QueryBuilder(config: QueryConfig) =
             command.Transaction <- provider.Transaction
             setParams(command)
             outParamGetter.Create(command)
-            use! dataReader = config.Executor.ExecuteAsync(command, CommandBehavior.Default) 
+            use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default) 
             return resultReader.Read(dataReader), outParamGetter.Get(command)
         }
 
@@ -104,7 +79,7 @@ type QueryBuilder(config: QueryConfig) =
         | None ->
             raise <| CompileTimeException($"Cannot compile query in {sourcePath}, line: {sourceLine}", ex)
 
-    new(createConnection: unit -> DbConnection) = 
+    new(createConnection: unit -> IDbConnection) = 
         QueryBuilder(QueryConfig.Default(createConnection))
 
     member __.Config = config
@@ -155,7 +130,7 @@ type QueryBuilder(config: QueryConfig) =
                 let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
                 let resultReader = executePrototypeQuery(CommandType.Text, commandText, (fun cmd -> paramSetter1.SetArtificial cmd; paramSetter2.SetArtificial cmd), createResultReader')
 
-                let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: DbCommand) = 
+                let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: IDbCommand) = 
                     paramSetter1.SetValue(parameters1, command) 
                     paramSetter2.SetValue(parameters2, command)
 

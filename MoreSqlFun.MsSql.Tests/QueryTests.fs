@@ -15,17 +15,18 @@ module QueryTests =
     [<Fact>]
     let ``Procedures``() = 
 
-        let executor = setupCommandOutParams
-                        [   "userId", box 1
-                            "name", box "jacentino"
-                            "email", box "jacentino@gmail.com"
-                            "created", box (DateTime(2023, 1, 1))
-                            "ret_val", box 5
-                        ]
+        let createConnection() = 
+            setupCommandOutParams
+                [   "userId", box 1
+                    "name", box "jacentino"
+                    "email", box "jacentino@gmail.com"
+                    "created", box (DateTime(2023, 1, 1))
+                    "ret_val", box 5
+                ]
 
-        let connector = new Connector(new SqlConnection(), null)
+        let connector = new Connector(createConnection(), null)
 
-        let qb = QueryBuilder ({ QueryConfig.MsSqlDefault(fun () -> new SqlConnection()) with Executor = executor })
+        let qb = QueryBuilder (QueryConfig.MsSqlDefault(createConnection))
                
         let query = qb.Proc(Params.Simple<int> "id") (OutParams.ReturnAnd<User>("ret_val", "user")) Results.Unit "getUser"
 
@@ -45,10 +46,11 @@ module QueryTests =
     [<Fact>]
     let ``Record seq - using TVP`` () =
     
-        let executor = createCommandExecutorMock [] []
+        let createConnection() = createConnectionMock [] //[]
 
         let createConnection () = 
-            createConnectionMock                         
+            createConnectionMock              
+                []
                 [
                     [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
                     [
@@ -59,8 +61,8 @@ module QueryTests =
                     ]                            
                 ]
 
-        let connector = new Connector(new SqlConnection(), null)
-        let qb = QueryBuilder({ QueryConfig.MsSqlDefault(fun () -> new SqlConnection()) with Executor = executor; ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection) })
+        let connector = new Connector(createConnection(), null)
+        let qb = QueryBuilder({ QueryConfig.MsSqlDefault(createConnection) with ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection) })
         let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"
