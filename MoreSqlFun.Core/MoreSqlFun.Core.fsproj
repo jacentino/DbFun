@@ -14,10 +14,10 @@
     <Compile Include="Params.fs" />
     <Compile Include="OutParams.fs" />
     <Compile Include="Row.fs" />
+    <Compile Include="Executor.fs" />
     <Compile Include="Results.fs" />
     <Compile Include="Connector.fs" />
     <Compile Include="Diagnostics.fs" />
-    <Compile Include="Executor.fs" />
     <Compile Include="Query.fs" />
   </ItemGroup>
 

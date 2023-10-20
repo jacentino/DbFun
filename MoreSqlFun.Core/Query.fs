@@ -53,7 +53,7 @@ type QueryBuilder(config: QueryConfig) =
             | None -> ()
             setParams(command)
             use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default)
-            return resultReader.Read(dataReader)
+            return! resultReader.Read(dataReader)
         }
 
     let executeProcedure (provider: IConnector, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
@@ -65,7 +65,8 @@ type QueryBuilder(config: QueryConfig) =
             setParams(command)
             outParamGetter.Create(command)
             use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default) 
-            return resultReader.Read(dataReader), outParamGetter.Get(command)
+            let! result = resultReader.Read(dataReader)
+            return result, outParamGetter.Get(command)
         }
 
     let handleException (sourcePath: string, sourceLine: int, ex: exn) = 

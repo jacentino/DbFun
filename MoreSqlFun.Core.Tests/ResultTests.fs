@@ -26,7 +26,7 @@ module ResultTests =
 
         let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.One<User>("") (builderParams)
-        let value = result.Read(reader)
+        let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
                 {
@@ -54,7 +54,7 @@ module ResultTests =
         let builderParams = provider :> IRowGetterProvider, reader 
 
         let result = Results.Many<User>("") builderParams
-        let value = result.Read(reader) |> Seq.toList
+        let value = result.Read(reader) |> Async.RunSynchronously |> Seq.toList
 
         let expected = 
             [
@@ -87,7 +87,7 @@ module ResultTests =
 
         let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.TryOne<User>("") builderParams
-        let value = result.Read(reader)
+        let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
                 {
@@ -110,7 +110,7 @@ module ResultTests =
 
         let builderParams = provider :> IRowGetterProvider, reader 
         let result = Results.TryOne<User>("") builderParams
-        let value = result.Read(reader)
+        let value = result.Read(reader) |> Async.RunSynchronously
 
         Assert.Equal(None, value)
 
@@ -139,7 +139,7 @@ module ResultTests =
                 Results.Many (Rows.Tuple<int, string>("roleId", "name")))        
                 builderParams
         
-        let user, roles = result.Read(regular) 
+        let user, roles = result.Read(regular) |> Async.RunSynchronously
         
         let expected = 
                 {
@@ -183,7 +183,7 @@ module ResultTests =
             ) |> Results.Map (fun (u, r) -> { userId = u.userId; name = u.name; email = u.email; created = u.created; roles = r |> Seq.map snd |> List.ofSeq })
             ) builderParams
 
-        let value = result.Read(regular)
+        let value = result.Read(regular) |> Async.RunSynchronously
 
         let expected = 
                 {

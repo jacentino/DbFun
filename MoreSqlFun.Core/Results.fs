@@ -6,20 +6,24 @@ open System.Linq.Expressions
 open System.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
-
+open MoreSqlFun.Core
 
 type IResultReader<'Result> = 
-    abstract member Read: IDataReader -> 'Result
+    abstract member Read: IDataReader -> Async<'Result>
 
 module MultipleResults = 
 
     type IAdvancer = 
         abstract member Advance: IDataReader -> unit
+        abstract member AdvanceAsync: IDataReader -> Async<unit>
 
     let (<*>) (multiple: IRowGetterProvider * IDataReader -> IResultReader<'Result -> 'Next>) (resultBuilder: IRowGetterProvider * IDataReader -> IResultReader<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Next> =        
         
         let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
             (combiner :?> IAdvancer).Advance(reader)
+
+        let advanceAsync(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
+            (combiner :?> IAdvancer).AdvanceAsync(reader)
 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let combiner = multiple(provider, prototype)
@@ -27,14 +31,22 @@ module MultipleResults =
             let resultReader = resultBuilder(provider, prototype)
             { new IResultReader<'Next> with
                 member __.Read(reader: IDataReader) = 
-                    let combine = combiner.Read(reader)
-                    advance(combiner, reader)
-                    let result = resultReader.Read(reader)
-                    combine(result)                    
+                    async {
+                        let! combine = combiner.Read(reader)
+                        do! advanceAsync(combiner, reader)
+                        let! result = resultReader.Read(reader)
+                        return combine(result)                    
+                    }
               interface IAdvancer with
                 member __.Advance(reader: IDataReader) = 
                     if not(reader.NextResult()) then
                         failwith "Not enough results"                         
+                member __.AdvanceAsync(reader: IDataReader) = 
+                    async {
+                        let! exists = Executor.nextResultAsync(reader)
+                        if not exists then
+                            failwith "Not enough results"                         
+                    }
             }
         
     type Results() = 
@@ -42,9 +54,10 @@ module MultipleResults =
         static member Combine(combiner: 'ResultBuilder) =         
             fun (_: IRowGetterProvider, _: IDataReader)  ->
                 { new IResultReader<'ResultBuilder> with
-                    member __.Read(_: IDataReader) = combiner
+                    member __.Read(_: IDataReader) = async.Return combiner
                   interface IAdvancer with
                     member __.Advance(_: IDataReader) = ()
+                    member __.AdvanceAsync(_: IDataReader) = async.Return ()
                 } 
 
 
@@ -54,10 +67,17 @@ type Results() =
         if not (reader.NextResult()) then
             failwithf "Not enough results when reading %A" resultTypes
 
+    static let advanceAsync (resultTypes: Type seq) (reader: IDataReader) = 
+        async {
+            let! exists = Executor.nextResultAsync(reader)
+            if not exists then
+                failwithf "Not enough results when reading %A" resultTypes
+        }
+
     static member private EmptyReader<'Result>() =
         { new IResultReader<'Result> with
-                member __.Read(_: IDataReader): 'Result = 
-                    Unchecked.defaultof<'Result>
+                member __.Read(_: IDataReader): Async<'Result> = 
+                    async.Return Unchecked.defaultof<'Result>
         }        
 
     static member Unit: IRowGetterProvider * IDataReader -> IResultReader<unit> = 
@@ -69,7 +89,7 @@ type Results() =
             { new IResultReader<'Result> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
-                        getter.Get(reader)    
+                        async.Return (getter.Get(reader))
                     else
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
@@ -80,7 +100,7 @@ type Results() =
             { new IResultReader<'Result> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
-                        getter.Get(reader)    
+                        async.Return (getter.Get(reader))
                     else
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
@@ -91,9 +111,9 @@ type Results() =
             { new IResultReader<'Result option> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
-                        Some <| getter.Get(reader)    
+                        async.Return (Some <| getter.Get(reader))
                     else
-                        None
+                        async.Return None
             }
 
     static member TryOne<'Result> (name: string): IRowGetterProvider * IDataReader -> IResultReader<'Result option>  = 
@@ -102,9 +122,9 @@ type Results() =
             { new IResultReader<'Result option> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
-                        Some <| getter.Get(reader)    
+                        async.Return (Some <| getter.Get(reader))
                     else
-                        None
+                        async.Return None
             }
 
     static member Many<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result seq> = 
@@ -112,9 +132,10 @@ type Results() =
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result seq> with
                 member __.Read(reader: IDataReader) = 
-                    [ while reader.Read() do
-                        getter.Get(reader)
-                    ]
+                    async.Return 
+                        [ while reader.Read() do
+                            getter.Get(reader)
+                        ]
             }
 
     static member Many<'Result> (name: string): IRowGetterProvider * IDataReader -> IResultReader<'Result seq> = 
@@ -122,9 +143,10 @@ type Results() =
             let getter = provider.Getter<'Result>(name, prototype)
             { new IResultReader<'Result seq> with
                 member __.Read(reader: IDataReader) = 
-                    [ while reader.Read() do
-                        getter.Get(reader)
-                    ]
+                    async.Return 
+                        [ while reader.Read() do
+                            getter.Get(reader)
+                        ]
             }
 
     static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
@@ -166,16 +188,17 @@ type Results() =
             builder2: IRowGetterProvider * IDataReader -> IResultReader<'Result2>)
             : IRowGetterProvider * IDataReader -> IResultReader<'Result1 * 'Result2> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
-            let advance = advance [ typeof<'Result1>; typeof<'Result2> ]
             let reader1 = builder1(provider, prototype)
-            advance(prototype)
+            advance [ typeof<'Result1>; typeof<'Result2> ] prototype
             let reader2 = builder2(provider, prototype)
             { new IResultReader<'Result1 * 'Result2> with
                 member __.Read(reader: IDataReader) = 
-                    let result1 = reader1.Read(reader)
-                    advance(reader)
-                    let result2 = reader2.Read(reader)
-                    result1, result2
+                    async {
+                        let! result1 = reader1.Read(reader)
+                        do! advanceAsync [ typeof<'Result1>; typeof<'Result2> ] reader
+                        let! result2 = reader2.Read(reader)
+                        return result1, result2
+                    }
             }
             
     static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: IRowGetterProvider * IDataReader -> IResultReader<'Source>): IRowGetterProvider * IDataReader -> IResultReader<'Target> = 
@@ -183,8 +206,10 @@ type Results() =
             let srcReader = source(provider, prototype)
             { new IResultReader<'Target> with
                 member __.Read(reader: IDataReader) = 
-                    let result = srcReader.Read(reader)
-                    mapper(result)
+                    async {
+                        let! result = srcReader.Read(reader)
+                        return mapper(result)
+                    }
             }
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 seq -> 'Result1): 
@@ -194,17 +219,19 @@ type Results() =
         fun (builder2: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
             (builder1: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
             (provider: IRowGetterProvider, prototype: IDataReader) ->
-                let advance = advance [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ]
                 let reader1 = builder1(provider, prototype)
-                advance(prototype)
+                advance [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ] prototype
                 let reader2 = builder2(provider, prototype)
                 { new IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> with
                     member __.Read(reader: IDataReader) = 
-                        let result1 = reader1.Read(reader) 
-                        advance(reader)
-                        let result2 = reader2.Read(reader) |> Seq.groupBy (fun (k, r) -> k.Foreign) |> readOnlyDict
-                        let merged = result1 |> Seq.map (fun (k, r1) -> k, merge(r1, result2.TryGetValue k.Primary |> (function (true, r2s) -> r2s |> Seq.map snd | (false, _) -> Seq.empty)))
-                        merged
+                        async {
+                            let! result1 = reader1.Read(reader) 
+                            do! advanceAsync [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ] reader
+                            let! result2 = reader2.Read(reader) 
+                            let result2' = result2 |> Seq.groupBy (fun (k, r) -> k.Foreign) |> readOnlyDict
+                            let merged = result1 |> Seq.map (fun (k, r1) -> k, merge(r1, result2'.TryGetValue k.Primary |> (function (true, r2s) -> r2s |> Seq.map snd | (false, _) -> Seq.empty)))
+                            return merged
+                        }
                 }
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 list -> 'Result1): 
