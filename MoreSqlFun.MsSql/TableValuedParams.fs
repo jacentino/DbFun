@@ -10,6 +10,8 @@ type ITVParamSetter<'Arg> = GenericSetters.ISetter<SqlDataRecord, 'Arg>
 
 type ITVParamSetterProvider = GenericSetters.ISetterProvider<SqlDataRecord, SqlDataRecord>
 
+type BuildTVParamSetter<'Arg> = ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Arg>
+
 module TableValuedParamsImpl = 
 
     type IBuilder = GenericSetters.IBuilder<SqlDataRecord, SqlDataRecord>

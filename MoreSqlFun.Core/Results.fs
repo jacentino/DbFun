@@ -11,13 +11,15 @@ open MoreSqlFun.Core
 type IResultReader<'Result> = 
     abstract member Read: IDataReader -> Async<'Result>
 
+type BuildResultReader<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
+
 module MultipleResults = 
 
     type IAdvancer = 
         abstract member Advance: IDataReader -> unit
         abstract member AdvanceAsync: IDataReader -> Async<unit>
 
-    let (<*>) (multiple: IRowGetterProvider * IDataReader -> IResultReader<'Result -> 'Next>) (resultBuilder: IRowGetterProvider * IDataReader -> IResultReader<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Next> =        
+    let (<*>) (multiple: BuildResultReader<'Result -> 'Next>) (resultBuilder: BuildResultReader<'Result>): BuildResultReader<'Next> =        
         
         let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
             (combiner :?> IAdvancer).Advance(reader)
@@ -80,7 +82,7 @@ type Results() =
                     async.Return Unchecked.defaultof<'Result>
         }        
 
-    static member Unit: IRowGetterProvider * IDataReader -> IResultReader<unit> = 
+    static member Unit: BuildResultReader<unit> = 
         fun (_: IRowGetterProvider, _: IDataReader) -> Results.EmptyReader<unit>()
             
     static member One<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result> = 
@@ -94,7 +96,7 @@ type Results() =
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
 
-    static member One<'Result> (name: string): IRowGetterProvider * IDataReader -> IResultReader<'Result> = 
+    static member One<'Result> (name: string): BuildResultReader<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = provider.Getter(name, prototype)
             { new IResultReader<'Result> with
@@ -105,7 +107,7 @@ type Results() =
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
 
-    static member TryOne<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result option> = 
+    static member TryOne<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result option> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result option> with
@@ -116,7 +118,7 @@ type Results() =
                         async.Return None
             }
 
-    static member TryOne<'Result> (name: string): IRowGetterProvider * IDataReader -> IResultReader<'Result option>  = 
+    static member TryOne<'Result> (name: string): BuildResultReader<'Result option>  = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter(name, prototype)
             { new IResultReader<'Result option> with
@@ -127,7 +129,7 @@ type Results() =
                         async.Return None
             }
 
-    static member Many<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result seq> = 
+    static member Many<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result seq> with
@@ -138,7 +140,7 @@ type Results() =
                         ]
             }
 
-    static member Many<'Result> (name: string): IRowGetterProvider * IDataReader -> IResultReader<'Result seq> = 
+    static member Many<'Result> (name: string): BuildResultReader<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter<'Result>(name, prototype)
             { new IResultReader<'Result seq> with
@@ -152,41 +154,31 @@ type Results() =
     static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
         Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, resultName))
 
-    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, result))
 
-    static member Keyed<'Primary, 'Foreign, 'Result>(
-            primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, 
-            foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, 
-            result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member Keyed<'Primary, 'Foreign, 'Result>(primary: BuildRowGetter<'Primary>, foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primary, foreign, result))
 
     static member PKeyed<'Primary, 'Result>(primaryName: string, resultName: string) = 
         Results.Many(Rows.PKeyed<'Primary, 'Result>(primaryName, resultName))
 
-    static member PKeyed<'Primary, 'Result>(primaryName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primaryName: string, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.PKeyed<'Primary, 'Result>(primaryName, result))
 
-    static member PKeyed<'Primary, 'Result>(
-            primary: IRowGetterProvider * IDataRecord -> IRowGetter<'Primary>, 
-            result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primary: BuildRowGetter<'Primary>, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.PKeyed<'Primary, 'Result>(primary, result))
 
     static member FKeyed<'Foreign, 'Result>(foreignName: string, resultName: string) = 
         Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreignName, resultName))
 
-    static member FKeyed<'Foreign, 'Result>(foreignName: string, result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreignName: string, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreignName, result))
 
-    static member FKeyed<'Foreign, 'Result>(
-            foreign: IRowGetterProvider * IDataRecord -> IRowGetter<'Foreign>, 
-            result: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
         Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreign, result))
 
-    static member Multiple<'Result1, 'Result2>(
-            builder1: IRowGetterProvider * IDataReader -> IResultReader<'Result1>, 
-            builder2: IRowGetterProvider * IDataReader -> IResultReader<'Result2>)
-            : IRowGetterProvider * IDataReader -> IResultReader<'Result1 * 'Result2> = 
+    static member Multiple<'Result1, 'Result2>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>): BuildResultReader<'Result1 * 'Result2> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let reader1 = builder1(provider, prototype)
             advance [ typeof<'Result1>; typeof<'Result2> ] prototype
@@ -201,7 +193,7 @@ type Results() =
                     }
             }
             
-    static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: IRowGetterProvider * IDataReader -> IResultReader<'Source>): IRowGetterProvider * IDataReader -> IResultReader<'Target> = 
+    static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: BuildResultReader<'Source>): BuildResultReader<'Target> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let srcReader = source(provider, prototype)
             { new IResultReader<'Target> with
@@ -213,11 +205,11 @@ type Results() =
             }
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 seq -> 'Result1): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
-        fun (builder2: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
-            (builder1: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+        fun (builder2: BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
+            (builder1: BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
             (provider: IRowGetterProvider, prototype: IDataReader) ->
                 let reader1 = builder1(provider, prototype)
                 advance [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ] prototype
@@ -235,15 +227,15 @@ type Results() =
                 }
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 list -> 'Result1): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge(r1, r2s |> Seq.toList))
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 array -> 'Result1): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge(r1, r2s |> Seq.toArray))
 
     static member private GetPropChain(expr: Expr) = 
@@ -273,23 +265,23 @@ type Results() =
         Expression.Lambda<Func<'Result1, 'Result2, 'Result1>>(construct, result1Param, result2Param).Compile()
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 list>): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 array>): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toArray))
 
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(target: Expr<'Result2 seq>): 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) -> 
-            (IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) -> 
-            IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
 

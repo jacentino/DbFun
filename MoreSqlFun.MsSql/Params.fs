@@ -153,20 +153,20 @@ type Params() =
         | Some builder -> builder :?> TVPCollectionBuilder
         | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
 
-    static member TableValuedSeq<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record seq> =
+    static member TableValuedSeq<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(name, tvpName)
 
-    static member TableValuedList<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record list> =
+    static member TableValuedList<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(name, tvpName)
 
-    static member TableValuedArray<'Record>(name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record array> =
+    static member TableValuedArray<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(name, tvpName)
 
-    static member TableValuedSeq<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record seq> =
+    static member TableValuedSeq<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(createTvpSetter, name, tvpName)
 
-    static member TableValuedList<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record list> =
+    static member TableValuedList<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(createTvpSetter, name, tvpName)
 
-    static member TableValuedArray<'Record>(createTvpSetter: ITVParamSetterProvider * SqlDataRecord -> ITVParamSetter<'Record>, name: string, ?tvpName: string): IParamSetterProvider * unit -> IParamSetter<'Record array> =
+    static member TableValuedArray<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(createTvpSetter, name, tvpName)

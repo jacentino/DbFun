@@ -41,10 +41,10 @@ type OutParams() =
     // TODO: should be possible to solve it better way
     static let returnBuilder = OutParams.ReturnBuilder() :> OutParamsImpl.IBuilder
 
-    static member Return(name: string): IOutParamGetterProvider * unit -> IOutParamGetter<int> = 
+    static member Return(name: string): BuildOutParamGetter<int> = 
         fun (provider, _) -> returnBuilder.Build<int>(name, provider, ())
 
-    static member ReturnAnd<'Arg>(retName: string, argName: string): IOutParamGetterProvider * unit -> IOutParamGetter<int * 'Arg> =
+    static member ReturnAnd<'Arg>(retName: string, argName: string): BuildOutParamGetter<int * 'Arg> =
         fun (provider, _) -> 
             let retp = fun (provider, ()) -> returnBuilder.Build<int>(retName, provider, ())
             let outp = OutParams.Simple<'Arg>(argName)

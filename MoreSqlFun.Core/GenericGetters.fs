@@ -27,6 +27,7 @@ module GenericGetters =
     type IBuilderEx<'Prototype, 'DbObject> = 
         abstract member Build: string * IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>
 
+    type BuildGetter<'Prototype, 'DbObject, 'Result> = IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>
 
     type IOverride<'Prototype, 'DbObject> = 
         abstract member IsRelevant: string -> bool
@@ -329,56 +330,59 @@ module GenericGetters =
 
     type GenericGetterBuilder<'Prototype, 'DbObject>() =
 
-        static member Unit (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, unit> = 
-            provider.Getter<unit>("", prototype)
+        static member Unit: BuildGetter<'Prototype, 'DbObject, Unit> = 
+            fun (provider, prototype) -> provider.Getter<unit>("", prototype)
 
-        static member Simple<'Result>(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
-            provider.Getter<'Result>(name, prototype)
+        static member Simple<'Result>(name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
+            fun (provider, prototype) -> provider.Getter<'Result>(name, prototype)
 
-        static member Int(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, int> = 
-            provider.Getter<int>(name, prototype)
+        static member Int(name: string): BuildGetter<'Prototype, 'DbObject, int> = 
+            fun (provider, prototype) -> provider.Getter<int>(name, prototype)
 
-        static member Int64(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, int64> = 
-            provider.Getter<int64>(name, prototype)
+        static member Int64(name: string): BuildGetter<'Prototype, 'DbObject, int64> = 
+            fun (provider, prototype) -> provider.Getter<int64>(name, prototype)
 
-        static member Byte(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, byte> = 
-            provider.Getter<byte>(name, prototype)
+        static member Byte(name: string): BuildGetter<'Prototype, 'DbObject, byte> = 
+            fun (provider, prototype) -> provider.Getter<byte>(name, prototype)
 
-        static member Char(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, char> = 
-            provider.Getter<char>(name, prototype)
+        static member Char(name: string): BuildGetter<'Prototype, 'DbObject, char> = 
+            fun (provider, prototype) -> provider.Getter<char>(name, prototype)
 
-        static member String(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, string> = 
-            provider.Getter<string>(name, prototype)
+        static member String(name: string): BuildGetter<'Prototype, 'DbObject, string> = 
+            fun (provider, prototype) -> provider.Getter<string>(name, prototype)
 
-        static member DateTime(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, DateTime> = 
-            provider.Getter<DateTime>(name, prototype)
+        static member DateTime(name: string): BuildGetter<'Prototype, 'DbObject, DateTime> = 
+            fun (provider, prototype) -> provider.Getter<DateTime>(name, prototype)
 
-        static member DateOnly(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, DateOnly> = 
-            provider.Getter<DateOnly>(name, prototype)
+        static member DateOnly(name: string): BuildGetter<'Prototype, 'DbObject, DateOnly> = 
+            fun (provider, prototype) -> provider.Getter<DateOnly>(name, prototype)
 
-        static member TimeOnly(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, TimeOnly> = 
-            provider.Getter<TimeOnly>(name, prototype)
+        static member TimeOnly(name: string): BuildGetter<'Prototype, 'DbObject, TimeOnly> = 
+            fun (provider, prototype) -> provider.Getter<TimeOnly>(name, prototype)
 
-        static member Decimal(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, decimal> = 
-            provider.Getter<decimal>(name, prototype)
+        static member Decimal(name: string): BuildGetter<'Prototype, 'DbObject, decimal> = 
+            fun (provider, prototype) -> provider.Getter<decimal>(name, prototype)
 
-        static member Float(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, float> = 
-            provider.Getter<float>(name, prototype)
+        static member Float(name: string): BuildGetter<'Prototype, 'DbObject, float> = 
+            fun (provider, prototype) -> provider.Getter<float>(name, prototype)
 
-        static member Double(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, double> = 
-            provider.Getter<double>(name, prototype)
+        static member Double(name: string): BuildGetter<'Prototype, 'DbObject, double> = 
+            fun (provider, prototype) -> provider.Getter<double>(name, prototype)
 
-        static member Bool(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, bool> = 
-            provider.Getter<bool>(name, prototype)
+        static member Bool(name: string): BuildGetter<'Prototype, 'DbObject, bool> = 
+            fun (provider, prototype) -> provider.Getter<bool>(name, prototype)
 
-        static member ByteArray(name: string) (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, byte array> = 
-            provider.Getter<byte array>(name, prototype)
+        static member Guid(name: string): BuildGetter<'Prototype, 'DbObject, Guid> = 
+            fun (provider, prototype) -> provider.Getter<Guid>(name, prototype)
 
-        static member Optional<'Result>(name: string):  IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result option> =            
+        static member ByteArray(name: string): BuildGetter<'Prototype, 'DbObject, byte array> = 
+            fun (provider, prototype) -> provider.Getter<byte array>(name, prototype)
+
+        static member Optional<'Result>(name: string):  BuildGetter<'Prototype, 'DbObject, 'Result option> =            
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
                 provider.Getter<'Result option>(name, prototype)
 
-        static member Optional<'Result>(underlying: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result option> = 
+        static member Optional<'Result>(underlying: BuildGetter<'Prototype, 'DbObject, 'Result>): BuildGetter<'Prototype, 'DbObject, 'Result option> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->           
                 let getter = underlying(provider, prototype)
                 { new IGetter<'DbObject, 'Result option> with
@@ -394,7 +398,7 @@ module GenericGetters =
                 }
 
 
-        static member Tuple<'Result1, 'Result2>(name1: string, name2: string): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result1 * 'Result2> =
+        static member Tuple<'Result1, 'Result2>(name1: string, name2: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2> =
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = provider.Getter<'Result1>(name1, prototype)
                 let getter2 = provider.Getter<'Result2>(name2, prototype)
@@ -409,9 +413,9 @@ module GenericGetters =
                 }
 
         static member Tuple<'Result1, 'Result2>(
-                createGetter1: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result1>, 
-                createGetter2: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result2>)
-                : IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result1 * 'Result2> = 
+                createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
+                createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>)
+                : BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = createGetter1(provider, prototype)
                 let getter2 = createGetter2(provider, prototype)
@@ -425,7 +429,7 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
-        static member Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result> = 
+        static member Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let provider = DerivedGetterProvider<'Prototype, 'DbObject>(provider, overrides)
                 match provider.GetBuilder(typeof<'Result>) with
@@ -438,5 +442,5 @@ module GenericGetters =
         static member Record<'Result>(?prefix: string): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result> = 
             GenericGetterBuilder<'Prototype, 'DbObject>.Record<'Result>(defaultArg prefix "", [||])
 
-        static member Record<'Result>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result> = 
+        static member Record<'Result>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             GenericGetterBuilder<'Prototype, 'DbObject>.Record<'Result>("", overrides)

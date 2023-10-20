@@ -27,6 +27,8 @@ module GenericSetters =
     type IBuilderEx<'Prototype, 'DbObject> = 
         abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
+    type BuildSetter<'Prototype, 'DbObject, 'Arg> = ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
+
     type IOverride<'Prototype, 'DbObject> = 
         abstract member IsRelevant: string -> bool
         abstract member IsFinal: bool
@@ -313,52 +315,55 @@ module GenericSetters =
 
     type GenericSetterBuilder<'Prototype, 'DbObject>() = 
 
-        static member Unit (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<unit>("", prototype)
+        static member Unit: BuildSetter<'Prototype, 'DbObject, Unit> = 
+            fun (provider, prototype) -> provider.Setter<unit>("", prototype)
 
-        static member Simple<'Arg> (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<'Arg>(name, prototype)
+        static member Simple<'Arg> (name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
+            fun (provider, prototype) -> provider.Setter<'Arg>(name, prototype)
 
-        static member Int (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<int>(name, prototype)
+        static member Int (name: string): BuildSetter<'Prototype, 'DbObject, int> = 
+            fun (provider, prototype) -> provider.Setter<int>(name, prototype)
 
-        static member Int64 (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<int64>(name, prototype)
+        static member Int64 (name: string): BuildSetter<'Prototype, 'DbObject, int64> = 
+            fun (provider, prototype) -> provider.Setter<int64>(name, prototype)
 
-        static member Byte (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<byte>(name, prototype)
+        static member Byte (name: string): BuildSetter<'Prototype, 'DbObject, byte> = 
+            fun (provider, prototype) -> provider.Setter<byte>(name, prototype)
 
-        static member Char (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<char>(name, prototype)
+        static member Char (name: string): BuildSetter<'Prototype, 'DbObject, char> = 
+            fun (provider, prototype) -> provider.Setter<char>(name, prototype)
 
-        static member String (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<string>(name, prototype)
+        static member String (name: string): BuildSetter<'Prototype, 'DbObject, string> = 
+            fun (provider, prototype) -> provider.Setter<string>(name, prototype)
 
-        static member DateTime (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<DateTime>(name, prototype)
+        static member DateTime (name: string): BuildSetter<'Prototype, 'DbObject, DateTime> = 
+            fun (provider, prototype) -> provider.Setter<DateTime>(name, prototype)
 
-        static member DateOnly (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<DateOnly>(name, prototype)
+        static member DateOnly (name: string): BuildSetter<'Prototype, 'DbObject, DateOnly> = 
+            fun (provider, prototype) -> provider.Setter<DateOnly>(name, prototype)
 
-        static member TimeOnly (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<TimeOnly>(name, prototype)
+        static member TimeOnly (name: string): BuildSetter<'Prototype, 'DbObject, TimeOnly> = 
+            fun (provider, prototype) -> provider.Setter<TimeOnly>(name, prototype)
 
-        static member Decimal (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<decimal>(name, prototype)
+        static member Decimal (name: string): BuildSetter<'Prototype, 'DbObject, decimal> = 
+            fun (provider, prototype) -> provider.Setter<decimal>(name, prototype)
 
-        static member Float (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<float>(name, prototype)
+        static member Float (name: string): BuildSetter<'Prototype, 'DbObject, float> = 
+            fun (provider, prototype) -> provider.Setter<float>(name, prototype)
 
-        static member Double (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<double>(name, prototype)
+        static member Double (name: string): BuildSetter<'Prototype, 'DbObject, double> = 
+            fun (provider, prototype) -> provider.Setter<double>(name, prototype)
 
-        static member Bool (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<bool>(name, prototype)
+        static member Bool (name: string): BuildSetter<'Prototype, 'DbObject, bool> = 
+            fun (provider, prototype) -> provider.Setter<bool>(name, prototype)
 
-        static member ByteArray (name: string) (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-            provider.Setter<byte array>(name, prototype)
+        static member Guid (name: string): BuildSetter<'Prototype, 'DbObject, Guid> = 
+            fun (provider, prototype) -> provider.Setter<Guid>(name, prototype)
 
-        static member Optional<'Arg> (createUnderlyingSetter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>) = 
+        static member ByteArray (name: string): BuildSetter<'Prototype, 'DbObject, byte array> = 
+            fun (provider, prototype) -> provider.Setter<byte array>(name, prototype)
+
+        static member Optional<'Arg> (createUnderlyingSetter: BuildSetter<'Prototype, 'DbObject, 'Arg>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let underlyingSetter = createUnderlyingSetter(provider, prototype)
                 { new ISetter<'DbObject, 'Arg option> with
@@ -373,8 +378,8 @@ module GenericSetters =
                 }
 
         static member Tuple<'Arg1, 'Arg2>(
-                createItem1Setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg1>, 
-                createItem2Setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg2>) = 
+                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)
@@ -407,9 +412,9 @@ module GenericSetters =
                 }
 
         static member Tuple<'Arg1, 'Arg2, 'Arg3>(
-                createItem1Setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg1>, 
-                createItem2Setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg2>, 
-                createItem3Setter: ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg3>) = 
+                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)
