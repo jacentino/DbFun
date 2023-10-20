@@ -34,7 +34,7 @@ module OutParamsImpl =
                 
             member __.CanBuild(argType: Type): bool = Types.isSimpleType argType
                     
-            member __.Build(_, name: string) (): IOutParamGetter<'Result> = 
+            member __.Build(name: string, _, ()): IOutParamGetter<'Result> = 
                 { new IOutParamGetter<'Result> with
                     member __.Create (command: IDbCommand) = 
                         let param = command.CreateParameter()

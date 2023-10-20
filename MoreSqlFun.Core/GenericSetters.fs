@@ -22,10 +22,10 @@ module GenericSetters =
     and
         IBuilder<'Prototype, 'DbObject> = 
         abstract member CanBuild: Type -> bool
-        abstract member Build: ISetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> ISetter<'DbObject, 'Arg>
+        abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
     type IBuilderEx<'Prototype, 'DbObject> = 
-        abstract member Build: ISetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> ISetter<'DbObject, 'Arg>
+        abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
     type IOverride<'Prototype, 'DbObject> = 
         abstract member IsRelevant: string -> bool
@@ -60,7 +60,7 @@ module GenericSetters =
 
         member this.GetSetter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Arg>) with
-            | Some builder -> builder.Build(this, name) prototype
+            | Some builder -> builder.Build(name, this, prototype)
             | None -> failwithf "Could not find a setter builder for type: %A" typeof<'Arg>
 
         interface ISetterProvider<'Prototype, 'DbObject> with
@@ -101,7 +101,7 @@ module GenericSetters =
 
             member __.CanBuild (argType: Type) = argType = typeof<unit>
 
-            member __.Build<'Arg> (_: ISetterProvider<'Prototype, 'DbObject>, _: string) (_: 'Prototype) = 
+            member __.Build<'Arg> (_: string, _: ISetterProvider<'Prototype, 'DbObject>, _: 'Prototype) = 
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (_: 'Arg, _: 'DbObject) = 
                         ()
@@ -118,7 +118,7 @@ module GenericSetters =
 
             member __.CanBuild (resType: Type) = Types.isCollectionType resType 
 
-            member __.Build<'Arg> (_: ISetterProvider<'Prototype, 'DbObject>, _: string) (_: 'Prototype) = 
+            member __.Build<'Arg> (_: string, _: ISetterProvider<'Prototype, 'DbObject>, _: 'Prototype) = 
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (_: 'Arg, _: 'DbObject) = 
                         ()
@@ -135,7 +135,7 @@ module GenericSetters =
 
             member __.CanBuild (argType: Type) = typeof<'Source>.IsAssignableFrom argType
 
-            member __.Build<'Arg> (provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype) = 
+            member __.Build<'Arg> (name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
                 let setter = provider.Setter<'Target>(name, prototype) 
                 let convert' = box convert :?> 'Arg -> 'Target
                 { new ISetter<'DbObject, 'Arg> with
@@ -154,7 +154,7 @@ module GenericSetters =
 
             member __.CanBuild(argType: Type): bool = argType.IsEnum && argType.GetEnumUnderlyingType() = typeof<'Underlying>
 
-            member __.Build(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<'Underlying>(name, prototype)   
                 let enumParam = Expression.Parameter(typeof<'Arg>)
                 let convert = Expression.Lambda<Func<'Arg, 'Underlying>>(Expression.Convert(enumParam, typeof<'Underlying>), enumParam).Compile()                    
@@ -179,7 +179,7 @@ module GenericSetters =
                 |> Seq.filter (fun f -> f.IsStatic) 
                 |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
 
-            member __.Build(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<string>(name, prototype)   
                 let op1 = Expression.Parameter(typeof<'Arg>)
                 let op2 = Expression.Parameter(typeof<'Arg>)
@@ -219,7 +219,7 @@ module GenericSetters =
 
             member __.CanBuild(argType: Type): bool = Types.isOptionType argType
 
-            member this.Build<'Arg>(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member this.Build<'Arg>(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let method = this.GetType().GetMethod("GetSetter")
                 let gmethod = method.MakeGenericMethod(typeof<'Arg>.GetGenericArguments().[0])
                 let assigner = gmethod.Invoke(this, [| provider; name; prototype |]) 
@@ -274,13 +274,13 @@ module GenericSetters =
 
             member __.CanBuild(argType: Type): bool = FSharpType.IsRecord(argType)
 
-            member __.Build(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let fields = FSharpType.GetRecordFields typeof<'Arg> |> Array.map (fun f -> f, f.Name)
                 FieldListAssigner.build(provider, fields, prototype)
 
         interface IBuilderEx<'Prototype, 'DbObject> with
 
-            member __.Build(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let fields = FSharpType.GetRecordFields typeof<'Arg> |> Array.map (fun f -> f, sprintf "%s%s" name f.Name)
                 FieldListAssigner.build(provider, fields, prototype)
 
@@ -291,7 +291,7 @@ module GenericSetters =
 
             member __.CanBuild(argType: Type): bool = FSharpType.IsTuple argType
 
-            member __.Build(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Arg> =                     
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> =                     
                 let fields = typeof<'Arg>.GetProperties() |> Array.mapi (fun i f -> f, sprintf "%s%d" name (i + 1))
                 FieldListAssigner.build(provider, fields, prototype)  
 
@@ -459,8 +459,8 @@ module GenericSetters =
                 match provider.GetBuilder(typeof<'Arg>) with
                 | Some builder ->
                     match builder with
-                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Arg>(provider, prefix) prototype
-                    | _ -> builder.Build<'Arg>(provider, prefix) prototype
+                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Arg>(prefix, provider, prototype)
+                    | _ -> builder.Build<'Arg>(prefix, provider, prototype)
                 | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
 
         static member Record<'Arg>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array) = 

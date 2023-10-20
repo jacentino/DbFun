@@ -41,7 +41,7 @@ module RowsImpl =
                 
             member __.CanBuild(argType: Type): bool = Types.isSimpleType argType
                     
-            member this.Build(_, name: string) (prototype: IDataRecord): IRowGetter<'Result> = 
+            member this.Build(name: string, _, prototype: IDataRecord): IRowGetter<'Result> = 
                 let ordinal = 
                     try
                         prototype.GetOrdinal(name)

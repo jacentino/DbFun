@@ -13,7 +13,7 @@ module OutParams =
                 
             member __.CanBuild(argType: Type): bool = argType = typeof<int>
                     
-            member __.Build(_, name: string) (): IOutParamGetter<'Result> = 
+            member __.Build(name: string, _, ()): IOutParamGetter<'Result> = 
                 { new IOutParamGetter<'Result> with
                     member __.Create (command: IDbCommand) = 
                         let param = command.CreateParameter()
@@ -42,11 +42,11 @@ type OutParams() =
     static let returnBuilder = OutParams.ReturnBuilder() :> OutParamsImpl.IBuilder
 
     static member Return(name: string): IOutParamGetterProvider * unit -> IOutParamGetter<int> = 
-        fun (provider, _) -> returnBuilder.Build<int>(provider, name) ()
+        fun (provider, _) -> returnBuilder.Build<int>(name, provider, ())
 
     static member ReturnAnd<'Arg>(retName: string, argName: string): IOutParamGetterProvider * unit -> IOutParamGetter<int * 'Arg> =
         fun (provider, _) -> 
-            let retp = fun (provider, ()) -> returnBuilder.Build<int>(provider, retName) ()
+            let retp = fun (provider, ()) -> returnBuilder.Build<int>(retName, provider, ())
             let outp = OutParams.Simple<'Arg>(argName)
             let createGetter = OutParams.Tuple<int, 'Arg>(retp, outp) 
             createGetter(provider, ())

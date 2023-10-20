@@ -25,7 +25,7 @@ module ParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (_, name: string) () = 
+            member this.Build<'Arg> (name: string, _, ()) = 
                 { new IParamSetter<'Arg> with
                     member __.SetValue (value: 'Arg, command: IDbCommand) = 
                         let param = command.CreateParameter()
@@ -71,7 +71,7 @@ module ParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isCollectionType argType && Types.isSimpleType (Types.getElementType argType)
 
-            member this.Build<'Arg> (provider: IParamSetterProvider, name: string) () = 
+            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, ()) = 
                 let elemType = Types.getElementType(typeof<'Arg>)
                 let elemSetter = provider.Setter(elemType, name, ())
                 let setValueMethod = 

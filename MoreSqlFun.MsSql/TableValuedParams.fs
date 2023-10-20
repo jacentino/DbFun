@@ -47,7 +47,7 @@ module TableValuedParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (_, name: string) (prototype: SqlDataRecord) = 
+            member this.Build<'Arg> (name: string, _, prototype: SqlDataRecord) = 
                 let ordinal = prototype.GetOrdinal(name)
                 let fieldType = prototype.GetFieldType(ordinal)
                 let colSetter = typedColAccessMethods |> List.tryFind (fst >> (=) fieldType) |> Option.map snd |> Option.defaultValue setValueMethod

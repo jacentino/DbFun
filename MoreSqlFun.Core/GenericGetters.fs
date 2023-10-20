@@ -22,10 +22,10 @@ module GenericGetters =
     and
         IBuilder<'Prototype, 'DbObject> = 
         abstract member CanBuild: Type -> bool
-        abstract member Build: IGetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> IGetter<'DbObject, 'Result>
+        abstract member Build: string * IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>
 
     type IBuilderEx<'Prototype, 'DbObject> = 
-        abstract member Build: IGetterProvider<'Prototype, 'DbObject> * string -> 'Prototype -> IGetter<'DbObject, 'Result>
+        abstract member Build: string * IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>
 
 
     type IOverride<'Prototype, 'DbObject> = 
@@ -60,7 +60,7 @@ module GenericGetters =
 
         member this.GetGetter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
             match builders |> Seq.tryFind (fun b -> b.CanBuild typeof<'Result>) with
-            | Some builder -> builder.Build(this, name) prototype
+            | Some builder -> builder.Build(name, this, prototype)
             | None -> failwithf "Could not find a getter builder for type: %A" typeof<'Result>
 
         interface IGetterProvider<'Prototype, 'DbObject> with
@@ -103,7 +103,7 @@ module GenericGetters =
 
             member __.CanBuild (resType: Type) = resType = typeof<unit>
 
-            member __.Build<'Result> (_: IGetterProvider<'Prototype, 'DbObject>, _: string) (_: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (_: string, _: IGetterProvider<'Prototype, 'DbObject>, _: 'Prototype): IGetter<'DbObject, 'Result> = 
                 { new IGetter<'DbObject, 'Result> with
                     member __.Get (_: 'DbObject) = 
                         Unchecked.defaultof<'Result>
@@ -120,7 +120,7 @@ module GenericGetters =
 
             member __.CanBuild (resType: Type) = Types.isCollectionType resType 
 
-            member __.Build<'Result> (_: IGetterProvider<'Prototype, 'DbObject>, _: string) (_: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (string, _: IGetterProvider<'Prototype, 'DbObject>, _: _: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let newCall = 
                     if typeof<'Result>.IsAbstract then 
                         Expression.New(typedefof<list<_>>.MakeGenericType(typeof<'Result>.GetGenericArguments().[0])) :> Expression
@@ -158,7 +158,7 @@ module GenericGetters =
 
             member __.CanBuild(resType: Type): bool = Types.isOptionType resType
                     
-            member this.Build(provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member this.Build(name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let method = this.GetType().GetMethod("CreateGetter")
                 let gmethod = method.MakeGenericMethod(typeof<'Result>.GetGenericArguments().[0])
                 let getter = gmethod.Invoke(this, [| provider; name; prototype |]) 
@@ -171,7 +171,7 @@ module GenericGetters =
 
             member __.CanBuild (resType: Type) = typeof<'Target>.IsAssignableFrom resType
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<'Source>(name, prototype) 
                 let convert' = box convert :?> 'Source -> 'Result
                 { new IGetter<'DbObject, 'Result> with
@@ -190,7 +190,7 @@ module GenericGetters =
 
             member __.CanBuild(resType: Type): bool = resType.IsEnum && resType.GetEnumUnderlyingType() = typeof<'Underlying>
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<'Underlying>(name, prototype)   
                 let underlyingParam = Expression.Parameter(typeof<'Underlying>)
                 let convert = Expression.Lambda<Func<'Underlying, 'Result>>(Expression.Convert(underlyingParam, typeof<'Result>), underlyingParam).Compile()                    
@@ -215,7 +215,7 @@ module GenericGetters =
                 |> Seq.filter (fun f -> f.IsStatic) 
                 |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<string>(name, prototype)   
                 let underlyingValues = 
                     [ for f in typeof<'Result>.GetFields() do
@@ -287,13 +287,13 @@ module GenericGetters =
 
             member __.CanBuild(resType: Type): bool = FSharpType.IsRecord(resType)
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, _) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (_, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, f.Name)
                 FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
                         
         interface IBuilderEx<'Prototype, 'DbObject> with
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, sprintf "%s%s" name f.Name)
                 FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
                         
@@ -308,7 +308,7 @@ module GenericGetters =
 
             member __.CanBuild(resType: Type): bool = FSharpType.IsTuple(resType)
 
-            member __.Build<'Result> (provider: IGetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): IGetter<'DbObject, 'Result> =                
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> =                
                 let fields = typeof<'Result>.GetProperties() |> Array.mapi (fun i f -> f.PropertyType, sprintf "%s%d" name (i + 1))
                 FieldListBuilder.build(provider, fields, newTuple (fields |> Array.map fst), prototype)
 
@@ -431,8 +431,8 @@ module GenericGetters =
                 match provider.GetBuilder(typeof<'Result>) with
                 | Some builder ->
                     match builder with
-                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(provider, prefix) prototype
-                    | _ -> builder.Build<'Result>(provider, prefix) prototype
+                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(prefix, provider, prototype)
+                    | _ -> builder.Build<'Result>(prefix, provider, prototype)
                 | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
 
         static member Record<'Result>(?prefix: string): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result> = 

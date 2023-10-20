@@ -128,7 +128,7 @@ module ParamsImpl =
             member __.CanBuild(argType: Type): bool = 
                 Types.isCollectionType argType && FSharpType.IsRecord (Types.getElementType argType)
 
-            member this.Build(_: IParamSetterProvider, name: string) (_: unit): IParamSetter<'Arg> = 
+            member this.Build(name: string, _: IParamSetterProvider, _: unit): IParamSetter<'Arg> = 
                 let elemType = Types.getElementType typeof<'Arg>
                 let createSetterName = 
                     if typeof<'Arg>.IsArray then "CreateArraySetter"
