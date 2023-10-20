@@ -96,15 +96,14 @@ type QueryBuilder(config: QueryConfig) =
         | Some log -> log.Value
         | None -> []
 
-    member __.Sql (createParamSetter: IParamSetterProvider * unit -> IParamSetter<'Params>, 
+    member __.Sql (createParamSetter: BuildParamSetter<'Params>, 
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result> =         
-        fun (createResultReader: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
+                   : BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result> =         
+        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
             try
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                        
-                let paramSetter = createParamSetter (builderParams)
+                let paramSetter = createParamSetter(provider, ())
 
                 let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
@@ -115,17 +114,16 @@ type QueryBuilder(config: QueryConfig) =
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
-    member __.Sql (createParamSetter1: IParamSetterProvider * unit -> IParamSetter<'Params1>, 
-                   createParamSetter2: IParamSetterProvider * unit -> IParamSetter<'Params2>,
+    member __.Sql (createParamSetter1: BuildParamSetter<'Params1>, 
+                   createParamSetter2: BuildParamSetter<'Params2>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
-        fun (createResultReader: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
+                   : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
+        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                        
-                let paramSetter1 = createParamSetter1(builderParams)
-                let paramSetter2 = createParamSetter2(builderParams)
+                let paramSetter1 = createParamSetter1(provider, ())
+                let paramSetter2 = createParamSetter2(provider, ())
 
                 let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
@@ -140,19 +138,17 @@ type QueryBuilder(config: QueryConfig) =
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
-    member __.Proc (paramSetter: IParamSetterProvider * unit -> IParamSetter<'Params>,
+    member __.Proc (paramSetter: BuildParamSetter<'Params>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : (IOutParamGetterProvider * unit -> IOutParamGetter<'OutParams>) -> (IRowGetterProvider * IDataReader -> IResultReader<'Result>) -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (outParamGetter: IOutParamGetterProvider * unit -> IOutParamGetter<'OutParams>) (resultReaderBuilder: IRowGetterProvider * IDataReader -> IResultReader<'Result>) (commandText: string) ->
+                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (outParamGetter: IOutParamGetterProvider * unit -> IOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let builderParams = provider :> GenericSetters.ISetterProvider<unit, IDbCommand>, ()                       
-                let paramSetter = paramSetter(builderParams)
+                let paramSetter = paramSetter(provider, ())
                         
                 let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
-                let builderParams = outParamProvider :> IOutParamGetterProvider, ()                        
-                let outParamGetter = outParamGetter(builderParams)
+                let outParamGetter = outParamGetter(outParamProvider, ())
 
                 let setArtificialParams command = 
                     paramSetter.SetArtificial(command)
