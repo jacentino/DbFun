@@ -1,7 +1,6 @@
 ﻿namespace MoreSqlFun.Core.Builders
 
 open System.Data
-open System.Data.Common
 open MoreSqlFun.Core
 open MoreSqlFun.Core.Diagnostics
 open System.Runtime.CompilerServices

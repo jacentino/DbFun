@@ -316,15 +316,15 @@ module GenericGetters =
     let getDefaultBuilders(): IBuilder<'Prototype, 'DbObject> list = 
         [
             UnitBuilder<'Prototype, 'DbObject>()
-            SequenceBuilder<'Prototype, 'DbObject>()
-            RecordBuilder<'Prototype, 'DbObject>()
-            TupleBuilder<'Prototype, 'DbObject>()
-            OptionBuilder<'Prototype, 'DbObject>()
             Converter<'Prototype, 'DbObject, DateTime, DateOnly>(fun (dateTime: DateTime) -> DateOnly.FromDateTime(dateTime))
             Converter<'Prototype, 'DbObject, TimeSpan, TimeOnly>(fun (timeSpan: TimeSpan) -> TimeOnly.FromTimeSpan(timeSpan))
             AttrEnumConverter<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
             EnumConverter<'Prototype, 'DbObject, int>()
+            RecordBuilder<'Prototype, 'DbObject>()
+            TupleBuilder<'Prototype, 'DbObject>()
+            OptionBuilder<'Prototype, 'DbObject>()
+            SequenceBuilder<'Prototype, 'DbObject>()
         ]
 
 

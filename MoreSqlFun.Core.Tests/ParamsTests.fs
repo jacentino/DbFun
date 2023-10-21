@@ -60,15 +60,93 @@ module ParamsTests =
 
 
     [<Fact>]
-    let ``Collections - seq`` () =
+    let ``Convertible collections - array`` () =
     
         use command = connection.CreateCommand()
-        command.CommandText <- "select * from User where userId in (@userId)"
+        command.CommandText <- "select * from User where created in (@created)"
 
-        (Params.Simple<int seq>("userId")(builderParams)).SetValue(Seq.singleton 5, command)
+        (Params.Simple<DateOnly array>("created")(builderParams)).SetValue([| DateOnly.FromDateTime(DateTime.Today) |], command)
 
         Assert.Equal(1, command.Parameters.Count)
-        Assert.Contains("(@userId0)", command.CommandText)
+        Assert.Contains("(@created0)", command.CommandText)
+        Assert.Equal(box DateTime.Today, command.Parameters["created0"].Value)
+
+    [<Fact>]
+    let ``Convertible collections - list`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from User where created in (@created)"
+
+        (Params.Simple<DateOnly list>("created")(builderParams)).SetValue([DateOnly.FromDateTime(DateTime.Today)], command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@created0)", command.CommandText)
+        Assert.Equal(box DateTime.Today, command.Parameters["created0"].Value)
+
+
+    [<Fact>]
+    let ``Convertible collections - seq`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from User where created in (@created)"
+
+        (Params.Simple<DateOnly seq>("created")(builderParams)).SetValue(Seq.singleton (DateOnly.FromDateTime(DateTime.Today)), command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@created0)", command.CommandText)
+        Assert.Equal(box DateTime.Today, command.Parameters["created0"].Value)
+
+
+    [<Fact>]
+    let ``Enum collections - array`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from User where status in (@status)"
+
+        (Params.Simple<Status array>("status")(builderParams)).SetValue([| Status.Active |], command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@status0)", command.CommandText)
+        Assert.Equal(box 'A', command.Parameters["status0"].Value)
+
+
+    [<Fact>]
+    let ``Enum collections - list`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from User where status in (@status)"
+
+        (Params.Simple<Status list>("status")(builderParams)).SetValue([ Status.Active ], command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@status0)", command.CommandText)
+        Assert.Equal(box 'A', command.Parameters["status0"].Value)
+
+
+    [<Fact>]
+    let ``Enum collections - seq`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from User where status in (@status)"
+
+        (Params.Simple<Status seq>("status")(builderParams)).SetValue(Seq.singleton Status.Active, command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@status0)", command.CommandText)
+        Assert.Equal(box 'A', command.Parameters["status0"].Value)
+
+
+    [<Fact>]
+    let ``Attr enum collections - seq`` () =
+    
+        use command = connection.CreateCommand()
+        command.CommandText <- "select * from Role where access in (@access)"
+
+        (Params.Simple<Access seq>("access")(builderParams)).SetValue(Seq.singleton Access.ReadWrite, command)
+
+        Assert.Equal(1, command.Parameters.Count)
+        Assert.Contains("(@access0)", command.CommandText)
+        Assert.Equal(box "RW", command.Parameters["access0"].Value)
 
 
     [<Fact>]

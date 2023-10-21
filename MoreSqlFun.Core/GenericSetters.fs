@@ -135,7 +135,7 @@ module GenericSetters =
 
         interface IBuilder<'Prototype, 'DbObject> with
 
-            member __.CanBuild (argType: Type) = typeof<'Source>.IsAssignableFrom argType
+            member __.CanBuild (argType: Type) = typeof<'Source> = argType
 
             member __.Build<'Arg> (name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
                 let setter = provider.Setter<'Target>(name, prototype) 
@@ -143,6 +143,34 @@ module GenericSetters =
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (value: 'Arg, command: 'DbObject) = 
                         setter.SetValue(convert'(value), command)
+                    member __.SetNull(command: 'DbObject) = 
+                        setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        setter.SetArtificial(command)
+                }
+
+    type SeqItemConverter<'Prototype, 'DbObject, 'Source, 'Target>(convert: 'Source -> 'Target) =
+
+        member __.MapSeq(source: 'Source seq) = source |> Seq.map convert
+
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild (argType: Type) = 
+                if not (Types.isCollectionType argType) then
+                    false
+                else
+                    let elemType = Types.getElementType argType                        
+                    typeof<'Source>.IsAssignableFrom(elemType)
+
+            member this.Build<'Arg> (name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
+                let setter = provider.Setter<'Target seq>(name, prototype)                
+                let sourceParam = Expression.Parameter(typeof<'Arg>)
+                let seqMapMethod = this.GetType().GetMethod("MapSeq")
+                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, sourceParam)
+                let convert' = Expression.Lambda<Func<'Arg, 'Target seq>>(conversion, sourceParam).Compile()
+                { new ISetter<'DbObject, 'Arg> with
+                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
+                        setter.SetValue(convert'.Invoke(value), command)
                     member __.SetNull(command: 'DbObject) = 
                         setter.SetNull(command)
                     member __.SetArtificial(command: 'DbObject) = 
@@ -168,8 +196,90 @@ module GenericSetters =
                     member __.SetArtificial(command: 'DbObject) = 
                         setter.SetArtificial(command)
                 }
+
+                
+    type EnumSeqConverter<'Prototype, 'DbObject, 'Underlying>() = 
+
+        member __.MapSeq<'Enum, 'Underlying>(mapper: Func<'Enum, 'Underlying>, sequence: 'Enum seq) = 
+            sequence |> Seq.map mapper.Invoke
+
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(argType: Type): bool = 
+                if not (Types.isCollectionType argType) then
+                    false
+                else
+                    let elemType = Types.getElementType argType
+                    elemType.IsEnum && elemType.GetEnumUnderlyingType() = typeof<'Underlying>
+
+            member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+                let setter = provider.Setter<'Underlying seq>(name, prototype)   
+                let enumType = Types.getElementType typeof<'Arg>
+                let enumParam = Expression.Parameter(enumType)
+                let itemConvert = Expression.Lambda(Expression.Convert(enumParam, typeof<'Underlying>), enumParam)
+                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType, typeof<'Underlying>)
+                let seqParam = Expression.Parameter(typeof<'Arg>)
+                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, itemConvert, seqParam)
+                let seqConvert = Expression.Lambda<Func<'Arg, 'Underlying seq>>(conversion, seqParam).Compile()
+                { new ISetter<'DbObject, 'Arg> with
+                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
+                        setter.SetValue(seqConvert.Invoke(value), command)
+                    member __.SetNull(command: 'DbObject) = 
+                        setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        setter.SetArtificial(command)
+                }
         
 
+    type AttrEnumSeqConverter<'Prototype, 'DbObject>() = 
+
+        member __.GetUnderlyingValues<'Enum>() = 
+            let underlyingValues = 
+                [ for f in typeof<'Enum>.GetFields() do
+                    if f.IsStatic then
+                        f.GetValue(null) :?> 'Enum, f.GetCustomAttribute<Models.EnumValueAttribute>().Value
+                ]     
+            underlyingValues
+
+        member __.MapSeq<'Enum>(eq: Func<'Enum, 'Enum, bool>, underlyingValues: ('Enum * string) list, sequence: 'Enum seq) = 
+            let convert (x: 'Enum): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
+            sequence |> Seq.map convert
+
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(argType: Type): bool = 
+                if not (Types.isCollectionType argType) then
+                    false
+                else
+                    let elemType = Types.getElementType argType
+                    elemType.IsEnum 
+                        && 
+                    elemType.GetFields() 
+                    |> Seq.filter (fun f -> f.IsStatic) 
+                    |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
+
+            member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+                let setter = provider.Setter<string seq>(name, prototype)   
+                let enumType = Types.getElementType typeof<'Arg>
+                let op1 = Expression.Parameter(enumType)
+                let op2 = Expression.Parameter(enumType)
+                let eq = Expression.Lambda(Expression.Equal(op1, op2), op1, op2)
+                let seqParam = Expression.Parameter(typeof<'Arg>)
+                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType)
+                let underlyingValsMethod = this.GetType().GetMethod("GetUnderlyingValues").MakeGenericMethod(enumType)
+                let underlyingValues = underlyingValsMethod.Invoke(this, [||])
+                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, eq, Expression.Constant(underlyingValues), seqParam)
+                let convert = Expression.Lambda<Func<'Arg, string seq>>(conversion, seqParam).Compile()
+                { new ISetter<'DbObject, 'Arg> with
+                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
+                        setter.SetValue(convert.Invoke(value), command)
+                    member __.SetNull(command: 'DbObject) = 
+                        setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        setter.SetArtificial(command)
+                }
+
+        
     type AttrEnumConverter<'Prototype, 'DbObject>() = 
 
         interface IBuilder<'Prototype, 'DbObject> with
@@ -201,7 +311,7 @@ module GenericSetters =
                         setter.SetArtificial(command)
                 }
 
-        
+
     type OptionBuilder<'Prototype, 'DbObject>() =
 
         member __.GetSetter(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Underlying option> = 
@@ -299,17 +409,24 @@ module GenericSetters =
 
 
     let getDefaultBuilders(): IBuilder<'Prototype, 'DbObject> list = 
+        let dateOnlyToDateTime (dtOnly: DateOnly) = dtOnly.ToDateTime(TimeOnly.MinValue)
+        let timeOnlyToTimeSpan (tmOnly: TimeOnly) = tmOnly.ToTimeSpan()
         [
+            Converter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
+            Converter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
+            SeqItemConverter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
+            SeqItemConverter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
+            AttrEnumConverter<'Prototype, 'DbObject>()
+            AttrEnumSeqConverter<'Prototype, 'DbObject>()
+            EnumConverter<'Prototype, 'DbObject, char>()
+            EnumConverter<'Prototype, 'DbObject, int>()
+            EnumSeqConverter<'Prototype, 'DbObject, char>()
+            EnumSeqConverter<'Prototype, 'DbObject, int>()
             UnitBuilder<'Prototype, 'DbObject>()
-            SequenceBuilder<'Prototype, 'DbObject>()
             RecordBuilder<'Prototype, 'DbObject>()
             TupleBuilder<'Prototype, 'DbObject>()
             OptionBuilder<'Prototype, 'DbObject>()
-            Converter<'Prototype, 'DbObject, _, _>(fun (dtOnly: DateOnly) -> dtOnly.ToDateTime(TimeOnly.MinValue))
-            Converter<'Prototype, 'DbObject, _, _>(fun (tmOnly: TimeOnly) -> tmOnly.ToTimeSpan())
-            AttrEnumConverter<'Prototype, 'DbObject>()
-            EnumConverter<'Prototype, 'DbObject, char>()
-            EnumConverter<'Prototype, 'DbObject, int>()
+            SequenceBuilder<'Prototype, 'DbObject>()
         ]
 
 
