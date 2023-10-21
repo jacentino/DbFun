@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.Core
+﻿namespace Sql2Fun.Core
 
 open System
 

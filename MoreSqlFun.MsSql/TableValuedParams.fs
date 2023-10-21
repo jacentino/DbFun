@@ -1,8 +1,8 @@
-﻿namespace MoreSqlFun.MsSql.Builders
+﻿namespace Sql2Fun.MsSql.Builders
 
 open System
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Builders
+open Sql2Fun.Core
+open Sql2Fun.Core.Builders
 open Microsoft.Data.SqlClient.Server
 open System.Linq.Expressions
 

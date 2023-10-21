@@ -1,9 +1,9 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 open System
 open System.Data
 open System.Linq.Expressions
-open MoreSqlFun.Core
+open Sql2Fun.Core
 
 type IRowGetter<'Result> = GenericGetters.IGetter<IDataRecord, 'Result>
 

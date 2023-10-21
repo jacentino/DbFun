@@ -1,7 +1,7 @@
-﻿namespace MoreSqlFun.MsSql.Builders
+﻿namespace Sql2Fun.MsSql.Builders
 
-open MoreSqlFun.Core.Builders
-open MoreSqlFun.MsSql.Builders
+open Sql2Fun.Core.Builders
+open Sql2Fun.MsSql.Builders
 open System.Data
 
 [<AutoOpen>]
@@ -14,7 +14,7 @@ module Extensions =
             }
 
 type QueryBuilder(config: QueryConfig) =
-    inherit MoreSqlFun.Core.Builders.QueryBuilder(config)
+    inherit Sql2Fun.Core.Builders.QueryBuilder(config)
 
     new(createConnection: unit -> IDbConnection) = 
         QueryBuilder(QueryConfig.MsSqlDefault(createConnection))

@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.Core.IntegrationTests.Models
+﻿namespace Sql2Fun.Core.IntegrationTests.Models
 
 open System
 

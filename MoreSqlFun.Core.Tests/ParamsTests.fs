@@ -1,11 +1,11 @@
-namespace MoreSqlFun.Core.Tests
+namespace Sql2Fun.Core.Tests
 
 open System
 open Xunit
 open Microsoft.Data.SqlClient
-open MoreSqlFun.Core.Builders
-open MoreSqlFun.TestTools.Models
-open MoreSqlFun.Core.Builders.GenericSetters
+open Sql2Fun.Core.Builders
+open Sql2Fun.TestTools.Models
+open Sql2Fun.Core.Builders.GenericSetters
 open System.Data
 
 module ParamsTests = 

@@ -1,12 +1,12 @@
-﻿namespace MoreSqlFun.Core.Tests
+﻿namespace Sql2Fun.Core.Tests
 
 open System
 open System.Data
 open Xunit
 open Moq
 
-open MoreSqlFun.Core.Builders
-open MoreSqlFun.TestTools.Models
+open Sql2Fun.Core.Builders
+open Sql2Fun.TestTools.Models
 
 module RowTests = 
 

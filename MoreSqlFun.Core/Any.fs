@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 [<AutoOpen>]
 module Any = 

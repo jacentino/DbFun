@@ -1,7 +1,7 @@
-﻿namespace MoreSqlFun.TestTools.Models
+﻿namespace Sql2Fun.TestTools.Models
 
 open System
-open MoreSqlFun.Core.Models
+open Sql2Fun.Core.Models
 
 type Status = 
     | New       = 'N'

@@ -6,18 +6,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TableValuedParams.fs" />
-    <Compile Include="Params.fs" />
-    <Compile Include="OutParams.fs" />
-    <Compile Include="Query.fs" />
+    <Compile Include="Mocks.fs" />
+    <Compile Include="Models.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
+    <PackageReference Include="Moq" Version="4.20.69" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MoreSqlFun.Core\MoreSqlFun.Core.fsproj" />
+    <ProjectReference Include="..\MoreSqlFun.Core\Sql2Fun.Core.fsproj" />
   </ItemGroup>
 
 </Project>

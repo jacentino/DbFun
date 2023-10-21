@@ -1,8 +1,8 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 open System
 open System.Data 
-open MoreSqlFun.Core
+open Sql2Fun.Core
 
 type IParamSetter<'Arg> = GenericSetters.ISetter<IDbCommand, 'Arg>
 

@@ -1,12 +1,12 @@
-namespace MoreSqlFun.Core.IntegrationTests
+namespace Sql2Fun.Core.IntegrationTests
 
-open MoreSqlFun.Core.IntegrationTests.Models
+open Sql2Fun.Core.IntegrationTests.Models
 open Commons
 
 module TestQueries = 
     
-    open MoreSqlFun.Core.Builders
-    open MoreSqlFun.Core.Builders.MultipleResults
+    open Sql2Fun.Core.Builders
+    open Sql2Fun.Core.Builders.MultipleResults
 
     let query = query.LogCompileTimeErrors()
 

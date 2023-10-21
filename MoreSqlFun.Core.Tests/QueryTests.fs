@@ -1,14 +1,13 @@
-﻿namespace MoreSqlFun.Core.Tests
+﻿namespace Sql2Fun.Core.Tests
 
 open System
 open Xunit
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Builders
-open MoreSqlFun.Core.Builders.MultipleResults
-open MoreSqlFun.TestTools.Models
-open MoreSqlFun.TestTools.Mocks
-open Microsoft.Data.SqlClient
-open MoreSqlFun.Core.Diagnostics
+open Sql2Fun.Core
+open Sql2Fun.Core.Builders
+open Sql2Fun.Core.Builders.MultipleResults
+open Sql2Fun.TestTools.Models
+open Sql2Fun.TestTools.Mocks
+open Sql2Fun.Core.Diagnostics
 open System.Data
 
 module QueryTests = 

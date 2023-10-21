@@ -1,8 +1,8 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 open System.Data
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Diagnostics
+open Sql2Fun.Core
+open Sql2Fun.Core.Diagnostics
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System

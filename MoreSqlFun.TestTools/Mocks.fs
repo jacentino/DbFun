@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.TestTools
+﻿namespace Sql2Fun.TestTools
 
 open System
 open System.Data

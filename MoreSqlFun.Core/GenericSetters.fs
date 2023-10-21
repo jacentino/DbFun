@@ -1,10 +1,10 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 open System
 open System.Reflection
 open FSharp.Reflection
 open System.Linq.Expressions
-open MoreSqlFun.Core
+open Sql2Fun.Core
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 

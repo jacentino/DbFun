@@ -1,4 +1,4 @@
-﻿namespace MoreSqlFun.Core.Builders
+﻿namespace Sql2Fun.Core.Builders
 
 open System
 open System.Data
@@ -6,7 +6,7 @@ open System.Linq.Expressions
 open System.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
-open MoreSqlFun.Core
+open Sql2Fun.Core
 
 type IResultReader<'Result> = 
     abstract member Read: IDataReader -> Async<'Result>

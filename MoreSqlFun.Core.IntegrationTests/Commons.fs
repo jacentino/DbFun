@@ -1,9 +1,9 @@
-﻿namespace MoreSqlFun.Core.IntegrationTests
+﻿namespace Sql2Fun.Core.IntegrationTests
 
 open Microsoft.Data.SqlClient
 open System.Configuration
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Builders
+open Sql2Fun.Core
+open Sql2Fun.Core.Builders
 
 module Commons = 
 

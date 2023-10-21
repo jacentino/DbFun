@@ -3,17 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34018.315
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MoreSqlFun.Core", "MoreSqlFun.Core\MoreSqlFun.Core.fsproj", "{68607E07-7C80-46C1-A1B7-870E6B9CDFE0}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.Core", "MoreSqlFun.Core\Sql2Fun.Core.fsproj", "{68607E07-7C80-46C1-A1B7-870E6B9CDFE0}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MoreSqlFun.Core.Tests", "MoreSqlFun.Core.Tests\MoreSqlFun.Core.Tests.fsproj", "{7D53C931-712C-4398-9B30-6550D076D5DD}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.Core.Tests", "MoreSqlFun.Core.Tests\Sql2Fun.Core.Tests.fsproj", "{7D53C931-712C-4398-9B30-6550D076D5DD}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MoreSqlFun.MsSql", "MoreSqlFun.MsSql\MoreSqlFun.MsSql.fsproj", "{CB616EDD-4762-4FAE-AB8F-F0A449931313}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.MsSql", "MoreSqlFun.MsSql\Sql2Fun.MsSql.fsproj", "{CB616EDD-4762-4FAE-AB8F-F0A449931313}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MoreSqlFun.MsSql.Tests", "MoreSqlFun.MsSql.Tests\MoreSqlFun.MsSql.Tests.fsproj", "{A0251ECC-F2F3-4B93-AC2B-C960BED75D73}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.MsSql.Tests", "MoreSqlFun.MsSql.Tests\Sql2Fun.MsSql.Tests.fsproj", "{A0251ECC-F2F3-4B93-AC2B-C960BED75D73}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MoreSqlFun.TestTools", "MoreSqlFun.TestTools\MoreSqlFun.TestTools.fsproj", "{EFDEB5CA-E5AD-47E1-9F7F-51B40DE89E7C}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.TestTools", "MoreSqlFun.TestTools\Sql2Fun.TestTools.fsproj", "{EFDEB5CA-E5AD-47E1-9F7F-51B40DE89E7C}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MoreSqlFun.Core.IntegrationTests", "MoreSqlFun.Core.IntegrationTests\MoreSqlFun.Core.IntegrationTests.fsproj", "{84F3CD59-21AB-4FFD-8414-7F7565C3B105}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sql2Fun.Core.IntegrationTests", "MoreSqlFun.Core.IntegrationTests\Sql2Fun.Core.IntegrationTests.fsproj", "{84F3CD59-21AB-4FFD-8414-7F7565C3B105}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

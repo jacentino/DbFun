@@ -1,13 +1,13 @@
-namespace MoreSqlFun.MsSql.Tests
+namespace Sql2Fun.MsSql.Tests
 
 open System
 open System.Data
 open Microsoft.Data.SqlClient.Server
 open Xunit
-open MoreSqlFun.MsSql.Builders
-open MoreSqlFun.TestTools.Models
-open MoreSqlFun.Core.Builders.GenericSetters
-open MoreSqlFun.Core.Builders
+open Sql2Fun.MsSql.Builders
+open Sql2Fun.TestTools.Models
+open Sql2Fun.Core.Builders.GenericSetters
+open Sql2Fun.Core.Builders
 
 module TableValuedParamsTests = 
 

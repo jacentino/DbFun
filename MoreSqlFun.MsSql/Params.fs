@@ -1,10 +1,10 @@
-﻿namespace MoreSqlFun.MsSql.Builders
+﻿namespace Sql2Fun.MsSql.Builders
 
 open System
 open System.Data
 open FSharp.Reflection
-open MoreSqlFun.Core
-open MoreSqlFun.Core.Builders
+open Sql2Fun.Core
+open Sql2Fun.Core.Builders
 open Microsoft.Data.SqlClient.Server
 open Microsoft.Data.SqlClient
 
