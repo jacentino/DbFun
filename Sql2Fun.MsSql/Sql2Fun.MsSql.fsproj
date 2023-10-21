@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MoreSqlFun.Core\Sql2Fun.Core.fsproj" />
+    <ProjectReference Include="..\Sql2Fun.Core\Sql2Fun.Core.fsproj" />
   </ItemGroup>
 
 </Project>

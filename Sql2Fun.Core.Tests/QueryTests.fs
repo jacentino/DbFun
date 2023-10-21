@@ -272,7 +272,7 @@ module QueryTests =
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 272", ex.Message)
+        Assert.Contains("line: 271", ex.Message)
 
 
     [<Fact>]
@@ -297,7 +297,7 @@ module QueryTests =
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(295, line)
+        Assert.Equal(294, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -325,4 +325,4 @@ module QueryTests =
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 322", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 321", ex.InnerExceptions.[0].Message)

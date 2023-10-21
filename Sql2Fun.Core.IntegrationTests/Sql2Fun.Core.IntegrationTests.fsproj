@@ -8,15 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TableValuedParamsTests.fs" />
-    <Compile Include="ParamsTests.fs" />
-    <Compile Include="OutParamsTests.fs" />
-    <Compile Include="QueryTests.fs" />
+    <None Include="App.config" />
+    <Compile Include="Commons.fs" />
+    <Compile Include="Models.fs" />
+    <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -29,9 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MoreSqlFun.Core\Sql2Fun.Core.fsproj" />
-    <ProjectReference Include="..\MoreSqlFun.MsSql\Sql2Fun.MsSql.fsproj" />
-    <ProjectReference Include="..\MoreSqlFun.TestTools\Sql2Fun.TestTools.fsproj" />
+    <ProjectReference Include="..\Sql2Fun.Core\Sql2Fun.Core.fsproj" />
   </ItemGroup>
 
 </Project>
