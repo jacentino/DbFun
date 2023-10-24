@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sql2Fun.Core\Sql2Fun.Core.fsproj" />
+    <ProjectReference Include="..\Sql2Fun.TestTools\Sql2Fun.TestTools.fsproj" />
   </ItemGroup>
 
 </Project>

@@ -95,7 +95,32 @@ type QueryBuilder(config: QueryConfig) =
         | Some log -> log.Value
         | None -> []
 
-    member __.Sql (createParamSetter: BuildParamSetter<'Params>, 
+    member __.TemplatedSql (createParamSetter: BuildParamSetter<'Params>, 
+                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                   : BuildResultReader<'Result> -> ('Params option -> string) -> 'Params -> IConnector -> Async<'Result> =         
+        fun (createResultReader: BuildResultReader<'Result>) (template: 'Params option -> string) ->
+            try
+                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
+                let paramSetter = createParamSetter(provider, ())
+
+                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
+                let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
+                let resultReader = executePrototypeQuery(CommandType.Text, template(None), paramSetter.SetArtificial, createResultReader')
+
+                fun (parameters: 'Params) (provider: IConnector) ->
+                    executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
+            with ex ->
+                handleException(sourcePath, sourceLine, ex)
+
+    member this.Sql (createParamSetter: BuildParamSetter<'Params>, 
+                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                   : BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result> =         
+        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
+            this.TemplatedSql(createParamSetter, sourcePath, sourceLine) createResultReader (fun _ -> commandText)
+
+    member __.SqlNT (createParamSetter: BuildParamSetter<'Params>, 
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                    : BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result> =         

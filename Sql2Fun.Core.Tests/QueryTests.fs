@@ -5,12 +5,20 @@ open Xunit
 open Sql2Fun.Core
 open Sql2Fun.Core.Builders
 open Sql2Fun.Core.Builders.MultipleResults
+open Sql2Fun.TestTools
 open Sql2Fun.TestTools.Models
 open Sql2Fun.TestTools.Mocks
 open Sql2Fun.Core.Diagnostics
 open System.Data
 
 module QueryTests = 
+
+    type Criteria = 
+        {
+            name    : string option
+            roles   : string list option
+            statuses: Status list option
+        }
 
     let createConfig createConnection = QueryConfig.Default(createConnection)
 
@@ -156,7 +164,7 @@ module QueryTests =
         let query = 
             qb.Sql (Params.Simple<int>("id"))
                    (Results.Many(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join (fun (u, rs) -> { u with roles = rs }) (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
+                    |> Results.Join (fun (u, rs) -> { u with UserWithRoles.roles = rs }) (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -272,7 +280,7 @@ module QueryTests =
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 271", ex.Message)
+        Assert.Contains("line: 279", ex.Message)
 
 
     [<Fact>]
@@ -297,7 +305,7 @@ module QueryTests =
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(294, line)
+        Assert.Equal(302, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -325,4 +333,63 @@ module QueryTests =
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 321", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 329", ex.InnerExceptions.[0].Message)
+
+    let shouldExpand f v =
+        v |> Option.map (f >> Option.isSome) |> Option.defaultValue true
+
+    [<Fact>]
+    let ``Templated queries``() = 
+
+        let createProtoConnection() = 
+            createConnectionMock
+                [ "name", DbType.String; "statuses", DbType.String; "roles", DbType.String] 
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [ ]                            
+                ]
+
+        let qb = QueryBuilder (createConfig createProtoConnection)
+               
+        let query = 
+            qb.TemplatedSql <| Params.Record<Criteria>() <| Results.Many<User> ""
+            <| Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
+                (Templating.applyWhen (fun p -> p.name.IsSome)       
+                    (Templating.where "name like '%' + @name + '%'")
+                 >> Templating.applyWhen (fun p -> p.statuses.IsSome)   
+                    (Templating.where "status in (@statuses)")
+                 >> Templating.applyWhen  (fun p -> p.roles.IsSome)      
+                    (Templating.join "join Role r on r.postId = u.id" >> Templating.where "r.name in (@roles)"))
+
+        let connection = 
+            createConnectionMock
+                [ "name", DbType.String; "statuses0", DbType.String; "statuses1", DbType.String; "roles0", DbType.String; "roles1", DbType.String ] 
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+        let command = connection.CreateCommand()
+        let connector = new Connector(connection, null)        
+
+        let criteria = 
+            {
+                name = None
+                statuses = Some [ Status.Active; Status.New ]
+                roles = Some [ "Guest"; "Tester" ]
+            }
+
+        let users = query criteria connector |> Async.RunSynchronously
+
+        let expected = 
+            [
+                {
+                    userId = 1
+                    name = "jacentino"
+                    email = "jacentino@gmail.com"
+                    created = DateTime(2023, 1, 1)
+                }
+            ]
+
+        Assert.Equal("select * from User u  join Role r on r.postId = u.id  where r.name in (@roles0, @roles1) and status in (@statuses0, @statuses1) ", command.CommandText)

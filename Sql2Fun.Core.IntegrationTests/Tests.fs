@@ -1,5 +1,7 @@
 namespace Sql2Fun.Core.IntegrationTests
 
+open Sql2Fun.Core
+open Sql2Fun.TestTools
 open Sql2Fun.Core.IntegrationTests.Models
 open Commons
 
@@ -44,6 +46,34 @@ module TestQueries =
              select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c where c.postId = @postId
              select t.postId, t.name from tag t where t.postId = @postId"
 
+    let findPosts = 
+        query.TemplatedSql (Params.Record<Criteria>()) (Results.Many<Post>(""))  
+            <| Templating.define 
+                "select p.id, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status from post p
+                 {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
+                (Templating.applyWhen (fun c -> c.name.IsSome) 
+                    (Templating.where ("p.name like '%' + @name + '%'"))
+                >> Templating.applyWhen (fun c -> c.title.IsSome) 
+                    (Templating.where ("p.title like '%' + @title + '%'"))
+                >> Templating.applyWhen (fun c -> c.content.IsSome) 
+                    (Templating.where ("p.content like '%' + @content + '%'"))
+                >> Templating.applyWhen (fun c -> c.author.IsSome) 
+                    (Templating.where ("p.author like '%' + @author + '%'"))                
+                >> Templating.applyWhen (fun c -> c.createdFrom.IsSome) 
+                    (Templating.where ("p.createdAt >= @createdFrom"))
+                >> Templating.applyWhen (fun c -> c.createdTo.IsSome) 
+                    (Templating.where ("p.createdAt <= @createdTo"))
+                >> Templating.applyWhen (fun c -> c.modifiedFrom.IsSome) 
+                    (Templating.where ("p.modifiedAt >= @modifiedFrom"))
+                >> Templating.applyWhen (fun c -> c.modifiedTo.IsSome) 
+                    (Templating.where ("p.modifiedAt <= @modifiedTo"))
+                >> Templating.applyWhen (fun c -> not c.statuses.IsEmpty) 
+                    (Templating.where ("p.status in (@statuses)"))
+                >> Templating.applyWhen (fun c -> not c.tags.IsEmpty) 
+                    (Templating.join ("join Tag t on t.postId = p.id") >> Templating.where ("t.name in (@tags)"))
+                >> Templating.applyWith (fun c -> sprintf "p.%A %A" c.sortOrder.field c.sortOrder.direction) "p.createdAt asc" Templating.orderBy)
+
+
 module Tests = 
 
     open Xunit
@@ -82,4 +112,24 @@ module Tests =
         let p = TestQueries.getOnePostWithTagsAndComments 1 |> run |> Async.RunSynchronously
         Assert.Equal(1, p.blogId)
         Assert.Equal(3, p.tags |> List.length)
+
+
+    [<Fact>]
+    let ``Template-based query returning one result``() = 
+        let criteria = 
+            {
+                name            = None
+                title           = None
+                content         = None
+                author          = Some "jac"
+                createdFrom     = None
+                createdTo       = None
+                modifiedFrom    = None
+                modifiedTo      = None
+                statuses        = [ PostStatus.Published ]
+                tags            = [ "framework" ]
+                sortOrder       = { field = SortField.Name; direction = SortDirection.Asc }
+            }
+        let p = TestQueries.findPosts criteria |> run |> Async.RunSynchronously |> Seq.head
+        Assert.Equal(1, p.blogId)
 

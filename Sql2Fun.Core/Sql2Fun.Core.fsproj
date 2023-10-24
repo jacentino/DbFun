@@ -19,6 +19,7 @@
     <Compile Include="Connector.fs" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Query.fs" />
+    <Compile Include="Templating.fs" />
   </ItemGroup>
 
 </Project>

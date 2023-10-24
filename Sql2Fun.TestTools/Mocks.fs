@@ -169,5 +169,8 @@ module Mocks =
             .Returns(createDataReaderMock data) 
         |> ignore
         command.Setup(fun x -> x.ExecuteReader()).Returns(createDataReaderMock data) |> ignore
+        let commandText = ref ""
+        command.SetupGet(fun x -> x.CommandText).Returns(Func<string>(fun () -> commandText.Value)) |> ignore
+        command.SetupSet(fun x -> x.CommandText <- It.IsAny<string>()).Callback(fun s -> commandText.Value <- s) |> ignore
         connection.Setup(fun x -> x.CreateCommand()).Returns(command.Object) |> ignore
         connection.Object
