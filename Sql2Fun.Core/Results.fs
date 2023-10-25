@@ -193,6 +193,89 @@ type Results() =
                     }
             }
             
+    static member Multiple<'Result1, 'Result2, 'Result3>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>, builder3: BuildResultReader<'Result3>)
+                    : BuildResultReader<'Result1 * 'Result2 * 'Result3> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3> ]
+            let reader1 = builder1(provider, prototype)
+            advance prototype
+            let reader2 = builder2(provider, prototype)
+            advance prototype
+            let reader3 = builder3(provider, prototype)
+            { new IResultReader<'Result1 * 'Result2 * 'Result3> with
+                member __.Read(reader: IDataReader) = 
+                    async {
+                        let advanceAsync = advanceAsync [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3> ]
+                        let! result1 = reader1.Read(reader)
+                        do! advanceAsync reader
+                        let! result2 = reader2.Read(reader)
+                        do! advanceAsync reader
+                        let! result3 = reader3.Read(reader)
+                        return result1, result2, result3
+                    }
+            }
+            
+    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>, builder3: BuildResultReader<'Result3>, builder4: BuildResultReader<'Result4>)
+                    : BuildResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4> ]
+            let reader1 = builder1(provider, prototype)
+            advance prototype
+            let reader2 = builder2(provider, prototype)
+            advance prototype
+            let reader3 = builder3(provider, prototype)
+            advance prototype
+            let reader4 = builder4(provider, prototype)
+            { new IResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4> with
+                member __.Read(reader: IDataReader) = 
+                    async {
+                        let advanceAsync = advanceAsync [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4> ]
+                        let! result1 = reader1.Read(reader)
+                        do! advanceAsync reader
+                        let! result2 = reader2.Read(reader)
+                        do! advanceAsync reader
+                        let! result3 = reader3.Read(reader)
+                        do! advanceAsync reader
+                        let! result4 = reader4.Read(reader)
+                        return result1, result2, result3, result4
+                    }
+            }
+            
+    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(
+            builder1: BuildResultReader<'Result1>, 
+            builder2: BuildResultReader<'Result2>, 
+            builder3: BuildResultReader<'Result3>, 
+            builder4: BuildResultReader<'Result4>, 
+            builder5: BuildResultReader<'Result5>)
+            : BuildResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4>; typeof<'Result5> ]
+            let reader1 = builder1(provider, prototype)
+            advance prototype
+            let reader2 = builder2(provider, prototype)
+            advance prototype
+            let reader3 = builder3(provider, prototype)
+            advance prototype
+            let reader4 = builder4(provider, prototype)
+            advance prototype
+            let reader5 = builder5(provider, prototype)
+            { new IResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> with
+                member __.Read(reader: IDataReader) = 
+                    async {
+                        let advanceAsync = advanceAsync [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4>; typeof<'Result5> ]
+                        let! result1 = reader1.Read(reader)
+                        do! advanceAsync reader
+                        let! result2 = reader2.Read(reader)
+                        do! advanceAsync reader
+                        let! result3 = reader3.Read(reader)
+                        do! advanceAsync reader
+                        let! result4 = reader4.Read(reader)
+                        do! advanceAsync reader
+                        let! result5 = reader5.Read(reader)
+                        return result1, result2, result3, result4, result5
+                    }
+            }
+            
     static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: BuildResultReader<'Source>): BuildResultReader<'Target> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let srcReader = source(provider, prototype)

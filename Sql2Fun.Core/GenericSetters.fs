@@ -571,6 +571,120 @@ module GenericSetters =
                         item3Setter.SetArtificial(command)
                 }
 
+        static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4>(
+                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>, 
+                createItem4Setter: BuildSetter<'Prototype, 'DbObject, 'Arg4>) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let item1Setter = createItem1Setter(provider, prototype)
+                let item2Setter = createItem2Setter(provider, prototype)
+                let item3Setter = createItem3Setter(provider, prototype)
+                let item4Setter = createItem4Setter(provider, prototype)
+                { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4> with
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), command: 'DbObject) =
+                        item1Setter.SetValue(val1, command)
+                        item2Setter.SetValue(val2, command)
+                        item3Setter.SetValue(val3, command)
+                        item4Setter.SetValue(val4, command)
+                    member __.SetNull(command: 'DbObject) = 
+                        item1Setter.SetNull(command)
+                        item2Setter.SetNull(command)
+                        item3Setter.SetNull(command)
+                        item4Setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        item1Setter.SetArtificial(command)
+                        item2Setter.SetArtificial(command)
+                        item3Setter.SetArtificial(command)
+                        item4Setter.SetArtificial(command)
+                }
+        
+        static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4>(name1: string, name2: string, name3: string, name4: string) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let item1Setter = provider.Setter<'Arg1>(name1, prototype) 
+                let item2Setter = provider.Setter<'Arg2>(name2, prototype)
+                let item3Setter = provider.Setter<'Arg3>(name3, prototype)
+                let item4Setter = provider.Setter<'Arg4>(name4, prototype)
+                { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4> with
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), command: 'DbObject) =
+                        item1Setter.SetValue(val1, command)
+                        item2Setter.SetValue(val2, command)
+                        item3Setter.SetValue(val3, command)
+                        item4Setter.SetValue(val4, command)
+                    member __.SetNull(command: 'DbObject) = 
+                        item1Setter.SetNull(command)
+                        item2Setter.SetNull(command)
+                        item3Setter.SetNull(command)
+                        item4Setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        item1Setter.SetArtificial(command)
+                        item2Setter.SetArtificial(command)
+                        item3Setter.SetArtificial(command)
+                        item4Setter.SetArtificial(command)
+                }
+
+
+        static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4, 'Arg5>(
+                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>, 
+                createItem4Setter: BuildSetter<'Prototype, 'DbObject, 'Arg4>, 
+                createItem5Setter: BuildSetter<'Prototype, 'DbObject, 'Arg5>) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let item1Setter = createItem1Setter(provider, prototype)
+                let item2Setter = createItem2Setter(provider, prototype)
+                let item3Setter = createItem3Setter(provider, prototype)
+                let item4Setter = createItem4Setter(provider, prototype)
+                let item5Setter = createItem5Setter(provider, prototype)
+                { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), command: 'DbObject) =
+                        item1Setter.SetValue(val1, command)
+                        item2Setter.SetValue(val2, command)
+                        item3Setter.SetValue(val3, command)
+                        item4Setter.SetValue(val4, command)
+                        item5Setter.SetValue(val5, command)
+                    member __.SetNull(command: 'DbObject) = 
+                        item1Setter.SetNull(command)
+                        item2Setter.SetNull(command)
+                        item3Setter.SetNull(command)
+                        item4Setter.SetNull(command)
+                        item5Setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        item1Setter.SetArtificial(command)
+                        item2Setter.SetArtificial(command)
+                        item3Setter.SetArtificial(command)
+                        item4Setter.SetArtificial(command)
+                        item5Setter.SetArtificial(command)
+                }
+        
+        static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4, 'Arg5>(name1: string, name2: string, name3: string, name4: string, name5: string) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let item1Setter = provider.Setter<'Arg1>(name1, prototype) 
+                let item2Setter = provider.Setter<'Arg2>(name2, prototype)
+                let item3Setter = provider.Setter<'Arg3>(name3, prototype)
+                let item4Setter = provider.Setter<'Arg4>(name4, prototype)
+                let item5Setter = provider.Setter<'Arg5>(name4, prototype)
+                { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), command: 'DbObject) =
+                        item1Setter.SetValue(val1, command)
+                        item2Setter.SetValue(val2, command)
+                        item3Setter.SetValue(val3, command)
+                        item4Setter.SetValue(val4, command)
+                        item5Setter.SetValue(val5, command)
+                    member __.SetNull(command: 'DbObject) = 
+                        item1Setter.SetNull(command)
+                        item2Setter.SetNull(command)
+                        item3Setter.SetNull(command)
+                        item4Setter.SetNull(command)
+                        item5Setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        item1Setter.SetArtificial(command)
+                        item2Setter.SetArtificial(command)
+                        item3Setter.SetArtificial(command)
+                        item4Setter.SetArtificial(command)
+                        item5Setter.SetArtificial(command)
+                }
+
         static member Optional<'Arg> (name: string) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
                 provider.Setter<'Arg option>(name, prototype)

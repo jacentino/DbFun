@@ -429,6 +429,129 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
+        static member Tuple<'Result1, 'Result2, 'Result3>(name1: string, name2: string, name3: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3> =
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = provider.Getter<'Result1>(name1, prototype)
+                let getter2 = provider.Getter<'Result2>(name2, prototype)
+                let getter3 = provider.Getter<'Result3>(name3, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record)
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                }
+
+        static member Tuple<'Result1, 'Result2, 'Result3>(
+                createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
+                createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
+                createGetter3: BuildGetter<'Prototype, 'DbObject, 'Result3>)
+                : BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3> = 
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = createGetter1(provider, prototype)
+                let getter2 = createGetter2(provider, prototype)
+                let getter3 = createGetter3(provider, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record)
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                }
+
+        static member Tuple<'Result1, 'Result2, 'Result3, 'Result4>(name1: string, name2: string, name3: string, name4: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> =
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = provider.Getter<'Result1>(name1, prototype)
+                let getter2 = provider.Getter<'Result2>(name2, prototype)
+                let getter3 = provider.Getter<'Result3>(name3, prototype)
+                let getter4 = provider.Getter<'Result4>(name4, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 * 'Result4 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record), getter4.Get(record)
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                        getter4.Create(record)
+                }
+
+        static member Tuple<'Result1, 'Result2, 'Result3, 'Result4>(
+                createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
+                createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
+                createGetter3: BuildGetter<'Prototype, 'DbObject, 'Result3>, 
+                createGetter4: BuildGetter<'Prototype, 'DbObject, 'Result4>)
+                : BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> = 
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = createGetter1(provider, prototype)
+                let getter2 = createGetter2(provider, prototype)
+                let getter3 = createGetter3(provider, prototype)
+                let getter4 = createGetter4(provider, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 * 'Result4 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record), getter4.Get(record)
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                        getter4.Create(record)
+                }
+
+        static member Tuple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(name1: string, name2: string, name3: string, name4: string, name5: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> =
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = provider.Getter<'Result1>(name1, prototype)
+                let getter2 = provider.Getter<'Result2>(name2, prototype)
+                let getter3 = provider.Getter<'Result3>(name3, prototype)
+                let getter4 = provider.Getter<'Result4>(name4, prototype)
+                let getter5 = provider.Getter<'Result5>(name5, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record) && getter5.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record), getter4.Get(record), getter5.Get(record)
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                        getter4.Create(record)
+                        getter5.Create(record)
+                }
+
+        static member Tuple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(
+                createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
+                createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
+                createGetter3: BuildGetter<'Prototype, 'DbObject, 'Result3>, 
+                createGetter4: BuildGetter<'Prototype, 'DbObject, 'Result4>, 
+                createGetter5: BuildGetter<'Prototype, 'DbObject, 'Result5>)
+                : BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let getter1 = createGetter1(provider, prototype)
+                let getter2 = createGetter2(provider, prototype)
+                let getter3 = createGetter3(provider, prototype)
+                let getter4 = createGetter4(provider, prototype)
+                let getter5 = createGetter5(provider, prototype)
+                { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> with
+                    member __.IsNull(record: 'DbObject): bool = 
+                        getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record) && getter5.IsNull(record)
+                    member __.Get(record: 'DbObject): 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5 = 
+                        getter1.Get(record), getter2.Get(record), getter3.Get(record), getter4.Get(record), getter5.Get(record) 
+                    member __.Create(record: 'DbObject): unit = 
+                        getter1.Create(record)
+                        getter2.Create(record)
+                        getter3.Create(record)
+                        getter4.Create(record)
+                        getter5.Create(record)
+                }
+
         static member Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let provider = DerivedGetterProvider<'Prototype, 'DbObject>(provider, overrides)
