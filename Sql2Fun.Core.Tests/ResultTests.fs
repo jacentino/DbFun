@@ -25,7 +25,7 @@ module ResultTests =
                         ]
 
         let builderParams = provider :> IRowGetterProvider, reader 
-        let result = Results.One<User>("") (builderParams)
+        let result = Results.Single<User>("") (builderParams)
         let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
@@ -53,8 +53,8 @@ module ResultTests =
 
         let builderParams = provider :> IRowGetterProvider, reader 
 
-        let result = Results.Many<User>("") builderParams
-        let value = result.Read(reader) |> Async.RunSynchronously |> Seq.toList
+        let result = Results.List<User>("") builderParams
+        let value = result.Read(reader) |> Async.RunSynchronously 
 
         let expected = 
             [
@@ -86,7 +86,7 @@ module ResultTests =
                         ]
 
         let builderParams = provider :> IRowGetterProvider, reader 
-        let result = Results.TryOne<User>("") builderParams
+        let result = Results.Optional<User>("") builderParams
         let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
@@ -109,7 +109,7 @@ module ResultTests =
                         ]
 
         let builderParams = provider :> IRowGetterProvider, reader 
-        let result = Results.TryOne<User>("") builderParams
+        let result = Results.Optional<User>("") builderParams
         let value = result.Read(reader) |> Async.RunSynchronously
 
         Assert.Equal(None, value)
@@ -135,8 +135,8 @@ module ResultTests =
         let builderParams = provider :> IRowGetterProvider, prototype 
         let result = 
             Results.Multiple(
-                Results.One<User>(""),
-                Results.Many (Rows.Tuple<int, string>("roleId", "name")))        
+                Results.Single<User>(""),
+                Results.List (Rows.Tuple<int, string>("roleId", "name")))        
                 builderParams
         
         let user, roles = result.Read(regular) |> Async.RunSynchronously
@@ -154,7 +154,7 @@ module ResultTests =
                     3, "Code Reviewer"
                 ]
                 
-        Assert.Equal(expected, (user, roles |> Seq.toList))
+        Assert.Equal(expected, (user, roles))
 
 
     [<Fact>]
@@ -178,8 +178,8 @@ module ResultTests =
         let builderParams = provider :> IRowGetterProvider, prototype 
         let result = 
             (Results.Multiple(
-                Results.One<User>(""), 
-                Results.Many (Rows.Tuple<int, string>("roleId", "name"))
+                Results.Single<User>(""), 
+                Results.Seq (Rows.Tuple<int, string>("roleId", "name"))
             ) |> Results.Map (fun (u, r) -> { userId = u.userId; name = u.name; email = u.email; created = u.created; roles = r |> Seq.map snd |> List.ofSeq })
             ) builderParams
 

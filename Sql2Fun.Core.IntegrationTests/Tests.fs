@@ -15,15 +15,15 @@ module TestQueries =
     let p = any<Post>
 
     let getBlog = 
-        query.Sql(Params.Int "id") (Results.One<Blog> "")
+        query.Sql(Params.Int "id") (Results.Single<Blog> "")
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where id = @id"
 
     let getAllBlogs = 
-        query.Sql Params.Unit (Results.Many<Blog> "") 
+        query.Sql Params.Unit (Results.Seq<Blog> "") 
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog"
 
     let getBlogOptional = 
-        query.Sql(Params.Int "id") (Results.TryOne<Blog> "") 
+        query.Sql(Params.Int "id") (Results.Optional<Blog> "") 
             "select * from Blog where id = @id"
 
     let getPostsWithTagsAndComments = 
@@ -38,16 +38,16 @@ module TestQueries =
 
     let getOnePostWithTagsAndComments = 
         query.Sql (Params.Int "postId") 
-                  (Results.Combine(fun post comments tags -> { post with comments = comments |> Seq.toList; tags = tags |> Seq.toList })
-                    <*> Results.One<Post>("")
-                    <*> Results.Many<Comment>("")
-                    <*> Results.Many<string>("name"))                    
+                  (Results.Combine(fun post comments tags -> { post with comments = comments; tags = tags })
+                    <*> Results.Single<Post>("")
+                    <*> Results.List<Comment>("")
+                    <*> Results.List<string>("name"))                    
             "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status from post where id = @postId;
              select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c where c.postId = @postId
              select t.postId, t.name from tag t where t.postId = @postId"
 
     let findPosts = 
-        query.TemplatedSql (Params.Record<Criteria>()) (Results.Many<Post> "")  
+        query.TemplatedSql (Params.Record<Criteria>()) (Results.Seq<Post> "")  
             <| Templating.define 
                 "select p.id, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status from post p
                  {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"

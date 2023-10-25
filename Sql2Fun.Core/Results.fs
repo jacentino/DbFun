@@ -85,7 +85,7 @@ type Results() =
     static member Unit: BuildResultReader<unit> = 
         fun (_: IRowGetterProvider, _: IDataReader) -> Results.EmptyReader<unit>()
             
-    static member One<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result> = 
+    static member Single<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): IRowGetterProvider * IDataReader -> IResultReader<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result> with
@@ -96,7 +96,7 @@ type Results() =
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
 
-    static member One<'Result> (name: string): BuildResultReader<'Result> = 
+    static member Single<'Result> (name: string): BuildResultReader<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = provider.Getter(name, prototype)
             { new IResultReader<'Result> with
@@ -107,7 +107,7 @@ type Results() =
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
             }
 
-    static member TryOne<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result option> = 
+    static member Optional<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result option> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result option> with
@@ -118,7 +118,7 @@ type Results() =
                         async.Return None
             }
 
-    static member TryOne<'Result> (name: string): BuildResultReader<'Result option>  = 
+    static member Optional<'Result> (name: string): BuildResultReader<'Result option>  = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter(name, prototype)
             { new IResultReader<'Result option> with
@@ -129,7 +129,7 @@ type Results() =
                         async.Return None
             }
 
-    static member Many<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result seq> = 
+    static member Seq<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result seq> with
@@ -140,7 +140,7 @@ type Results() =
                         ]
             }
 
-    static member Many<'Result> (name: string): BuildResultReader<'Result seq> = 
+    static member Seq<'Result> (name: string): BuildResultReader<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter<'Result>(name, prototype)
             { new IResultReader<'Result seq> with
@@ -151,32 +151,76 @@ type Results() =
                         ]
             }
 
+    static member List<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result list> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = rowBuilder(provider, prototype)
+            { new IResultReader<'Result list> with
+                member __.Read(reader: IDataReader) = 
+                    async.Return 
+                        [ while reader.Read() do
+                            getter.Get(reader)
+                        ]
+            }
+
+    static member List<'Result> (name: string): BuildResultReader<'Result list> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = provider.Getter<'Result>(name, prototype)
+            { new IResultReader<'Result list> with
+                member __.Read(reader: IDataReader) = 
+                    async.Return 
+                        [ while reader.Read() do
+                            getter.Get(reader)
+                        ]
+            }
+
+    static member Array<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result array> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = rowBuilder(provider, prototype)
+            { new IResultReader<'Result array> with
+                member __.Read(reader: IDataReader) = 
+                    async.Return 
+                        [| while reader.Read() do
+                            getter.Get(reader)
+                        |]
+            }
+
+    static member Array<'Result> (name: string): BuildResultReader<'Result array> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = provider.Getter<'Result>(name, prototype)
+            { new IResultReader<'Result array> with
+                member __.Read(reader: IDataReader) = 
+                    async.Return 
+                        [| while reader.Read() do
+                            getter.Get(reader)
+                        |]
+            }
+
     static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
-        Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, resultName))
+        Results.Seq(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, resultName))
 
     static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, result))
+        Results.Seq(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, result))
 
     static member Keyed<'Primary, 'Foreign, 'Result>(primary: BuildRowGetter<'Primary>, foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.Keyed<'Primary, 'Foreign, 'Result>(primary, foreign, result))
+        Results.Seq(Rows.Keyed<'Primary, 'Foreign, 'Result>(primary, foreign, result))
 
     static member PKeyed<'Primary, 'Result>(primaryName: string, resultName: string) = 
-        Results.Many(Rows.PKeyed<'Primary, 'Result>(primaryName, resultName))
+        Results.Seq(Rows.PKeyed<'Primary, 'Result>(primaryName, resultName))
 
     static member PKeyed<'Primary, 'Result>(primaryName: string, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.PKeyed<'Primary, 'Result>(primaryName, result))
+        Results.Seq(Rows.PKeyed<'Primary, 'Result>(primaryName, result))
 
     static member PKeyed<'Primary, 'Result>(primary: BuildRowGetter<'Primary>, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.PKeyed<'Primary, 'Result>(primary, result))
+        Results.Seq(Rows.PKeyed<'Primary, 'Result>(primary, result))
 
     static member FKeyed<'Foreign, 'Result>(foreignName: string, resultName: string) = 
-        Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreignName, resultName))
+        Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreignName, resultName))
 
     static member FKeyed<'Foreign, 'Result>(foreignName: string, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreignName, result))
+        Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreignName, result))
 
     static member FKeyed<'Foreign, 'Result>(foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
-        Results.Many(Rows.FKeyed<'Foreign, 'Result>(foreign, result))
+        Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreign, result))
 
     static member Multiple<'Result1, 'Result2>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>): BuildResultReader<'Result1 * 'Result2> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->

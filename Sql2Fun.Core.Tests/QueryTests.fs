@@ -38,7 +38,7 @@ module QueryTests =
         let qb = QueryBuilder (createConfig createConnection)
                
         let query = 
-            qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+            qb.Sql <| Params.Simple<int> "id" <| Results.Single<User> ""
             <| "select * from User where userId = @Id"
 
         let connector = new Connector(createConnection(), null)        
@@ -77,7 +77,7 @@ module QueryTests =
         let qb = QueryBuilder (createConfig createConnection)
 
         let query = 
-            qb.Sql <| Params.Simple<int>("id") <| Results.Multiple(Results.One<User>(""), Results.Many<string>("name"))
+            qb.Sql <| Params.Simple<int>("id") <| Results.Multiple(Results.Single<User>(""), Results.Seq<string>("name"))
             <| "select * from User where userId = @id;
                 select * from Role where userId = @id"
 
@@ -120,8 +120,8 @@ module QueryTests =
         let query = 
             qb.Sql(Params.Simple<int>("id"))
                   (Results.Combine(fun user roles -> user, roles)
-                    <*> Results.One<User>("") 
-                    <*> Results.Many<string>("name"))
+                    <*> Results.Single<User>("") 
+                    <*> Results.Seq<string>("name"))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
 
@@ -163,8 +163,8 @@ module QueryTests =
 
         let query = 
             qb.Sql (Params.Simple<int>("id"))
-                   (Results.Many(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join (fun (u, rs) -> { u with UserWithRoles.roles = rs }) (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
+                   (Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join (fun (u, rs) -> { u with UserWithRoles.roles = rs }) (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -208,8 +208,8 @@ module QueryTests =
 
         let query = 
             qb.Sql (Params.Simple<int>("id"))
-                   (Results.Many(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join uwr.roles (Results.Many(Rows.FKeyed<int, string>("userId", "name")))
+                   (Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                    |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
                     |> Results.Map (Seq.map snd))
                 "select * from User where userId = @id;
                  select * from Role where userId = @id"
@@ -276,7 +276,7 @@ module QueryTests =
                
         let ex = 
             Assert.Throws<CompileTimeException>(fun () -> 
-                qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+                qb.Sql <| Params.Simple<int> "id" <| Results.Single<User> ""
                        <| "select * from User where userId = @Id"
                 |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
@@ -299,7 +299,7 @@ module QueryTests =
 
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
-        qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+        qb.Sql <| Params.Simple<int> "id" <| Results.Single<User> ""
                <| "select * from User where userId = @Id"
         |> ignore
 
@@ -326,7 +326,7 @@ module QueryTests =
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
         let query = 
-            qb.Sql <| Params.Simple<int> "id" <| Results.One<User> ""
+            qb.Sql <| Params.Simple<int> "id" <| Results.Single<User> ""
                    <| "select * from User where userId = @Id"
 
         let connector = new Connector(createConnection(), null)        
@@ -352,7 +352,7 @@ module QueryTests =
         let qb = QueryBuilder (createConfig createProtoConnection)
                
         let query = 
-            qb.TemplatedSql <| Params.Record<Criteria>() <| Results.Many<User> ""
+            qb.TemplatedSql <| Params.Record<Criteria>() <| Results.Seq<User> ""
             <| Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
                 (Templating.applyWhen (fun p -> p.name.IsSome)       
                     (Templating.where "name like '%' + @name + '%'")
