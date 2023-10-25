@@ -59,6 +59,7 @@ type SortOrder =
         field       : SortField
         direction   : SortDirection
     }
+    override this.ToString() = sprintf "%A %A" this.field this.direction
 
 type Criteria = 
     {
