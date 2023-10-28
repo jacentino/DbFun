@@ -25,7 +25,7 @@ module QueryTests =
 
         let connector = new Connector(createConnection(), null)
 
-        let qb = QueryBuilder (QueryConfig.MsSqlDefault(createConnection))
+        let qb = QueryBuilder (QueryConfig.Default(createConnection))
                
         let query = qb.Proc(Params.Simple<int> "id") (OutParams.ReturnAnd<User>("ret_val", "user")) Results.Unit "getUser"
 
@@ -45,8 +45,6 @@ module QueryTests =
     [<Fact>]
     let ``Record seq - using TVP`` () =
     
-        let createConnection() = createConnectionMock [] //[]
-
         let createConnection () = 
             createConnectionMock              
                 []
@@ -61,7 +59,7 @@ module QueryTests =
                 ]
 
         let connector = new Connector(createConnection(), null)
-        let qb = QueryBuilder({ QueryConfig.MsSqlDefault(createConnection) with ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection) })
+        let qb = QueryBuilder(QueryConfig.Default(createConnection))
         let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"

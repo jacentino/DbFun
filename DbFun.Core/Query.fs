@@ -16,7 +16,8 @@ type QueryConfig =
         Timeout             : int option
         LogCompileTimeErrors: bool
     }
-    with static member Default(createConnection): QueryConfig = 
+    with 
+        static member Default(createConnection): QueryConfig = 
             {
                 CreateConnection    = createConnection
                 ParamBuilders       = ParamsImpl.getDefaultBuilders()
@@ -24,6 +25,15 @@ type QueryConfig =
                 RowBuilders         = RowsImpl.getDefaultBuilders()
                 Timeout             = None
                 LogCompileTimeErrors= false
+            }
+
+        member this.AddParamConverter(convert: 'Source -> 'Target) = 
+            { this with ParamBuilders = GenericSetters.Converter<unit, IDbCommand, 'Source, 'Target>(convert) :: this.ParamBuilders }
+
+        member this.AddRowConverter(convert: 'Source -> 'Target) = 
+            { this with 
+                RowBuilders = GenericGetters.Converter<IDataRecord, IDataRecord, 'Source, 'Target>(convert) :: this.RowBuilders
+                OutParamBuilders = GenericGetters.Converter<unit, IDbCommand, 'Source, 'Target>(convert) ::  this.OutParamBuilders
             }
 
 
