@@ -26,7 +26,7 @@ module Extensions =
 
             member this.AddTvpBuilder(builder: TableValuedParamsImpl.IBuilder) = 
                 let tvpBuilders = builder :: this.TvpBuilders
-                let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(tvpBuilders)
+                let tvpProvider = ParamsImpl.BaseSetterProvider(tvpBuilders)
                 let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) :> ParamsImpl.IBuilder
                 let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.TVPCollectionBuilder -> tvpCollBuilder | b -> b)
                 { this with
@@ -35,8 +35,11 @@ module Extensions =
                 }
 
             member this.AddParamConverter(converter: 'Source -> 'Target) = 
-                let tvpBuilder = GenericSetters.Converter<SqlDataRecord, SqlDataRecord, 'Source, 'Target>(converter) 
-                { this with Common = this.Common.AddParamConverter(converter) }.AddTvpBuilder(tvpBuilder)
+                let tvpBuilder = ParamsImpl.Converter<'Source, 'Target>(converter) 
+                let tvpSeqBuilder = ParamsImpl.SeqItemConverter<'Source, 'Target>(converter) 
+                { this with Common = this.Common.AddParamConverter(converter) }
+                    .AddTvpBuilder(tvpBuilder)
+                    .AddTvpBuilder(tvpSeqBuilder)
 
 
 type QueryBuilder(config: QueryConfig) =

@@ -393,3 +393,145 @@ module QueryTests =
             ]
 
         Assert.Equal("select * from User u  join Role r on r.postId = u.id  where r.name in (@roles0, @roles1) and status in (@statuses0, @statuses1) ", command.CommandText)
+
+
+    [<Fact>]
+    let ``Custom converters - parameters``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
+
+        let qb = QueryBuilder(config)
+               
+        let query = 
+            qb.Sql <| Params.Simple<UserId> "id" <| Results.Single<User> ""
+            <| "select * from User where userId = @Id"
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query (UserId 1) connector |> Async.RunSynchronously
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+
+        Assert.Equal(expected, user)
+
+
+    [<Fact>]
+    let ``Custom converters - parameters - list``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [ ]                            
+                ]
+
+        let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
+
+        let qb = QueryBuilder(config)
+               
+        let query = 
+            qb.Sql <| Params.Simple<UserId list> "id" <| Results.Single<User> ""
+            <| "select * from User where userId in (@id)"
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id0", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query [UserId 1] connector |> Async.RunSynchronously
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+
+        Assert.Equal(expected, user)
+
+
+    [<Fact>]
+    let ``Custom converters - results``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let config = createConfig(createConnection).AddRowConverter(UserId)
+
+        let qb = QueryBuilder(config)
+               
+        let query = 
+            qb.Sql <| Params.Simple<int> "id" <| Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created"))
+            <| "select * from User where userId = @Id"
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query 1 connector |> Async.RunSynchronously
+
+        let expected = (UserId 1, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+
+        Assert.Equal(expected, user)
+
+
+    [<Fact>]
+    let ``Custom converters - parameters & results``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let config = createConfig(createConnection)
+                        .AddParamConverter(fun (UserId id) -> id)
+                        .AddRowConverter(UserId)
+
+        let qb = QueryBuilder(config)
+               
+        let query = 
+            qb.Sql <| Params.Simple<UserId> "id" <| Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created"))
+            <| "select * from User where userId = @Id"
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query (UserId 1) connector |> Async.RunSynchronously
+
+        let expected = (UserId 1, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+
+        Assert.Equal(expected, user)

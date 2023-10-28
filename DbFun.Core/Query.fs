@@ -28,12 +28,16 @@ type QueryConfig =
             }
 
         member this.AddParamConverter(convert: 'Source -> 'Target) = 
-            { this with ParamBuilders = GenericSetters.Converter<unit, IDbCommand, 'Source, 'Target>(convert) :: this.ParamBuilders }
+            { this with ParamBuilders = 
+                            ParamsImpl.Converter<'Source, 'Target>(convert) :: 
+                            ParamsImpl.SeqItemConverter<'Source, 'Target>(convert) :: 
+                            this.ParamBuilders 
+            }
 
         member this.AddRowConverter(convert: 'Source -> 'Target) = 
             { this with 
-                RowBuilders = GenericGetters.Converter<IDataRecord, IDataRecord, 'Source, 'Target>(convert) :: this.RowBuilders
-                OutParamBuilders = GenericGetters.Converter<unit, IDbCommand, 'Source, 'Target>(convert) ::  this.OutParamBuilders
+                RowBuilders = RowsImpl.Converter<'Source, 'Target>(convert) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.Converter<'Source, 'Target>(convert) ::  this.OutParamBuilders
             }
 
 

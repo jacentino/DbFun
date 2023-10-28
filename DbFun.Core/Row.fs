@@ -72,12 +72,31 @@ module RowsImpl =
                         member this.Create(arg1: IDataRecord): unit = 
                             raise (System.NotImplementedException())
                 }
-
     
 
     type KeySpecifier<'Primary, 'Foreign>(primary: 'Primary, foreign: 'Foreign) =
             member __.Primary = primary
             member __.Foreign = foreign
+
+    type BaseGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>
+
+    type DerivedGetterProvider = GenericGetters.DerivedGetterProvider<IDataRecord, IDataRecord>
+
+    type UnitBuilder = GenericGetters.UnitBuilder<IDataRecord, IDataRecord>
+
+    type SequenceBuilder = GenericGetters.SequenceBuilder<IDataRecord, IDataRecord>
+
+    type OptionBuilder = GenericGetters.OptionBuilder<IDataRecord, IDataRecord>
+
+    type Converter<'Source, 'Target> = GenericGetters.Converter<IDataRecord, IDataRecord, 'Source, 'Target>
+
+    type EnumConverter<'Underlying> = GenericGetters.EnumConverter<IDataRecord, IDataRecord, 'Underlying>
+
+    type AttrEnumConverter = GenericGetters.AttrEnumConverter<IDataRecord, IDataRecord>
+
+    type RecordBuilder = GenericGetters.RecordBuilder<IDataRecord, IDataRecord>
+
+    type TupleBuilder = GenericGetters.TupleBuilder<IDataRecord, IDataRecord>
 
 
     let getDefaultBuilders(): IBuilder list = 

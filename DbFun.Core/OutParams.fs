@@ -58,6 +58,28 @@ module OutParamsImpl =
                         param.Value = DBNull.Value
                 }
 
+
+    type BaseGetterProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>
+
+    type DerivedGetterProvider = GenericGetters.DerivedGetterProvider<unit, IDbCommand>
+
+    type UnitBuilder = GenericGetters.UnitBuilder<unit, IDbCommand>
+
+    type SequenceBuilder = GenericGetters.SequenceBuilder<unit, IDbCommand>
+
+    type OptionBuilder = GenericGetters.OptionBuilder<unit, IDbCommand>
+
+    type Converter<'Source, 'Target> = GenericGetters.Converter<unit, IDbCommand, 'Source, 'Target>
+
+    type EnumConverter<'Underlying> = GenericGetters.EnumConverter<unit, IDbCommand, 'Underlying>
+
+    type AttrEnumConverter = GenericGetters.AttrEnumConverter<unit, IDbCommand>
+
+    type RecordBuilder = GenericGetters.RecordBuilder<unit, IDbCommand>
+
+    type TupleBuilder = GenericGetters.TupleBuilder<unit, IDbCommand>
+
+
     let getDefaultBuilders(): IBuilder list = SimpleOutParamBuilder() :: GenericGetters.getDefaultBuilders()
 
 type OutParams() =

@@ -98,8 +98,35 @@ module ParamsImpl =
                         artificialSetter(command)
                 }
 
+    type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, IDbCommand>
+
+    type DerivedSetterProvider = GenericSetters.DerivedSetterProvider<unit, IDbCommand>
+
+    type UnitBuilder = GenericSetters.UnitBuilder<unit, IDbCommand>
+
+    type SequenceBuilder = GenericSetters.SequenceBuilder<unit, IDbCommand>
+
+    type Converter<'Source, 'Target> = GenericSetters.Converter<unit, IDbCommand, 'Source, 'Target>
+
+    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<unit, IDbCommand, 'Source, 'Target>
+
+    type EnumConverter<'Underlying> = GenericSetters.EnumConverter<unit, IDbCommand, 'Underlying>
+
+    type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<unit, IDbCommand, 'Underlying>
+
+    type AttrEnumSeqConverter = GenericSetters.AttrEnumSeqConverter<unit, IDbCommand>
+
+    type AttrEnumConverter = GenericSetters.AttrEnumConverter<unit, IDbCommand>
+
+    type OptionBuilder = GenericSetters.OptionBuilder<unit, IDbCommand>
+
+    type RecordBuilder = GenericSetters.RecordBuilder<unit, IDbCommand>
+
+    type TupleBuilder = GenericSetters.TupleBuilder<unit, IDbCommand>
+
     let getDefaultBuilders(): IBuilder list = 
         [ SimpleBuilder(); SimpleCollectionBuilder() ] @ GenericSetters.getDefaultBuilders()
+
 
 type Params() = 
     inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()

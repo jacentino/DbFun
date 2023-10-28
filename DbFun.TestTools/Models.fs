@@ -37,3 +37,4 @@ type UserWithRoles =
         roles   : string list
     }
 
+type UserId = UserId of int

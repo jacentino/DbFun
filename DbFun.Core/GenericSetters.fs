@@ -55,9 +55,6 @@ module GenericSetters =
 
     type BaseSetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq) = 
 
-        member __.AddBuilder(builder: IBuilder<'Prototype, 'DbObject>) = 
-            BaseSetterProvider<'Prototype, 'DbObject>(builder :: (Seq.toList builders))
-
         member this.GetSetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetSetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
             let gmethod = method.MakeGenericMethod(argType)

@@ -126,7 +126,7 @@ module ParamsImpl =
         interface ParamsImpl.IBuilder with
 
             member __.CanBuild(argType: Type): bool = 
-                Types.isCollectionType argType && FSharpType.IsRecord (Types.getElementType argType)
+                Types.isCollectionType argType && (FSharpType.IsRecord (Types.getElementType argType) || FSharpType.IsTuple (Types.getElementType argType))
 
             member this.Build(name: string, _: IParamSetterProvider, _: unit): IParamSetter<'Arg> = 
                 let elemType = Types.getElementType typeof<'Arg>
@@ -138,6 +138,34 @@ module ParamsImpl =
                 let createSetterMethod = this.GetType().GetMethod(createSetterName, [| typeof<string>; typeof<string option> |]).MakeGenericMethod(elemType)
                 let setter = createSetterMethod.Invoke(this, [| name; None |]) :?> IParamSetter<'Arg>
                 setter
+
+    type BaseSetterProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>
+
+    type DerivedSetterProvider = GenericSetters.DerivedSetterProvider<SqlDataRecord, SqlDataRecord>
+
+    type UnitBuilder = GenericSetters.UnitBuilder<SqlDataRecord, SqlDataRecord>
+
+    type SequenceBuilder = GenericSetters.SequenceBuilder<SqlDataRecord, SqlDataRecord>
+
+    type Converter<'Source, 'Target> = GenericSetters.Converter<SqlDataRecord, SqlDataRecord, 'Source, 'Target>
+
+    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<SqlDataRecord, SqlDataRecord, 'Source, 'Target>
+
+    type EnumConverter<'Underlying> = GenericSetters.EnumConverter<SqlDataRecord, SqlDataRecord, 'Underlying>
+
+    type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<SqlDataRecord, SqlDataRecord, 'Underlying>
+
+    type AttrEnumSeqConverter = GenericSetters.AttrEnumSeqConverter<SqlDataRecord, SqlDataRecord>
+
+    type AttrEnumConverter = GenericSetters.AttrEnumConverter<SqlDataRecord, SqlDataRecord>
+
+    type OptionBuilder = GenericSetters.OptionBuilder<SqlDataRecord, SqlDataRecord>
+
+    type RecordBuilder = GenericSetters.RecordBuilder<SqlDataRecord, SqlDataRecord>
+
+    type TupleBuilder = GenericSetters.TupleBuilder<SqlDataRecord, SqlDataRecord>
+
+
 
     let getDefaultBuilders(createConnection: unit -> IDbConnection): ParamsImpl.IBuilder list = 
         let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
