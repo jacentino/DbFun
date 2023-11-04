@@ -173,6 +173,9 @@ module ParamsImpl =
 
 open ParamsImpl
 
+/// <summary>
+/// Provides methods creating various query parameter builders.
+/// </summary>
 type Params() = 
     inherit Builders.Params()
         
@@ -181,20 +184,83 @@ type Params() =
         | Some builder -> builder :?> TVPCollectionBuilder
         | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
 
+    /// <summary>
+    /// Creates a table-valued builder for a sequence of values (records or tuples).
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedSeq<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(name, tvpName)
 
+    /// <summary>
+    /// Creates a table-valued builder for a list of values (records or tuples).
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedList<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(name, tvpName)
 
+    /// <summary>
+    /// Creates a table-valued builder for an array of values (records or tuples).
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedArray<'Record>(name: string, ?tvpName: string): BuildParamSetter<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(name, tvpName)
 
+    /// <summary>
+    /// Creates a table-valued builder for a sequence of values (records or tuples).
+    /// </summary>
+    /// <param name="createTvpSetter">
+    /// The table-valued parameter builder.
+    /// </param>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedSeq<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(createTvpSetter, name, tvpName)
 
+    /// <summary>
+    /// Creates a table-valued builder for a list of values (records or tuples).
+    /// </summary>
+    /// <param name="createTvpSetter">
+    /// The table-valued parameter builder.
+    /// </param>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedList<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(createTvpSetter, name, tvpName)
 
+    /// <summary>
+    /// Creates a table-valued builder for an array of values (records or tuples).
+    /// </summary>
+    /// <param name="createTvpSetter">
+    /// The table-valued parameter builder.
+    /// </param>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="tvpName">
+    /// The name of user-defined table type representing records passed in the parameter.
+    /// </param>
     static member TableValuedArray<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, name: string, ?tvpName: string): BuildParamSetter<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(createTvpSetter, name, tvpName)

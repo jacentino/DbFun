@@ -79,9 +79,14 @@ module TableValuedParamsImpl =
     let getDefaultBuilders(): IBuilder list = 
         SimpleBuilder() :: GenericSetters.getDefaultBuilders()
 
+/// <summary>
+/// Provides methods creating various table-valued parameter builders.
+/// </summary>
 type TVParams() = 
     inherit GenericSetters.GenericSetterBuilder<SqlDataRecord, SqlDataRecord>()
            
-
+/// <summary>
+/// The field-to-column of SqlDataRecord mapping override.
+/// </summary>
 type TVParamOverride<'Arg> = GenericSetters.Override<SqlDataRecord, SqlDataRecord, 'Arg>
 

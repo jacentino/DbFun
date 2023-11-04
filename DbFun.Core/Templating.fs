@@ -40,7 +40,21 @@ module Templating =
         |> Seq.mapi (fun i s -> if i % 2 = 0 then s else "")
         |> String.concat ""
 
-
+    /// <summary>
+    /// Applies a template transformation when the guard condition is met or parameters is not specified (i.e. parameters is None).
+    /// </summary>
+    /// <param name="guard">
+    /// The template transformation condition.
+    /// </param>
+    /// <param name="expand">
+    /// The template transformation function.
+    /// </param>
+    /// <param name="template">
+    /// The template.
+    /// </param>
+    /// <param name="parameters">
+    /// The query parameters object.
+    /// </param>
     let applyWhen (guard: 'Params -> bool) (expand: string -> string) (template: string, parameters: 'Params option) = 
         let expanded = 
             match parameters with
@@ -48,6 +62,24 @@ module Templating =
             | None -> expand(template)
         expanded, parameters
 
+    /// <summary>
+    /// Applies a template transformation with a value extracted from query parameters (or default value if parameters object is None).
+    /// </summary>
+    /// <param name="getter">
+    /// The function extracting a value  from  query parameters.
+    /// </param>
+    /// <param name="defVal">
+    /// The default value.
+    /// </param>
+    /// <param name="expand">
+    /// The template transformation function.
+    /// </param>
+    /// <param name="template">
+    /// The template.
+    /// </param>
+    /// <param name="parameters">
+    /// The query parameters object.
+    /// </param>
     let applyWith (getter: 'Params -> 'T) (defVal: 'T) (expand: 'T -> string -> string) (template: string, parameters: 'Params option) = 
         let expanded = 
             match parameters with
@@ -55,6 +87,18 @@ module Templating =
             | None -> expand defVal template
         expanded, parameters
 
+    /// <summary>
+    /// Defines a template transformation using template string and transformation function.
+    /// </summary>
+    /// <param name="template">
+    /// The template.
+    /// </param>
+    /// <param name="expand">
+    /// The template transformation function.
+    /// </param>
+    /// <param name="parameters">
+    /// The query parameters object.
+    /// </param>
     let define (template: string) (expand: string * 'Params option -> string * 'Params option) (parameters: 'Params option) = 
         expand(template, parameters) 
         |> fst 

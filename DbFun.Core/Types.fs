@@ -2,19 +2,48 @@
 
 open System
 
+/// <summary>
+/// Reflection helper functions.
+/// </summary>
 module Types = 
 
-    let isSimpleType (t: Type) = t.IsPrimitive || List.contains t [ typeof<string>; typeof<DateTime>; typeof<TimeSpan>; typeof<Guid>; typeof<byte array> ] 
+    /// <summary>
+    /// Checks if a given type is a simple type i.e. whether it can be a column value.
+    /// Includes .NET basic types, string, DateTime, TimeSpan, Guid and byte array.
+    /// </summary>
+    /// <param name="typ">
+    /// The type to be checked.
+    /// </param>
+    let isSimpleType (typ: Type) = typ.IsPrimitive || List.contains typ [ typeof<string>; typeof<DateTime>; typeof<TimeSpan>; typeof<Guid>; typeof<byte array> ] 
 
-    let isOptionType (t: Type) = t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<Option<_>>
+    /// <summary>
+    /// Checks if a given type is an option type.
+    /// </summary>
+    /// <param name="typ">
+    /// The type to be checked.
+    /// </param>
+    let isOptionType (typ: Type) = typ.IsGenericType && typ.GetGenericTypeDefinition() = typedefof<Option<_>>
 
-    let isCollectionType (t: Type) = 
-        t.IsArray ||
-        (t.IsGenericType && 
-         typedefof<seq<_>>.MakeGenericType(t.GetGenericArguments().[0]).IsAssignableFrom(t) && 
-         t <> typeof<string> && 
-         t <> typeof<byte array>)
+    /// <summary>
+    /// Checks whether a given type is a collection type, i.e. array, sequence or its descendants, but not strig or byte array 
+    /// (they can be stored as simple column values).
+    /// </summary>
+    /// <param name="typ">
+    /// The type to be checked.
+    /// </param>
+    let isCollectionType (typ: Type) = 
+        typ.IsArray ||
+        (typ.IsGenericType && 
+         typedefof<seq<_>>.MakeGenericType(typ.GetGenericArguments().[0]).IsAssignableFrom(typ) && 
+         typ <> typeof<string> && 
+         typ <> typeof<byte array>)
 
+    /// <summary>
+    /// Returns element type of a collection type
+    /// </summary>
+    /// <param name="collectionType">
+    /// The collection type.
+    /// </param>
     let getElementType(collectionType: Type) = 
         if collectionType.IsArray then
             collectionType.GetElementType()

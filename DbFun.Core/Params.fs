@@ -128,7 +128,13 @@ module ParamsImpl =
         [ SimpleBuilder(); SimpleCollectionBuilder() ] @ GenericSetters.getDefaultBuilders()
 
 
+/// <summary>
+/// Provides methods creating various query parameter builders.
+/// </summary>
 type Params() = 
     inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()
 
+/// <summary>
+/// The field-to-parameter mapping override.
+/// </summary>
 type ParamOverride<'Arg> = GenericSetters.Override<unit, IDbCommand, 'Arg>

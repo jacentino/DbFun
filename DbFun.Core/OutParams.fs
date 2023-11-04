@@ -82,7 +82,13 @@ module OutParamsImpl =
 
     let getDefaultBuilders(): IBuilder list = SimpleOutParamBuilder() :: GenericGetters.getDefaultBuilders()
 
+/// <summary>
+/// Provides methods creating various query output parameter builders of stored procedures.
+/// </summary>
 type OutParams() =
     inherit GenericGetters.GenericGetterBuilder<unit, IDbCommand>()
 
+/// <summary>
+/// The field-to-parameter mapping override.
+/// </summary>
 type OutParamOverride<'Arg> = GenericGetters.Override<unit, IDbCommand, 'Arg>

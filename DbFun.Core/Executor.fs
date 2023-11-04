@@ -3,8 +3,17 @@
 open System.Data
 open System.Data.Common
 
+/// <summary>
+/// Helper module executing various async functions on a connection/command/data reader supporting async, or its
+/// sync counterparts for objects, that don't support async.
+/// </summary>
 module Executor = 
 
+    /// <summary>
+    /// Executes reader on a command.
+    /// </summary>
+    /// <param name="command">The command.</param>
+    /// <param name="behavior">The command behavior.</param>
     let executeReaderAsync (command: IDbCommand, behavior: CommandBehavior): Async<IDataReader> = 
         async {
             match command with 
@@ -17,6 +26,10 @@ module Executor =
                 return reader
         }
         
+    /// <summary>
+    /// Moves data reader to next result.
+    /// </summary>
+    /// <param name="reader"> The data reader.</param>
     let nextResultAsync(reader: IDataReader): Async<bool> = 
         async {
             match reader with 

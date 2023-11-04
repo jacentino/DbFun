@@ -35,22 +35,32 @@ module GenericGetters =
         abstract member Shift: unit -> IOverride<'Prototype, 'DbObject>
         abstract member Build: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>
 
-    type Override<'Prototype, 'DbObject, 'Result>(propNames: string list, setter: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>) =         
+    /// <summary>
+    /// The specification of field mapping override.
+    /// </summary>
+    type Override<'Prototype, 'DbObject, 'Result>(propNames: string list, builder: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>) =         
 
         static let rec getPropChain(expr: Expr) = 
             match expr with
             | PropertyGet (Some inner, property, _) -> getPropChain(inner) @ [ property.Name ]
             | _ -> []
 
-        new ([<ReflectedDefinition>] path: Expr<'Result>, setter: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>) = 
-            Override(getPropChain(path), setter)
+        /// <summary>
+        /// Creates an override for a field specified by a given property path by replacing it's default builder.
+        /// </summary>
+        /// <param name="path">
+        /// The property path of the overriden field.
+        /// </param>
+        /// <param name="setter"></param>
+        new ([<ReflectedDefinition>] path: Expr<'Result>, builder: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>) = 
+            Override(getPropChain(path), builder)
 
         interface IOverride<'Prototype, 'DbObject> with
             member __.IsRelevant (propertyName: string) = propNames |> List.tryHead |> Option.map ((=) propertyName) |> Option.defaultValue false
             member __.IsFinal = propNames |> List.isEmpty
-            member __.Shift() = Override(propNames |> List.tail, setter)
+            member __.Shift() = Override(propNames |> List.tail, builder)
             member __.Build<'Result2>(provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-                setter(provider, prototype) :?> IGetter<'DbObject, 'Result2>
+                builder(provider, prototype) :?> IGetter<'DbObject, 'Result2>
 
     type BaseGetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq) = 
 
@@ -330,58 +340,163 @@ module GenericGetters =
 
     type GenericGetterBuilder<'Prototype, 'DbObject>() =
 
+        /// <summary>
+        /// Creates a builder handling result without any value.
+        /// </summary>
         static member Unit: BuildGetter<'Prototype, 'DbObject, Unit> = 
             fun (provider, prototype) -> provider.Getter<unit>("", prototype)
 
+        /// <summary>
+        /// Creates a builder handling simple values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name or prefix (for indirect results).
+        /// </param>
         static member Simple<'Result>(name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider, prototype) -> provider.Getter<'Result>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling integer values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Int(name: string): BuildGetter<'Prototype, 'DbObject, int> = 
             fun (provider, prototype) -> provider.Getter<int>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling 64-bit integer values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Int64(name: string): BuildGetter<'Prototype, 'DbObject, int64> = 
             fun (provider, prototype) -> provider.Getter<int64>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling byte values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Byte(name: string): BuildGetter<'Prototype, 'DbObject, byte> = 
             fun (provider, prototype) -> provider.Getter<byte>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling char values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Char(name: string): BuildGetter<'Prototype, 'DbObject, char> = 
             fun (provider, prototype) -> provider.Getter<char>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling string values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member String(name: string): BuildGetter<'Prototype, 'DbObject, string> = 
             fun (provider, prototype) -> provider.Getter<string>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling DateTime values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member DateTime(name: string): BuildGetter<'Prototype, 'DbObject, DateTime> = 
             fun (provider, prototype) -> provider.Getter<DateTime>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling DateOnly values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member DateOnly(name: string): BuildGetter<'Prototype, 'DbObject, DateOnly> = 
             fun (provider, prototype) -> provider.Getter<DateOnly>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling TimeOnly values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member TimeOnly(name: string): BuildGetter<'Prototype, 'DbObject, TimeOnly> = 
             fun (provider, prototype) -> provider.Getter<TimeOnly>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling Decimal values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Decimal(name: string): BuildGetter<'Prototype, 'DbObject, decimal> = 
             fun (provider, prototype) -> provider.Getter<decimal>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling float values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Float(name: string): BuildGetter<'Prototype, 'DbObject, float> = 
             fun (provider, prototype) -> provider.Getter<float>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling double values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Double(name: string): BuildGetter<'Prototype, 'DbObject, double> = 
             fun (provider, prototype) -> provider.Getter<double>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling bool values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Bool(name: string): BuildGetter<'Prototype, 'DbObject, bool> = 
             fun (provider, prototype) -> provider.Getter<bool>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling Guid values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member Guid(name: string): BuildGetter<'Prototype, 'DbObject, Guid> = 
             fun (provider, prototype) -> provider.Getter<Guid>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling byte array values.
+        /// </summary>
+        /// <param name="name">
+        /// The column name.
+        /// </param>
         static member ByteArray(name: string): BuildGetter<'Prototype, 'DbObject, byte array> = 
             fun (provider, prototype) -> provider.Getter<byte array>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling optional types.
+        /// </summary>
+        /// <param name="name">
+        /// The column or prefix (for indirect results) name.
+        /// </param>
         static member Optional<'Result>(name: string):  BuildGetter<'Prototype, 'DbObject, 'Result option> =            
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
                 provider.Getter<'Result option>(name, prototype)
 
+        /// <summary>
+        /// Creates a builder handling optional types.
+        /// </summary>
+        /// <param name="underlying">
+        /// The option underlying type builder.
+        /// </param>
         static member Optional<'Result>(underlying: BuildGetter<'Prototype, 'DbObject, 'Result>): BuildGetter<'Prototype, 'DbObject, 'Result option> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->           
                 let getter = underlying(provider, prototype)
@@ -397,7 +512,16 @@ module GenericGetters =
                         getter.Create(record)
                 }
 
-
+            
+        /// <summary>
+        /// Creates a builder handling 2-element tuple types.
+        /// </summary>
+        /// <param name="name1">
+        /// The column or prefix (for indirect results) name of the first tuple element.
+        /// </param>
+        /// <param name="name2">
+        /// The column or prefix (for indirect results) name of the second tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2>(name1: string, name2: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2> =
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = provider.Getter<'Result1>(name1, prototype)
@@ -412,6 +536,15 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 2-element tuple types.
+        /// </summary>
+        /// <param name="createGetter1">
+        /// The builder of the first tuple element.
+        /// </param>
+        /// <param name="createGetter2">
+        /// The builder of the second tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2>(
                 createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
                 createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>)
@@ -429,6 +562,18 @@ module GenericGetters =
                         getter2.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 3-element tuple types.
+        /// </summary>
+        /// <param name="name1">
+        /// The column or prefix (for indirect results) name of the first tuple element.
+        /// </param>
+        /// <param name="name2">
+        /// The column or prefix (for indirect results) name of the second tuple element.
+        /// </param>
+        /// <param name="name3">
+        /// The column or prefix (for indirect results) name of the third tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3>(name1: string, name2: string, name3: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3> =
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = provider.Getter<'Result1>(name1, prototype)
@@ -445,6 +590,18 @@ module GenericGetters =
                         getter3.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 3-element tuple types.
+        /// </summary>
+        /// <param name="createGetter1">
+        /// The builder of the first tuple element.
+        /// </param>
+        /// <param name="createGetter2">
+        /// The builder of the second tuple element.
+        /// </param>
+        /// <param name="createGetter3">
+        /// The builder of the third tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3>(
                 createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
                 createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
@@ -465,6 +622,21 @@ module GenericGetters =
                         getter3.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 4-element tuple types.
+        /// </summary>
+        /// <param name="name1">
+        /// The column or prefix (for indirect results) name of the first tuple element.
+        /// </param>
+        /// <param name="name2">
+        /// The column or prefix (for indirect results) name of the second tuple element.
+        /// </param>
+        /// <param name="name3">
+        /// The column or prefix (for indirect results) name of the third tuple element.
+        /// </param>
+        /// <param name="name4">
+        /// The column or prefix (for indirect results) name of the fourth tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4>(name1: string, name2: string, name3: string, name4: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> =
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = provider.Getter<'Result1>(name1, prototype)
@@ -483,6 +655,21 @@ module GenericGetters =
                         getter4.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 4-element tuple types.
+        /// </summary>
+        /// <param name="createGetter1">
+        /// The builder of the first tuple element.
+        /// </param>
+        /// <param name="createGetter2">
+        /// The builder of the second tuple element.
+        /// </param>
+        /// <param name="createGetter3">
+        /// The builder of the third tuple element.
+        /// </param>
+        /// <param name="createGetter4">
+        /// The builder of the fourth tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4>(
                 createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
                 createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
@@ -506,6 +693,24 @@ module GenericGetters =
                         getter4.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 5-element tuple types.
+        /// </summary>
+        /// <param name="name1">
+        /// The column or prefix (for indirect results) name of the first tuple element.
+        /// </param>
+        /// <param name="name2">
+        /// The column or prefix (for indirect results) name of the second tuple element.
+        /// </param>
+        /// <param name="name3">
+        /// The column or prefix (for indirect results) name of the third tuple element.
+        /// </param>
+        /// <param name="name4">
+        /// The column or prefix (for indirect results) name of the fourth tuple element.
+        /// </param>
+        /// <param name="name5">
+        /// The column or prefix (for indirect results) name of the fifth tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(name1: string, name2: string, name3: string, name4: string, name5: string): BuildGetter<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> =
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let getter1 = provider.Getter<'Result1>(name1, prototype)
@@ -526,6 +731,24 @@ module GenericGetters =
                         getter5.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling 5-element tuple types.
+        /// </summary>
+        /// <param name="createGetter1">
+        /// The builder of the first tuple element.
+        /// </param>
+        /// <param name="createGetter2">
+        /// The builder of the second tuple element.
+        /// </param>
+        /// <param name="createGetter3">
+        /// The builder of the third tuple element.
+        /// </param>
+        /// <param name="createGetter4">
+        /// The builder of the fourth tuple element.
+        /// </param>
+        /// <param name="createGetter5">
+        /// The builder of the fourth tuple element.
+        /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(
                 createGetter1: BuildGetter<'Prototype, 'DbObject, 'Result1>, 
                 createGetter2: BuildGetter<'Prototype, 'DbObject, 'Result2>, 
@@ -552,6 +775,15 @@ module GenericGetters =
                         getter5.Create(record)
                 }
 
+        /// <summary>
+        /// Creates a builder handling record types.
+        /// </summary>
+        /// <param name="name">
+        /// The prefix of column names representing record fields in a dtatbase.
+        /// </param>
+        /// <param name="overrides">
+        /// Objects allowing to override default mappings of particular fields.
+        /// </param>
         static member Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let provider = DerivedGetterProvider<'Prototype, 'DbObject>(provider, overrides)
@@ -560,10 +792,22 @@ module GenericGetters =
                     match builder with
                     | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Result>(prefix, provider, prototype)
                     | _ -> builder.Build<'Result>(prefix, provider, prototype)
-                | None -> failwithf "Could not findnd row/column getter for type: %A" typeof<'Result>
+                | None -> failwithf "Could not find row/column getter for type: %A" typeof<'Result>
 
+        /// <summary>
+        /// Creates a builder handling record types.
+        /// </summary>
+        /// <param name="name">
+        /// The prefix of column names representing record fields in a dtatabase.
+        /// </param>
         static member Record<'Result>(?prefix: string): IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result> = 
             GenericGetterBuilder<'Prototype, 'DbObject>.Record<'Result>(defaultArg prefix "", [||])
 
+        /// <summary>
+        /// Creates a builder handling record types.
+        /// </summary>
+        /// <param name="overrides">
+        /// Objects allowing to override default mappings of particular fields.
+        /// </param>
         static member Record<'Result>([<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             GenericGetterBuilder<'Prototype, 'DbObject>.Record<'Result>("", overrides)
