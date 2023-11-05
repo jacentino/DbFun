@@ -244,11 +244,12 @@ module GenericSetters =
     type AttrEnumSeqConverter<'Prototype, 'DbObject>() = 
 
         member __.GetUnderlyingValues<'Enum>() = 
+            let properties = typeof<'Enum>.GetProperties()
             let underlyingValues = 
-                [ for f in typeof<'Enum>.GetFields() do
-                    if f.IsStatic then
-                        f.GetValue(null) :?> 'Enum, f.GetCustomAttribute<Models.EnumValueAttribute>().Value
-                ]     
+                [ for uc in FSharpType.GetUnionCases typeof<'Enum> do
+                    (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Enum, 
+                    (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value
+                ] 
             underlyingValues
 
         member __.MapSeq<'Enum>(eq: Func<'Enum, 'Enum, bool>, underlyingValues: ('Enum * string) list, sequence: 'Enum seq) = 
@@ -262,11 +263,11 @@ module GenericSetters =
                     false
                 else
                     let elemType = Types.getElementType argType
-                    elemType.IsEnum 
+                    FSharpType.IsUnion elemType
                         && 
-                    elemType.GetFields() 
-                    |> Seq.filter (fun f -> f.IsStatic) 
-                    |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
+                    elemType
+                    |> FSharpType.GetUnionCases
+                    |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
 
             member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<string seq>(name, prototype)   
@@ -295,21 +296,22 @@ module GenericSetters =
         interface IBuilder<'Prototype, 'DbObject> with
 
             member __.CanBuild(argType: Type): bool = 
-                argType.IsEnum 
+                FSharpType.IsUnion argType
                     && 
-                argType.GetFields() 
-                |> Seq.filter (fun f -> f.IsStatic) 
-                |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
+                argType
+                |> FSharpType.GetUnionCases
+                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
 
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<string>(name, prototype)   
                 let op1 = Expression.Parameter(typeof<'Arg>)
                 let op2 = Expression.Parameter(typeof<'Arg>)
-                let eq = Expression.Lambda<Func<'Arg, 'Arg, bool>>(Expression.Equal(op1, op2), op1, op2).Compile()                    
+                let eq = Expression.Lambda<Func<'Arg, 'Arg, bool>>(Expression.Equal(op1, op2), op1, op2).Compile()   
+                let properties = typeof<'Arg>.GetProperties()
                 let underlyingValues = 
-                    [ for f in typeof<'Arg>.GetFields() do
-                        if f.IsStatic then
-                            f.GetValue(null) :?> 'Arg, f.GetCustomAttribute<Models.EnumValueAttribute>().Value
+                    [ for uc in FSharpType.GetUnionCases typeof<'Arg> do
+                        (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Arg, 
+                        (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value
                     ] 
                 let convert (x: 'Arg): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
                 { new ISetter<'DbObject, 'Arg> with

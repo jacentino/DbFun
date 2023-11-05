@@ -15,10 +15,11 @@ type Role =
     | Admin     = 3
 
 type Access =     
-    | [<EnumValue("NO")>] NoAccess  = 0
-    | [<EnumValue("RD")>] Read      = 1 
-    | [<EnumValue("WR")>] Write     = 2
-    | [<EnumValue("RW")>] ReadWrite = 3
+    | [<EnumValue("NO")>] NoAccess 
+    | [<EnumValue("RD")>] Read     
+    | [<EnumValue("WR")>] Write    
+    | [<EnumValue("RW")>] ReadWrite
+
 
 type User = 
     {

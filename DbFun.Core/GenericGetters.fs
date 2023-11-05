@@ -220,18 +220,19 @@ module GenericGetters =
         interface IBuilder<'Prototype, 'DbObject> with
 
             member __.CanBuild(resType: Type): bool = 
-                resType.IsEnum 
+                FSharpType.IsUnion resType
                     && 
-                resType.GetFields() 
-                |> Seq.filter (fun f -> f.IsStatic) 
-                |> Seq.forall (fun f -> not (Seq.isEmpty (f.GetCustomAttributes<Models.EnumValueAttribute>())))
+                resType
+                |> FSharpType.GetUnionCases
+                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
 
             member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<string>(name, prototype)   
+                let properties = typeof<'Result>.GetProperties()
                 let underlyingValues = 
-                    [ for f in typeof<'Result>.GetFields() do
-                        if f.IsStatic then
-                            f.GetCustomAttribute<Models.EnumValueAttribute>().Value, f.GetValue(null) :?> 'Result
+                    [ for uc in FSharpType.GetUnionCases typeof<'Result> do
+                        (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value,
+                        (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Result
                     ] 
                 let convert (x: string): 'Result = underlyingValues |> List.find (fst >> (=) x) |> snd
                 { new IGetter<'DbObject, 'Result> with
