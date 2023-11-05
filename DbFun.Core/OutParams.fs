@@ -73,7 +73,7 @@ module OutParamsImpl =
 
     type EnumConverter<'Underlying> = GenericGetters.EnumConverter<unit, IDbCommand, 'Underlying>
 
-    type AttrEnumConverter = GenericGetters.AttrEnumConverter<unit, IDbCommand>
+    type UnionBuilder = GenericGetters.UnionBuilder<unit, IDbCommand>
 
     type RecordBuilder = GenericGetters.RecordBuilder<unit, IDbCommand>
 

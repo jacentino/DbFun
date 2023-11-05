@@ -241,14 +241,14 @@ module GenericSetters =
                 }
         
 
-    type AttrEnumSeqConverter<'Prototype, 'DbObject>() = 
+    type UnionSeqBuilder<'Prototype, 'DbObject>() = 
 
         member __.GetUnderlyingValues<'Enum>() = 
             let properties = typeof<'Enum>.GetProperties()
             let underlyingValues = 
                 [ for uc in FSharpType.GetUnionCases typeof<'Enum> do
                     (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Enum, 
-                    (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value
+                    (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
                 ] 
             underlyingValues
 
@@ -267,7 +267,7 @@ module GenericSetters =
                         && 
                     elemType
                     |> FSharpType.GetUnionCases
-                    |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
+                    |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
 
             member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<string seq>(name, prototype)   
@@ -291,7 +291,7 @@ module GenericSetters =
                 }
 
         
-    type AttrEnumConverter<'Prototype, 'DbObject>() = 
+    type UnionBuilder<'Prototype, 'DbObject>() = 
 
         interface IBuilder<'Prototype, 'DbObject> with
 
@@ -300,7 +300,7 @@ module GenericSetters =
                     && 
                 argType
                 |> FSharpType.GetUnionCases
-                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
+                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
 
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<string>(name, prototype)   
@@ -311,7 +311,7 @@ module GenericSetters =
                 let underlyingValues = 
                     [ for uc in FSharpType.GetUnionCases typeof<'Arg> do
                         (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Arg, 
-                        (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value
+                        (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
                     ] 
                 let convert (x: 'Arg): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
                 { new ISetter<'DbObject, 'Arg> with
@@ -428,8 +428,8 @@ module GenericSetters =
             Converter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
             SeqItemConverter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
             SeqItemConverter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
-            AttrEnumConverter<'Prototype, 'DbObject>()
-            AttrEnumSeqConverter<'Prototype, 'DbObject>()
+            UnionBuilder<'Prototype, 'DbObject>()
+            UnionSeqBuilder<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
             EnumConverter<'Prototype, 'DbObject, int>()
             EnumSeqConverter<'Prototype, 'DbObject, char>()

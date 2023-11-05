@@ -215,7 +215,7 @@ module GenericGetters =
                 }
 
 
-    type AttrEnumConverter<'Prototype, 'DbObject>() = 
+    type UnionBuilder<'Prototype, 'DbObject>() = 
 
         interface IBuilder<'Prototype, 'DbObject> with
 
@@ -224,14 +224,14 @@ module GenericGetters =
                     && 
                 resType
                 |> FSharpType.GetUnionCases
-                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>))))
+                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
 
             member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<string>(name, prototype)   
                 let properties = typeof<'Result>.GetProperties()
                 let underlyingValues = 
                     [ for uc in FSharpType.GetUnionCases typeof<'Result> do
-                        (uc.GetCustomAttributes(typeof<Models.EnumValueAttribute>)[0] :?> Models.EnumValueAttribute).Value,
+                        (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value,
                         (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Result
                     ] 
                 let convert (x: string): 'Result = underlyingValues |> List.find (fst >> (=) x) |> snd
@@ -329,7 +329,7 @@ module GenericGetters =
             UnitBuilder<'Prototype, 'DbObject>()
             Converter<'Prototype, 'DbObject, DateTime, DateOnly>(fun (dateTime: DateTime) -> DateOnly.FromDateTime(dateTime))
             Converter<'Prototype, 'DbObject, TimeSpan, TimeOnly>(fun (timeSpan: TimeSpan) -> TimeOnly.FromTimeSpan(timeSpan))
-            AttrEnumConverter<'Prototype, 'DbObject>()
+            UnionBuilder<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
             EnumConverter<'Prototype, 'DbObject, int>()
             RecordBuilder<'Prototype, 'DbObject>()

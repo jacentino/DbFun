@@ -155,9 +155,9 @@ module ParamsImpl =
 
     type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<SqlDataRecord, SqlDataRecord, 'Underlying>
 
-    type AttrEnumSeqConverter = GenericSetters.AttrEnumSeqConverter<SqlDataRecord, SqlDataRecord>
+    type UnionSeqBuilder = GenericSetters.UnionSeqBuilder<SqlDataRecord, SqlDataRecord>
 
-    type AttrEnumConverter = GenericSetters.AttrEnumConverter<SqlDataRecord, SqlDataRecord>
+    type UnionBuilder = GenericSetters.UnionBuilder<SqlDataRecord, SqlDataRecord>
 
     type OptionBuilder = GenericSetters.OptionBuilder<SqlDataRecord, SqlDataRecord>
 

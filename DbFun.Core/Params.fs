@@ -114,9 +114,9 @@ module ParamsImpl =
 
     type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<unit, IDbCommand, 'Underlying>
 
-    type AttrEnumSeqConverter = GenericSetters.AttrEnumSeqConverter<unit, IDbCommand>
+    type UnionSeqBuilder = GenericSetters.UnionSeqBuilder<unit, IDbCommand>
 
-    type AttrEnumConverter = GenericSetters.AttrEnumConverter<unit, IDbCommand>
+    type UnionBuilder = GenericSetters.UnionBuilder<unit, IDbCommand>
 
     type OptionBuilder = GenericSetters.OptionBuilder<unit, IDbCommand>
 

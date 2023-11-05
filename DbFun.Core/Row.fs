@@ -92,7 +92,7 @@ module RowsImpl =
 
     type EnumConverter<'Underlying> = GenericGetters.EnumConverter<IDataRecord, IDataRecord, 'Underlying>
 
-    type AttrEnumConverter = GenericGetters.AttrEnumConverter<IDataRecord, IDataRecord>
+    type UnionBuilder = GenericGetters.UnionBuilder<IDataRecord, IDataRecord>
 
     type RecordBuilder = GenericGetters.RecordBuilder<IDataRecord, IDataRecord>
 

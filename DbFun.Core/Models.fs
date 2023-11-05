@@ -6,7 +6,7 @@ open System
 /// An attribute allowing to specify string values, representing database values of enum literals.
 /// </summary>
 [<AttributeUsage(AttributeTargets.Property)>]
-type EnumValueAttribute(value: string) =
+type UnionCaseTagAttribute(value: string) =
     inherit Attribute()
     member __.Value = value
 
