@@ -20,6 +20,10 @@ type Access =
     | [<UnionCaseTag("WR")>] Write    
     | [<UnionCaseTag("RW")>] ReadWrite
 
+type PaymentType = 
+    | [<UnionCaseTag("NP")>] NoPayment
+    | [<UnionCaseTag("CS")>] Cash of string
+    | [<UnionCaseTag("CC")>] CreditCard of number: string * cvc: string
 
 type User = 
     {

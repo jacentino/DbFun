@@ -16,6 +16,22 @@ module ParamsImpl =
 
     type SimpleBuilder() =
 
+        member __.FindOrCreateParam(command: IDbCommand, name: string) = 
+            let index = command.Parameters.IndexOf(name)
+            if index = -1 then
+                let param = command.CreateParameter()
+                param.ParameterName <- name
+                command.Parameters.Add param |> ignore
+                param
+            else
+                command.Parameters.[index] :?> IDbDataParameter 
+
+        member __.Update(param: IDbDataParameter, value: obj) = 
+            if param.Value = null || param.Value = DBNull.Value then
+                param.Value <- value
+            else
+                failwithf "Duplicate parameter definition: %s" param.ParameterName
+
         member __.GetArtificialValue<'Type>(): obj = 
             if typeof<'Type> = typeof<string> then box ""
             elif typeof<'Type> = typeof<DateTime> then box DateTime.Now
@@ -30,20 +46,14 @@ module ParamsImpl =
             member this.Build<'Arg> (name: string, _, ()) = 
                 { new IParamSetter<'Arg> with
                     member __.SetValue (value: 'Arg, command: IDbCommand) = 
-                        let param = command.CreateParameter()
-                        param.ParameterName <- name
-                        param.Value <- value
-                        command.Parameters.Add param |> ignore
+                        let param = this.FindOrCreateParam(command, name)
+                        this.Update(param, value)
                     member __.SetNull(command: IDbCommand) = 
-                        let param = command.CreateParameter()
-                        param.ParameterName <- name
-                        param.Value <- DBNull.Value
-                        command.Parameters.Add param |> ignore
+                        let param = this.FindOrCreateParam(command, name)
+                        this.Update(param, DBNull.Value)
                     member __.SetArtificial(command: IDbCommand) = 
-                        let param = command.CreateParameter()
-                        param.ParameterName <- name
+                        let param = this.FindOrCreateParam(command, name)
                         param.Value <- this.GetArtificialValue<'Arg>()
-                        command.Parameters.Add param |> ignore
                 }
 
     type SimpleCollectionBuilder() =

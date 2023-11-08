@@ -24,8 +24,8 @@ module GenericSetters =
         abstract member CanBuild: Type -> bool
         abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
-    type IBuilderEx<'Prototype, 'DbObject> = 
-        abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
+    type IConfigurableBuilder<'Prototype, 'DbObject, 'Config> = 
+        abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Config * 'Prototype -> ISetter<'DbObject, 'Arg>
 
     type BuildSetter<'Prototype, 'DbObject, 'Arg> = ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
@@ -92,9 +92,13 @@ module GenericSetters =
 
         member __.GetSetter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
             let relevant = overrides |> Seq.filter (fun x -> x.IsRelevant name) |> Seq.map (fun x -> x.Shift()) |> Seq.toList
+            let nextDerived = DerivedSetterProvider(baseProvider, relevant)
             match relevant |> List.tryFind (fun x -> x.IsFinal) with
-            | Some ov -> ov.Build(DerivedSetterProvider(baseProvider, relevant), prototype)
-            | None -> baseProvider.Setter(name, prototype)
+            | Some ov -> ov.Build(nextDerived, prototype)
+            | None -> 
+                match baseProvider.Builder(typeof<'Arg>) with
+                | Some builder -> builder.Build(name, nextDerived, prototype)
+                | None -> failwithf "Could not find a setter builder for type: %A" typeof<'Arg>
 
         member __.GetBuilder(argType: Type) = 
             baseProvider.Builder(argType)
@@ -291,39 +295,6 @@ module GenericSetters =
                 }
 
         
-    type UnionBuilder<'Prototype, 'DbObject>() = 
-
-        interface IBuilder<'Prototype, 'DbObject> with
-
-            member __.CanBuild(argType: Type): bool = 
-                FSharpType.IsUnion argType
-                    && 
-                argType
-                |> FSharpType.GetUnionCases
-                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
-
-            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
-                let setter = provider.Setter<string>(name, prototype)   
-                let op1 = Expression.Parameter(typeof<'Arg>)
-                let op2 = Expression.Parameter(typeof<'Arg>)
-                let eq = Expression.Lambda<Func<'Arg, 'Arg, bool>>(Expression.Equal(op1, op2), op1, op2).Compile()   
-                let properties = typeof<'Arg>.GetProperties()
-                let underlyingValues = 
-                    [ for uc in FSharpType.GetUnionCases typeof<'Arg> do
-                        (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Arg, 
-                        (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
-                    ] 
-                let convert (x: 'Arg): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
-                { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(convert(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
-                }
-
-
     type OptionBuilder<'Prototype, 'DbObject>() =
 
         member __.GetSetter(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Underlying option> = 
@@ -402,9 +373,9 @@ module GenericSetters =
                 let fields = FSharpType.GetRecordFields typeof<'Arg> |> Array.map (fun f -> f, f.Name)
                 FieldListAssigner.build(provider, fields, prototype)
 
-        interface IBuilderEx<'Prototype, 'DbObject> with
+        interface IConfigurableBuilder<'Prototype, 'DbObject, unit> with
 
-            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, _, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let fields = FSharpType.GetRecordFields typeof<'Arg> |> Array.map (fun f -> f, sprintf "%s%s" name f.Name)
                 FieldListAssigner.build(provider, fields, prototype)
 
@@ -418,6 +389,72 @@ module GenericSetters =
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> =                     
                 let fields = typeof<'Arg>.GetProperties() |> Array.mapi (fun i f -> f, sprintf "%s%d" name (i + 1))
                 FieldListAssigner.build(provider, fields, prototype)  
+
+
+    type UnionBuilder<'Prototype, 'DbObject>() = 
+
+        member __.CreateUnionCaseSetter<'Union, 'UnionCase>(provider: ISetterProvider<'Prototype, 'DbObject>, name: string, fields: PropertyInfo array, prototype: 'Prototype): ISetter<'DbObject, 'Union> =             
+            let named = 
+                if fields |> Array.forall (fun f -> System.Text.RegularExpressions.Regex.Match(f.Name, "Item[0-9]*").Success) then 
+                    fields |> Array.mapi (fun i f -> f, sprintf "%s%d" name (i + 1)) 
+                else 
+                    fields |> Array.map (fun f -> f, f.Name)
+            let unionCaseBuilder: ISetter<'DbObject, 'UnionCase> = FieldListAssigner.build(provider, named, prototype)  
+            { new ISetter<'DbObject, 'Union> with
+                member __.SetValue (value: 'Union, command: 'DbObject) = 
+                    unionCaseBuilder.SetValue(value |> box :?> 'UnionCase, command)
+                member __.SetNull(command: 'DbObject) = 
+                    unionCaseBuilder.SetNull(command)
+                member __.SetArtificial(command: 'DbObject) = 
+                    unionCaseBuilder.SetArtificial(command)
+            }
+
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(argType: Type): bool = 
+                FSharpType.IsUnion argType
+                    && 
+                argType
+                |> FSharpType.GetUnionCases
+                |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
+
+            member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+                let tagSetter = provider.Setter<string>(name, prototype)   
+                let uc = Expression.Parameter(typeof<'Arg>)
+                let getTag = Expression.Lambda<Func<'Arg, int>>(Expression.Property(uc, "Tag"), uc).Compile()
+                let createUCSetterMethod = this.GetType().GetMethod("CreateUnionCaseSetter")
+                let dbTags = 
+                    [ for uc in FSharpType.GetUnionCases typeof<'Arg> do                         
+                        uc.Tag, (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
+                    ] 
+                let caseSetters = 
+                    [ for uc in FSharpType.GetUnionCases typeof<'Arg> do                         
+                        uc.Tag, 
+                        let fields = uc.GetFields()
+                        if Array.isEmpty fields then
+                            let emptyBuilder = UnitBuilder<'Prototype, 'DbObject>() :> IBuilder<'Prototype, 'DbObject>
+                            emptyBuilder.Build<'Arg>(name, provider, prototype)
+                        else
+                            let gmethod = createUCSetterMethod.MakeGenericMethod(typeof<'Arg>, typeof<'Arg>.GetNestedType(uc.Name))
+                            gmethod.Invoke(this, [| provider; uc.Name; fields; prototype |]) :?> ISetter<'DbObject, 'Arg>
+                    ] 
+                { new ISetter<'DbObject, 'Arg> with
+                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
+                        let dbTag = dbTags |> List.find (fst >> (=) (getTag.Invoke value)) |> snd
+                        tagSetter.SetValue(dbTag, command)
+                        for (_, setter) in caseSetters do
+                            setter.SetNull(command)
+                        let setter = caseSetters |> List.find (fst >> (=) (getTag.Invoke value)) |> snd
+                        setter.SetValue(value, command)
+                    member __.SetNull(command: 'DbObject) = 
+                        tagSetter.SetNull(command)
+                        for (_, setter) in caseSetters do
+                            setter.SetNull(command)
+                    member __.SetArtificial(command: 'DbObject) = 
+                        tagSetter.SetArtificial(command)
+                        for (_, setter) in caseSetters do
+                            setter.SetArtificial(command)
+                }
 
 
     let getDefaultBuilders(): IBuilder<'Prototype, 'DbObject> list = 
@@ -927,10 +964,7 @@ module GenericSetters =
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let provider = DerivedSetterProvider<'Prototype, 'DbObject>(provider, overrides)
                 match provider.GetBuilder(typeof<'Arg>) with
-                | Some builder ->
-                    match builder with
-                    | :? IBuilderEx<'Prototype, 'DbObject> as builderEx -> builderEx.Build<'Arg>(prefix, provider, prototype)
-                    | _ -> builder.Build<'Arg>(prefix, provider, prototype)
+                | Some builder -> (builder :?> IConfigurableBuilder<'Prototype, 'DbObject, unit>).Build<'Arg>(prefix, provider, (), prototype)
                 | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
 
         /// <summary>
@@ -950,4 +984,20 @@ module GenericSetters =
         /// </param>
         static member Record<'Arg>(?prefix: string) = 
             GenericSetterBuilder<'Prototype, 'DbObject>.Record<'Arg>(defaultArg prefix "", [||])
+
+        /// <summary>
+        /// Creates a builder handling discriminated union types.
+        /// </summary>
+        /// <param name="name">
+        /// The union tag column name.
+        /// </param>
+        /// <param name="overrides">
+        /// Objects allowing to override default mappings of particular fields.
+        /// </param>
+        static member Union<'Arg>(name: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let provider = DerivedSetterProvider<'Prototype, 'DbObject>(provider, overrides)
+                match provider.GetBuilder(typeof<'Arg>) with
+                | Some builder -> builder.Build<'Arg>(name, provider, prototype)
+                | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
 

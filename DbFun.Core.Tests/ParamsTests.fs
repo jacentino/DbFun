@@ -8,11 +8,38 @@ open DbFun.TestTools.Models
 open DbFun.Core.Builders.GenericSetters
 open System.Data
 
+
+
+open DbFun.Core.Models
+
+type TestUnion = 
+    | [<UnionCaseTag("EC")>] EmptyCase
+    | [<UnionCaseTag("SV")>] SimpleValue of int
+    | [<UnionCaseTag("TU")>] Tuple of int * string
+    | [<UnionCaseTag("NI")>] NamedItems of Id: int * Name: string
+
+
 module ParamsTests = 
 
     let connection = new SqlConnection()
     let provider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.getDefaultBuilders())
     let builderParams = provider :> IParamSetterProvider, ()
+
+    open FSharp.Reflection
+
+    [<Fact>]
+    let ``Explore DU``() = 
+        let duType = typeof<TestUnion>
+        let cases = FSharpType.GetUnionCases duType
+        let props = duType.GetProperties()
+        let methods = duType.GetMethods()
+        let fields = cases |> Array.map (fun uc -> uc, uc.GetFields())
+        let nestedTypes = cases |> Array.map (fun uc -> duType.GetNestedType(uc.Name))
+
+        let isUnionCase = FSharpType.IsUnion nestedTypes.[1].BaseType
+
+        Assert.NotEmpty(cases)
+        Assert.NotEmpty(props)
 
     [<Fact>]
     let ``Simple types`` () =
@@ -137,7 +164,7 @@ module ParamsTests =
 
 
     [<Fact>]
-    let ``Attr enum collections - seq`` () =
+    let ``Discriminated union collections - seq`` () =
     
         use command = connection.CreateCommand()
         command.CommandText <- "select * from Role where access in (@access)"
@@ -435,9 +462,31 @@ module ParamsTests =
 
 
     [<Fact>]
-    let ``Attribute enums``() =
+    let ``Discriminated unions - simple``() =
         use command = connection.CreateCommand()
 
         (Params.Simple<Access>("access")(builderParams)).SetValue(Access.Read, command)
 
         Assert.Equal(box "RD", command.Parameters["access"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - unnamed fields``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment")(builderParams)).SetValue(PaymentType.Cash "PLN", command)
+
+        Assert.Equal(box "CS", command.Parameters["payment"].Value)
+        Assert.Equal(box "PLN", command.Parameters["Cash1"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["number"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["cvc"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - named fields``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment")(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["number"].Value)
+        Assert.Equal(box "222", command.Parameters["cvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["Cash1"].Value)

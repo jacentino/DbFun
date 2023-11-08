@@ -53,10 +53,10 @@ module OutParamsTests =
         
         
     [<Fact>]
-    let ``Attr enum types``() = 
+    let ``Discriminated union types - simple``() = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Simple<Access>("access") builderParams
+        let getter = OutParams.Union<Access>("access") builderParams
 
         getter.Create(command)
         command.Parameters.["access"].Value <- "RW"

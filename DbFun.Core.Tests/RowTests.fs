@@ -153,7 +153,7 @@ module RowTests =
 
 
     [<Fact>]
-    let ``Attribute enums``() = 
+    let ``Discriminated unions - no fields``() = 
 
         let record = createDataRecordMock [ vcol("access", "RW") ]
         let builderParams = provider :> IRowGetterProvider, record
@@ -162,6 +162,30 @@ module RowTests =
         let value = getter.Get(record)
 
         Assert.Equal(Access.ReadWrite, value)
+
+
+    [<Fact>]
+    let ``Discriminated unions - unnamed fields``() = 
+
+        let record = createDataRecordMock [ vcol("payment", "CS"); vcol("Cash1", "PLN"); ncol<string>("number"); ncol<string>("cvc") ]
+        let builderParams = provider :> IRowGetterProvider, record
+        
+        let getter = Rows.Union<PaymentType> "payment" builderParams
+        let value = getter.Get(record)
+
+        Assert.Equal(PaymentType.Cash "PLN", value)
+
+
+    [<Fact>]
+    let ``Discriminated unions - named fields``() = 
+
+        let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("Cash1"); vcol("number", "1234567890"); vcol("cvc", "222") ]
+        let builderParams = provider :> IRowGetterProvider, record
+        
+        let getter = Rows.Union<PaymentType> "payment" builderParams
+        let value = getter.Get(record)
+
+        Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
     [<Fact>]
