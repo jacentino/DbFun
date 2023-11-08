@@ -167,7 +167,7 @@ module RowTests =
     [<Fact>]
     let ``Discriminated unions - unnamed fields``() = 
 
-        let record = createDataRecordMock [ vcol("payment", "CS"); vcol("Cash1", "PLN"); ncol<string>("number"); ncol<string>("cvc") ]
+        let record = createDataRecordMock [ vcol("payment", "CS"); vcol("Cash", "PLN"); ncol<string>("number"); ncol<string>("cvc") ]
         let builderParams = provider :> IRowGetterProvider, record
         
         let getter = Rows.Union<PaymentType> "payment" builderParams
@@ -179,7 +179,7 @@ module RowTests =
     [<Fact>]
     let ``Discriminated unions - named fields``() = 
 
-        let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("Cash1"); vcol("number", "1234567890"); vcol("cvc", "222") ]
+        let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("Cash"); vcol("number", "1234567890"); vcol("cvc", "222") ]
         let builderParams = provider :> IRowGetterProvider, record
         
         let getter = Rows.Union<PaymentType> "payment" builderParams

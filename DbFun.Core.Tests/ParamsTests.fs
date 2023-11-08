@@ -476,7 +476,7 @@ module ParamsTests =
         (Params.Union<PaymentType>("payment")(builderParams)).SetValue(PaymentType.Cash "PLN", command)
 
         Assert.Equal(box "CS", command.Parameters["payment"].Value)
-        Assert.Equal(box "PLN", command.Parameters["Cash1"].Value)
+        Assert.Equal(box "PLN", command.Parameters["Cash"].Value)
         Assert.Equal(box DBNull.Value, command.Parameters["number"].Value)
         Assert.Equal(box DBNull.Value, command.Parameters["cvc"].Value)
 
@@ -489,4 +489,4 @@ module ParamsTests =
         Assert.Equal(box "CC", command.Parameters["payment"].Value)
         Assert.Equal(box "1234567890", command.Parameters["number"].Value)
         Assert.Equal(box "222", command.Parameters["cvc"].Value)
-        Assert.Equal(box DBNull.Value, command.Parameters["Cash1"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["Cash"].Value)

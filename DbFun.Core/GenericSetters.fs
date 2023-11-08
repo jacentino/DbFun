@@ -7,6 +7,7 @@ open System.Linq.Expressions
 open DbFun.Core
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
+open System.Text.RegularExpressions
 
 module GenericSetters =
 
@@ -395,8 +396,8 @@ module GenericSetters =
 
         member __.CreateUnionCaseSetter<'Union, 'UnionCase>(provider: ISetterProvider<'Prototype, 'DbObject>, name: string, fields: PropertyInfo array, prototype: 'Prototype): ISetter<'DbObject, 'Union> =             
             let named = 
-                if fields |> Array.forall (fun f -> System.Text.RegularExpressions.Regex.Match(f.Name, "Item[0-9]*").Success) then 
-                    fields |> Array.mapi (fun i f -> f, sprintf "%s%d" name (i + 1)) 
+                if fields |> Array.forall (fun f -> Regex.Match(f.Name, "Item[0-9]*").Success) then 
+                    fields |> Array.mapi (fun i f -> f, f.Name.Replace("Item", name)) 
                 else 
                     fields |> Array.map (fun f -> f, f.Name)
             let unionCaseBuilder: ISetter<'DbObject, 'UnionCase> = FieldListAssigner.build(provider, named, prototype)  

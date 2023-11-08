@@ -7,6 +7,7 @@ open Microsoft.FSharp.Reflection
 open DbFun.Core
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
+open System.Text.RegularExpressions
 
 module GenericGetters = 
 
@@ -308,11 +309,11 @@ module GenericGetters =
 
         member __.CreateUnionCaseGetter<'Union, 'UnionCase>(provider: IGetterProvider<'Prototype, 'DbObject>, name: string, fields: PropertyInfo array, prototype: 'Prototype): IGetter<'DbObject, 'Union> =             
             let named = 
-                if fields |> Array.forall (fun f -> System.Text.RegularExpressions.Regex.Match(f.Name, "Item[0-9]*").Success) then 
-                    fields |> Array.mapi (fun i f -> f.PropertyType, sprintf "%s%d" name (i + 1)) 
+                if fields |> Array.forall (fun f -> Regex.Match(f.Name, "Item[0-9]*").Success) then 
+                    fields |> Array.mapi (fun i f -> f.PropertyType, f.Name.Replace("Item", name)) 
                 else 
                     fields |> Array.map (fun f -> f.PropertyType, f.Name)
-            let unionCaseBuilder: IGetter<'DbObject, 'Union> = FieldListBuilder.build(provider, named, newUnionCase(typeof<'Union>, typeof<'UnionCase>.Name), prototype)  
+            let unionCaseBuilder: IGetter<'DbObject, 'Union> = FieldListBuilder.build(provider, named, newUnionCase(typeof<'Union>, name), prototype)  
             unionCaseBuilder
 
         member __.CreateDirectValueGetter<'Union>(name: string) = 
