@@ -43,3 +43,18 @@ type UserWithRoles =
     }
 
 type UserId = UserId of int
+
+type Signature = 
+    {
+        createdAt : DateTime
+        createdBy : string
+        updatedAt : DateTime
+        updatedBy : string
+    }
+
+type Account = 
+    {
+        userId      : string
+        password    : string
+        signature   : Signature
+    }

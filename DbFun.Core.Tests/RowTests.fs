@@ -375,6 +375,84 @@ module RowTests =
 
 
     [<Fact>]
+    let ``Hierarchical records``() = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", "jacentino")
+                            vcol("password", "******")
+                            vcol("createdAt", DateTime(2023, 1, 1))
+                            vcol("createdBy", "admin")
+                            vcol("updatedAt", DateTime(2023, 1, 1))
+                            vcol("updatedBy", "admin")
+                        ]
+        let builderParams = provider :> IRowGetterProvider, record
+
+        let getter = Rows.Record<Account>() builderParams
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId      = "jacentino"
+                password    = "******"
+                signature   = { createdAt = DateTime(2023, 1, 1); createdBy = "admin"; updatedAt = DateTime(2023, 1, 1); updatedBy = "admin" }
+            }
+        Assert.Equal(expected, value)
+
+
+    [<Fact>]
+    let ``Hierarchical records -prefixes``() = 
+
+        let record = createDataRecordMock 
+                        [   vcol("account_userId", "jacentino")
+                            vcol("account_password", "******")
+                            vcol("account_createdAt", DateTime(2023, 1, 1))
+                            vcol("account_createdBy", "admin")
+                            vcol("account_updatedAt", DateTime(2023, 1, 1))
+                            vcol("account_updatedBy", "admin")
+                        ]
+        let builderParams = provider :> IRowGetterProvider, record
+
+        let getter = Rows.Record<Account>("account_") builderParams
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId      = "jacentino"
+                password    = "******"
+                signature   = { createdAt = DateTime(2023, 1, 1); createdBy = "admin"; updatedAt = DateTime(2023, 1, 1); updatedBy = "admin" }
+            }
+        Assert.Equal(expected, value)
+
+
+    [<Fact>]
+    let ``Hierarchical records - overrides``() = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", "jacentino")
+                            vcol("password", "******")
+                            vcol("createdAt", DateTime(2023, 1, 1))
+                            vcol("createdBy", "admin")
+                            vcol("modifiedAt", DateTime(2023, 1, 1))
+                            vcol("modifiedBy", "admin")
+                        ]
+        let builderParams = provider :> IRowGetterProvider, record
+
+        let a = any<Account>
+        let ovUpdatedAt = RowOverride(a.signature.updatedAt, Rows.Simple("modifiedAt"))
+        let ovUpdatedBy = RowOverride(a.signature.updatedBy, Rows.Simple("modifiedBy"))
+        let getter = Rows.Record<Account>(ovUpdatedAt, ovUpdatedBy) builderParams
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId      = "jacentino"
+                password    = "******"
+                signature   = { createdAt = DateTime(2023, 1, 1); createdBy = "admin"; updatedAt = DateTime(2023, 1, 1); updatedBy = "admin" }
+            }
+        Assert.Equal(expected, value)
+
+
+    [<Fact>]
     let ``Collections - list``() = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]

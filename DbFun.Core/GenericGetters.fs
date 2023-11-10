@@ -114,6 +114,41 @@ module GenericGetters =
                 this.GetBuilder(argType)
 
 
+    type DerivedConfigurableGetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: IGetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
+
+        member this.GetGetter(argType: Type, name: string, prototype: 'Prototype): obj = 
+            let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
+            let gmethod = method.MakeGenericMethod(argType)
+            gmethod.Invoke(this, [| name; prototype |])
+
+        member __.GetGetter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            let relevant = overrides |> Seq.filter (fun x -> x.IsRelevant name) |> Seq.map (fun x -> x.Shift()) |> Seq.toList
+            let nextDerived = DerivedGetterProvider(baseProvider, relevant)
+            match relevant |> List.tryFind (fun x -> x.IsFinal) with
+            | Some ov -> ov.Build(nextDerived, prototype)
+            | None -> 
+                match baseProvider.Builder(typeof<'Result>) with
+                | Some builder -> 
+                    match builder with 
+                    | :? IConfigurableBuilder<'Prototype, 'DbObject, 'Config> as cfgBuilder ->
+                        let nextCfgDerived = DerivedConfigurableGetterProvider(baseProvider, config, relevant)
+                        cfgBuilder.Build(name, nextCfgDerived, config, prototype)
+                    | _ ->
+                        builder.Build(name, nextDerived, prototype)
+                | None -> failwithf "Could not find a getter builder for type: %A" typeof<'Result>
+
+        member __.GetBuilder(argType: Type) = 
+            baseProvider.Builder(argType)
+
+        interface IGetterProvider<'Prototype, 'DbObject> with
+            member this.Getter<'Result>(name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+                this.GetGetter<'Result>(name, prototype)
+            member this.Getter(argType: Type, name: string, prototype: 'Prototype): obj = 
+                this.GetGetter(argType, name, prototype)
+            member this.Builder(argType: Type) = 
+                this.GetBuilder(argType)
+
+
     type UnitBuilder<'Prototype, 'DbObject>() =
 
         interface IBuilder<'Prototype, 'DbObject> with
@@ -279,9 +314,9 @@ module GenericGetters =
                 let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, f.Name)
                 FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
                         
-        interface IConfigurableBuilder<'Prototype, 'DbObject, unit> with
+        interface IConfigurableBuilder<'Prototype, 'DbObject, string> with
 
-            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, _, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (_: string, provider: IGetterProvider<'Prototype, 'DbObject>, name: string, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let fields = FSharpType.GetRecordFields typeof<'Result> |> Array.map (fun f -> f.PropertyType, sprintf "%s%s" name f.Name)
                 FieldListBuilder.build(provider, fields, newRecord typeof<'Result> (fields |> Array.map fst), prototype)
                         
@@ -825,9 +860,13 @@ module GenericGetters =
         /// </param>
         static member Record<'Result>(prefix: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let provider = DerivedGetterProvider<'Prototype, 'DbObject>(provider, overrides)
-                match provider.GetBuilder(typeof<'Result>) with
-                | Some builder -> (builder :?> IConfigurableBuilder<'Prototype, 'DbObject, unit>).Build<'Result>(prefix, provider, (), prototype)
+                let provider = 
+                    if String.IsNullOrEmpty(prefix) then
+                        DerivedGetterProvider<'Prototype, 'DbObject>(provider, overrides) :> IGetterProvider<'Prototype, 'DbObject>
+                    else
+                        DerivedConfigurableGetterProvider<'Prototype, 'DbObject, string>(provider, prefix, overrides) :> IGetterProvider<'Prototype, 'DbObject>
+                match provider.Builder(typeof<'Result>) with
+                | Some builder -> (builder :?> IConfigurableBuilder<'Prototype, 'DbObject, string>).Build<'Result>(prefix, provider, prefix, prototype)
                 | None -> failwithf "Could not find row/column getter for type: %A" typeof<'Result>
 
         /// <summary>

@@ -424,6 +424,75 @@ module ParamsTests =
 
 
     [<Fact>]
+    let ``Hierarchical records``() = 
+
+        use command = connection.CreateCommand()
+
+        let account = 
+            { 
+                userId = "jacenty"; 
+                password = "******"; 
+                signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
+            }
+        (Params.Record<Account>()(builderParams)).SetValue(account, command)
+
+        Assert.Equal(6, command.Parameters.Count)
+        Assert.Equal(box "jacenty", command.Parameters.["userId"].Value)
+        Assert.Equal(box "******", command.Parameters.["password"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["createdAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["createdBy"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["updatedAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["updatedBy"].Value)
+
+
+    [<Fact>]
+    let ``Hierarchical records - name prefixes``() = 
+
+        use command = connection.CreateCommand()
+
+        let account = 
+            { 
+                userId = "jacenty"; 
+                password = "******"; 
+                signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
+            }
+        (Params.Record<Account>("account_")(builderParams)).SetValue(account, command)
+
+        Assert.Equal(6, command.Parameters.Count)
+        Assert.Equal(box "jacenty", command.Parameters.["account_userId"].Value)
+        Assert.Equal(box "******", command.Parameters.["account_password"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["account_createdAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["account_createdBy"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["account_updatedAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["account_updatedBy"].Value)
+
+
+    [<Fact>]
+    let ``Hierarchical records - overrides``() = 
+
+        use command = connection.CreateCommand()
+
+        let account = 
+            { 
+                userId = "jacenty"; 
+                password = "******"; 
+                signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
+            }
+        let a = any<Account>
+        let ovUpdatedAt = ParamOverride(a.signature.updatedAt, Params.Simple("modifiedAt"))
+        let ovUpdatedBy = ParamOverride(a.signature.updatedBy, Params.Simple("modifiedBy"))
+        (Params.Record<Account>(ovUpdatedAt, ovUpdatedBy)(builderParams)).SetValue(account, command)
+
+        Assert.Equal(6, command.Parameters.Count)
+        Assert.Equal(box "jacenty", command.Parameters.["userId"].Value)
+        Assert.Equal(box "******", command.Parameters.["password"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["createdAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["createdBy"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["modifiedAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["modifiedBy"].Value)
+
+
+    [<Fact>]
     let ``Converters``() = 
 
         use command = connection.CreateCommand()
