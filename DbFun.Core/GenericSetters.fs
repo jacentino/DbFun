@@ -101,16 +101,13 @@ module GenericSetters =
                 | Some builder -> builder.Build(name, nextDerived, prototype)
                 | None -> failwithf "Could not find a setter builder for type: %A" typeof<'Arg>
 
-        member __.GetBuilder(argType: Type) = 
-            baseProvider.Builder(argType)
-
         interface ISetterProvider<'Prototype, 'DbObject> with
             member this.Setter<'Arg>(name: string, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 this.GetSetter<'Arg>(name, prototype)
             member this.Setter(argType: Type, name: string, prototype: 'Prototype): obj = 
                 this.GetSetter(argType, name, prototype)
             member this.Builder(argType: Type) = 
-                this.GetBuilder(argType)
+                baseProvider.Builder(argType)
 
     type DerivedConfigurableSetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: ISetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
 
@@ -1035,8 +1032,8 @@ module GenericSetters =
         /// </param>
         static member Union<'Arg>(name: string, [<ParamArray>] overrides: IOverride<'Prototype, 'DbObject> array) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let provider = DerivedSetterProvider<'Prototype, 'DbObject>(provider, overrides)
-                match provider.GetBuilder(typeof<'Arg>) with
+                let provider = DerivedSetterProvider<'Prototype, 'DbObject>(provider, overrides): ISetterProvider<'Prototype, 'DbObject>
+                match provider.Builder(typeof<'Arg>) with
                 | Some builder -> builder.Build<'Arg>(name, provider, prototype)
                 | None -> failwithf "Could not found param builder for type: %A" typeof<'Arg>
 
