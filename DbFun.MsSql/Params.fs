@@ -141,7 +141,9 @@ module ParamsImpl =
 
     type BaseSetterProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>
 
-    type DerivedSetterProvider = GenericSetters.DerivedSetterProvider<SqlDataRecord, SqlDataRecord>
+    type InitialDerivedSetterProvider<'Config> = GenericSetters.InitialDerivedSetterProvider<SqlDataRecord, SqlDataRecord, 'Config>
+
+    type DerivedSetterProvider<'Config> = GenericSetters.DerivedSetterProvider<SqlDataRecord, SqlDataRecord, 'Config>
 
     type UnitBuilder = GenericSetters.UnitBuilder<SqlDataRecord, SqlDataRecord>
 
@@ -164,8 +166,6 @@ module ParamsImpl =
     type RecordBuilder = GenericSetters.RecordBuilder<SqlDataRecord, SqlDataRecord>
 
     type TupleBuilder = GenericSetters.TupleBuilder<SqlDataRecord, SqlDataRecord>
-
-
 
     let getDefaultBuilders(createConnection: unit -> IDbConnection): ParamsImpl.IBuilder list = 
         let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())

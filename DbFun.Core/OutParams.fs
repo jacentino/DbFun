@@ -61,7 +61,9 @@ module OutParamsImpl =
 
     type BaseGetterProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>
 
-    type DerivedGetterProvider = GenericGetters.DerivedGetterProvider<unit, IDbCommand>
+    type InitialDerivedGetterProvider<'Config> = GenericGetters.InitialDerivedGetterProvider<unit, IDbCommand, 'Config>
+
+    type DerivedGetterProvider<'Config> = GenericGetters.DerivedGetterProvider<unit, IDbCommand, 'Config>
 
     type UnitBuilder = GenericGetters.UnitBuilder<unit, IDbCommand>
 

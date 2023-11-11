@@ -110,7 +110,9 @@ module ParamsImpl =
 
     type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, IDbCommand>
 
-    type DerivedSetterProvider = GenericSetters.DerivedSetterProvider<unit, IDbCommand>
+    type InitialDerivedSetterProvider<'Config> = GenericSetters.InitialDerivedSetterProvider<unit, IDbCommand, 'Config>
+
+    type DerivedSetterProvider<'Config> = GenericSetters.DerivedSetterProvider<unit, IDbCommand, 'Config>
 
     type UnitBuilder = GenericSetters.UnitBuilder<unit, IDbCommand>
 

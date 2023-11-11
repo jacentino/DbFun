@@ -80,7 +80,9 @@ module RowsImpl =
 
     type BaseGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>
 
-    type DerivedGetterProvider = GenericGetters.DerivedGetterProvider<IDataRecord, IDataRecord>
+    type InitialDerivedGetterProvider<'Config> = GenericGetters.InitialDerivedGetterProvider<IDataRecord, IDataRecord, 'Config>
+
+    type DerivedGetterProvider<'Config> = GenericGetters.DerivedGetterProvider<IDataRecord, IDataRecord, 'Config>
 
     type UnitBuilder = GenericGetters.UnitBuilder<IDataRecord, IDataRecord>
 
@@ -97,7 +99,6 @@ module RowsImpl =
     type RecordBuilder = GenericGetters.RecordBuilder<IDataRecord, IDataRecord>
 
     type TupleBuilder = GenericGetters.TupleBuilder<IDataRecord, IDataRecord>
-
 
     let getDefaultBuilders(): IBuilder list = 
         SimpleColumnBuilder() :: GenericGetters.getDefaultBuilders()
