@@ -9,6 +9,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Any.fs" />
     <Compile Include="Models.fs" />
+    <Compile Include="Naming.fs" />
     <Compile Include="GenericGetters.fs" />
     <Compile Include="GenericSetters.fs" />
     <Compile Include="Params.fs" />

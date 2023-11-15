@@ -3,6 +3,7 @@
 open DbFun.Core.Builders
 open DbFun.MsSql.Builders
 open System.Data
+open System
 
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
@@ -64,6 +65,16 @@ type QueryConfig =
                 .AddTvpBuilder(tvpBuilder)
                 .AddTvpBuilder(tvpSeqBuilder)
 
+        member this.AddParamConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
+                .AddTvpBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
+
+        member this.AddRowConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
+
+        member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            this.AddParamConfigurator(getConfig, canBuild)
+                .AddRowConfigurator(getConfig, canBuild)
 
 /// <summary>
 /// Provides methods creating various query functions.

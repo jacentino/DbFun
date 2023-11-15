@@ -100,6 +100,8 @@ module RowsImpl =
 
     type TupleBuilder = GenericGetters.TupleBuilder<IDataRecord, IDataRecord>
 
+    type Configurator<'Config> = GenericGetters.Configurator<IDataRecord, IDataRecord, 'Config>
+
     let getDefaultBuilders(): IBuilder list = 
         SimpleColumnBuilder() :: GenericGetters.getDefaultBuilders()
 

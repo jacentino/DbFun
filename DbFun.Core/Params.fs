@@ -136,6 +136,8 @@ module ParamsImpl =
 
     type TupleBuilder = GenericSetters.TupleBuilder<unit, IDbCommand>
 
+    type Configurator<'Config> = GenericSetters.Configurator<unit, IDbCommand, 'Config>
+
     let getDefaultBuilders(): IBuilder list = 
         [ SimpleBuilder(); SimpleCollectionBuilder() ] @ GenericSetters.getDefaultBuilders()
 

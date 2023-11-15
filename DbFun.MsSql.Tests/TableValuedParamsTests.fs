@@ -89,7 +89,7 @@ module TableValuedParamsTests =
             |]
         let u = any<User>
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Record<User>(TVParamOverride(u.userId, TVParams.Simple<int>("id"))) (tvpProvider, record)
+        let setter = TVParams.Record<User>(overrides = [ TVParamOverride(u.userId, TVParams.Simple<int>("id")) ]) (tvpProvider, record)
         let user = 
             {
                 User.userId = 3

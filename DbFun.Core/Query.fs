@@ -61,6 +61,19 @@ type QueryConfig =
                 OutParamBuilders = OutParamsImpl.Converter<'Source, 'Target>(convert) ::  this.OutParamBuilders
             }
 
+        member this.AddParamConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            { this with ParamBuilders = ParamsImpl.Configurator<'Config>(getConfig, canBuild) :: this.ParamBuilders }
+
+        member this.AddRowConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            { this with 
+                RowBuilders = RowsImpl.Configurator<'Config>(getConfig, canBuild) :: this.RowBuilders 
+                OutParamBuilders = OutParamsImpl.Configurator<'Config>(getConfig, canBuild) :: this.OutParamBuilders
+            }
+
+        member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            this.AddParamConfigurator(getConfig, canBuild)
+                .AddRowConfigurator(getConfig, canBuild)
+
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>

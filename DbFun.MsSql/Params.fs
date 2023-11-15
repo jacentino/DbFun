@@ -167,6 +167,8 @@ module ParamsImpl =
 
     type TupleBuilder = GenericSetters.TupleBuilder<SqlDataRecord, SqlDataRecord>
 
+    type Configurator<'Config> = GenericSetters.Configurator<SqlDataRecord, SqlDataRecord, 'Config>
+
     let getDefaultBuilders(createConnection: unit -> IDbConnection): ParamsImpl.IBuilder list = 
         let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         [ TVPCollectionBuilder(createConnection, tvpProvider) ] @ ParamsImpl.getDefaultBuilders()

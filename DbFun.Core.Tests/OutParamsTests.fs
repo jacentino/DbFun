@@ -132,7 +132,7 @@ module OutParamsTests =
     let ``Flat records - prefixed names``() = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Record<User>("user_") builderParams
+        let getter = OutParams.Record<User>("user_", RecordNaming.Prefix) builderParams
 
         getter.Create(command)
         command.Parameters.["user_userId"].Value <- 2
@@ -156,7 +156,7 @@ module OutParamsTests =
 
         let command = connection.CreateCommand()
         let u = any<User>
-        let getter = OutParams.Record<User>(OutParamOverride<int>(u.userId, OutParams.Simple<int>("id"))) builderParams
+        let getter = OutParams.Record<User>(overrides = [OutParamOverride<int>(u.userId, OutParams.Simple<int>("id"))]) builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2

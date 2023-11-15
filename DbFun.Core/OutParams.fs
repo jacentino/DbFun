@@ -81,6 +81,8 @@ module OutParamsImpl =
 
     type TupleBuilder = GenericGetters.TupleBuilder<unit, IDbCommand>
 
+    type Configurator<'Config> = GenericGetters.Configurator<unit, IDbCommand, 'Config>
+
 
     let getDefaultBuilders(): IBuilder list = SimpleOutParamBuilder() :: GenericGetters.getDefaultBuilders()
 

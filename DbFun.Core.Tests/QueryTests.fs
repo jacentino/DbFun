@@ -335,8 +335,6 @@ module QueryTests =
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
         Assert.Contains("line: 329", ex.InnerExceptions.[0].Message)
 
-    let shouldExpand f v =
-        v |> Option.map (f >> Option.isSome) |> Option.defaultValue true
 
     [<Fact>]
     let ``Templated queries``() = 
@@ -535,3 +533,52 @@ module QueryTests =
         let expected = (UserId 1, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
 
         Assert.Equal(expected, user)
+
+            
+
+    [<Fact>]
+    let ``Configurators``() =
+        
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "user_userId"; col<string> "user_name"; col<string> "user_email"; col<DateTime> "user_created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]
+                    [ col<int> "userId"; col<string> "name";  ],
+                    [
+                        [ 1; "Administrator" ]
+                        [ 1; "Guest" ]
+                    ]                            
+                ]
+
+        let config = (createConfig createConnection)
+                        .AddConfigurator((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<UserWithRoles>)
+
+        let qb = QueryBuilder (config)
+        let uwr = any<UserWithRoles>
+
+        let query = 
+            qb.Sql (Params.Simple<int>("id"))
+                   (Results.Seq(Rows.PKeyed<int, UserWithRoles>("user_userId", "user_")) 
+                    |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+                    |> Results.Map (Seq.map snd))
+                "select * from User where userId = @id;
+                 select * from Role where userId = @id"
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query 1 connector |> Async.RunSynchronously |> Seq.toList
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+                roles = [ "Administrator"; "Guest" ]
+            }
+
+        Assert.Equal<UserWithRoles seq>([expected], user)

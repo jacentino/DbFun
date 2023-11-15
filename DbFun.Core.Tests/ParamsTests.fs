@@ -22,8 +22,8 @@ type TestUnion =
 module ParamsTests = 
 
     let connection = new SqlConnection()
-    let provider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.getDefaultBuilders())
-    let builderParams = provider :> IParamSetterProvider, ()
+    let provider: IParamSetterProvider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.getDefaultBuilders())
+    let builderParams = provider, ()
 
     open FSharp.Reflection
 
@@ -311,7 +311,7 @@ module ParamsTests =
 
         use command = connection.CreateCommand()
 
-        (Params.Record<User>("user_")(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+        (Params.Record<User>("user_", RecordNaming.Prefix)(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
         Assert.Equal(4, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["user_userId"].Value)
@@ -326,7 +326,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         let u = any<User>
 
-        let setter = Params.Record<User>(ParamOverride<int>(u.userId, Params.Simple<int>("id")))(builderParams)
+        let setter = Params.Record<User>(overrides = [ParamOverride<int>(u.userId, Params.Simple<int>("id"))])(builderParams)
 
         setter.SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
@@ -335,6 +335,25 @@ module ParamsTests =
         Assert.Equal(box "jacenty", command.Parameters.["name"].Value)
         Assert.Equal(box "jacenty@gmail.com", command.Parameters.["email"].Value)
         Assert.Equal(box DateTime.Today, command.Parameters.["created"].Value)
+
+
+    [<Fact>]
+    let ``Flat records - name prefixes by configurator``() = 
+
+        use command = connection.CreateCommand()
+        let provider: IParamSetterProvider = 
+            ParamsImpl.BaseSetterProvider(
+                ParamsImpl.Configurator<string * RecordNaming>((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<User>) ::  
+                ParamsImpl.getDefaultBuilders())
+        let builderParams = provider, ()
+
+        (Params.Record<User>("user_")(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
+
+        Assert.Equal(4, command.Parameters.Count)
+        Assert.Equal(box 1, command.Parameters.["user_userId"].Value)
+        Assert.Equal(box "jacenty", command.Parameters.["user_name"].Value)
+        Assert.Equal(box "jacenty@gmail.com", command.Parameters.["user_email"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["user_created"].Value)
 
 
     [<Fact>]
@@ -456,7 +475,7 @@ module ParamsTests =
                 password = "******"; 
                 signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
             }
-        (Params.Record<Account>("account_")(builderParams)).SetValue(account, command)
+        (Params.Record<Account>("account_", RecordNaming.Prefix)(builderParams)).SetValue(account, command)
 
         Assert.Equal(6, command.Parameters.Count)
         Assert.Equal(box "jacenty", command.Parameters.["account_userId"].Value)
@@ -465,6 +484,28 @@ module ParamsTests =
         Assert.Equal(box "admin", command.Parameters.["account_createdBy"].Value)
         Assert.Equal(box DateTime.Today, command.Parameters.["account_updatedAt"].Value)
         Assert.Equal(box "admin", command.Parameters.["account_updatedBy"].Value)
+
+
+    [<Fact>]
+    let ``Hierarchical records - name paths``() = 
+
+        use command = connection.CreateCommand()
+
+        let account = 
+            { 
+                userId = "jacenty"; 
+                password = "******"; 
+                signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
+            }
+        (Params.Record<Account>("account_", RecordNaming.Path)(builderParams)).SetValue(account, command)
+
+        Assert.Equal(6, command.Parameters.Count)
+        Assert.Equal(box "jacenty", command.Parameters.["account_userId"].Value)
+        Assert.Equal(box "******", command.Parameters.["account_password"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["account_signaturecreatedAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["account_signaturecreatedBy"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["account_signatureupdatedAt"].Value)
+        Assert.Equal(box "admin", command.Parameters.["account_signatureupdatedBy"].Value)
 
 
     [<Fact>]
@@ -481,7 +522,7 @@ module ParamsTests =
         let a = any<Account>
         let ovUpdatedAt = ParamOverride(a.signature.updatedAt, Params.Simple("modifiedAt"))
         let ovUpdatedBy = ParamOverride(a.signature.updatedBy, Params.Simple("modifiedBy"))
-        (Params.Record<Account>(ovUpdatedAt, ovUpdatedBy)(builderParams)).SetValue(account, command)
+        (Params.Record<Account>(overrides = [ovUpdatedAt; ovUpdatedBy])(builderParams)).SetValue(account, command)
 
         Assert.Equal(6, command.Parameters.Count)
         Assert.Equal(box "jacenty", command.Parameters.["userId"].Value)
@@ -559,3 +600,85 @@ module ParamsTests =
         Assert.Equal(box "1234567890", command.Parameters["number"].Value)
         Assert.Equal(box "222", command.Parameters["cvc"].Value)
         Assert.Equal(box DBNull.Value, command.Parameters["Cash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - prefix``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.Prefix)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - path``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.Path)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - case names``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.CaseNames)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["CreditCardnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["CreditCardcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["Cash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - prefix and case names``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.CaseNames ||| UnionNaming.Prefix)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentCreditCardnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentCreditCardcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - path and case names``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.CaseNames ||| UnionNaming.Path)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentCreditCardnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentCreditCardcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - prefix and path``() =
+        use command = connection.CreateCommand()
+
+        (Params.Union<PaymentType>("payment", UnionNaming.Prefix ||| UnionNaming.Path)(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
+
+    [<Fact>]
+    let ``Discriminated unions - prefix by discriminator``() =
+        use command = connection.CreateCommand()
+
+        let provider: IParamSetterProvider = 
+            ParamsImpl.BaseSetterProvider(
+                ParamsImpl.Configurator<string * UnionNaming>((fun prefix -> prefix, UnionNaming.Prefix), fun t -> t = typeof<PaymentType>) ::  
+                ParamsImpl.getDefaultBuilders())
+        let builderParams = provider, ()
+        (Params.Union<PaymentType>("payment")(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), command)
+
+        Assert.Equal(box "CC", command.Parameters["payment"].Value)
+        Assert.Equal(box "1234567890", command.Parameters["paymentnumber"].Value)
+        Assert.Equal(box "222", command.Parameters["paymentcvc"].Value)
+        Assert.Equal(box DBNull.Value, command.Parameters["paymentCash"].Value)
