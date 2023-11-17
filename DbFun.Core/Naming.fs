@@ -2,11 +2,17 @@
 
 open System
 
-type RecordNaming = 
+/// <summary>
+/// Record naming conventions.
+/// </summary>
+type RecordNaming =     
     | Fields    
     | Prefix    
     | Path      
 
+/// <summary>
+/// Discriminated union naming conventions.
+/// </summary>
 [<Flags>]
 type UnionNaming = 
     | Fields    = 0
