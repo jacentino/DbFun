@@ -1034,6 +1034,9 @@ module GenericSetters =
         /// <param name="prefix">
         /// The prefix of parameter names representing record fields in a query.
         /// </param>
+        /// <param name="naming">
+        /// The enum determining how columns representing record fields are named.
+        /// </param>
         /// <param name="overrides">
         /// Objects allowing to override default mappings of particular fields.
         /// </param>
@@ -1052,6 +1055,9 @@ module GenericSetters =
         /// </summary>
         /// <param name="name">
         /// The union tag column name.
+        /// </param>
+        /// <param name="naming">
+        /// Flags determining how columns representing union values are named.
         /// </param>
         /// <param name="overrides">
         /// Objects allowing to override default mappings of particular fields.

@@ -896,6 +896,9 @@ module GenericGetters =
         /// <param name="prefix">
         /// The prefix of column names representing record fields in a dtatbase.
         /// </param>
+        /// <param name="naming">
+        /// The enum determining how columns representing record fields are named.
+        /// </param>
         /// <param name="overrides">
         /// Objects allowing to override default mappings of particular fields.
         /// </param>
@@ -914,6 +917,9 @@ module GenericGetters =
         /// </summary>
         /// <param name="name">
         /// The union tag name column name.
+        /// </param>
+        /// <param name="naming">
+        /// Flags determining how columns representing union values are named.
         /// </param>
         /// <param name="overrides">
         /// Objects allowing to override default mappings of particular fields.

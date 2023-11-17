@@ -1,5 +1,6 @@
 namespace DbFun.Core.IntegrationTests
 
+open System
 open DbFun.Core
 open DbFun.TestTools
 open DbFun.Core.IntegrationTests.Models
@@ -21,6 +22,10 @@ module TestQueries =
     let getAllBlogs = 
         query.Sql Params.Unit (Results.Seq<Blog> "") 
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog"
+
+    let getBlogsBefore = 
+        query.Sql(Params.Simple<DateTimeOffset> "createdTo") (Results.List<BlogTZ> "")
+            "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where createdAt <= @createdTo"
 
     let getBlogOptional = 
         query.Sql(Params.Int "id") (Results.Optional<Blog> "") 
@@ -133,3 +138,8 @@ module Tests =
         let p = TestQueries.findPosts criteria |> run |> Async.RunSynchronously |> Seq.head
         Assert.Equal(1, p.blogId)
 
+
+    [<Fact>]
+    let ``Query filtering by DateTimeOffset`` () =
+        let blogs = TestQueries.getBlogsBefore(DateTimeOffset.Now) |> run |> Async.RunSynchronously
+        Assert.Equal(1, blogs |> Seq.length)

@@ -65,13 +65,40 @@ type QueryConfig =
                 .AddTvpBuilder(tvpBuilder)
                 .AddTvpBuilder(tvpSeqBuilder)
 
+        /// <summary>
+        /// Adds a configurator for parameter builders of types determined by canBuild function.
+        /// </summary>
+        /// <param name="getConfig">
+        /// Creates a configuration object.
+        /// </param>
+        /// <param name="canBuild">
+        /// Function determining whether a given type is handled by the configurator.
+        /// </param>
         member this.AddParamConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
                 .AddTvpBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
 
+        /// <summary>
+        /// Adds a configurator for row builders of types determined by canBuild function.
+        /// </summary>
+        /// <param name="getConfig">
+        /// Creates a configuration object.
+        /// </param>
+        /// <param name="canBuild">
+        /// Function determining whether a given type is handled by the configurator.
+        /// </param>
         member this.AddRowConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
 
+        /// <summary>
+        /// Adds a configurator for both parameter and row builders of types determined by canBuild function.
+        /// </summary>
+        /// <param name="getConfig">
+        /// Creates a configuration object.
+        /// </param>
+        /// <param name="canBuild">
+        /// Function determining whether a given type is handled by the configurator.
+        /// </param>
         member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)

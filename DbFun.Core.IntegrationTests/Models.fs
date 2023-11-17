@@ -43,6 +43,18 @@ type Blog = {
     posts       : Post list
 }
 
+type BlogTZ = {
+    id          : int
+    name        : string
+    title       : string
+    description : string
+    owner       : string
+    createdAt   : DateTimeOffset
+    modifiedAt  : DateTimeOffset option
+    modifiedBy  : string option
+    posts       : Post list
+}
+
 type SortField = 
     | Name      = 1
     | Title     = 2
