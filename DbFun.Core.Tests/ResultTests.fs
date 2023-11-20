@@ -196,3 +196,90 @@ module ResultTests =
                 }
                 
         Assert.Equal(expected, value)
+
+    [<Fact>]
+    let ``Auto - one record``() = 
+
+        let reader = createDataReaderMock
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]
+                            
+                        ]
+
+        let builderParams = provider :> IRowGetterProvider, reader 
+        let result = Results.Auto<User>("") (builderParams)
+        let value = result.Read(reader) |> Async.RunSynchronously
+
+        let expected = 
+                {
+                    userId = 1
+                    name = "jacentino"
+                    email = "jacentino@gmail.com"
+                    created = DateTime(2023, 1, 1)
+                }
+        Assert.Equal(expected, value)
+
+
+
+    [<Fact>]
+    let ``Auto - optional record``() = 
+
+        let reader = createDataReaderMock
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                            ]                            
+                        ]
+
+        let builderParams = provider :> IRowGetterProvider, reader 
+        let result = Results.Auto<User option>("") builderParams
+        let value = result.Read(reader) |> Async.RunSynchronously
+
+        let expected = 
+                {
+                    userId = 1
+                    name = "jacentino"
+                    email = "jacentino@gmail.com"
+                    created = DateTime(2023, 1, 1)
+                }
+        Assert.Equal(Some expected, value)
+
+
+    [<Fact>]
+    let ``Auto - many records``() = 
+
+        let reader = createDataReaderMock
+                        [
+                            [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                            [
+                                [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                                [ 2; "mike"; "mike@gmail.com"; DateTime(2020, 1, 1) ]
+                            ]
+                            
+                        ]
+
+        let builderParams = provider :> IRowGetterProvider, reader 
+
+        let result = Results.Auto<User list>("") builderParams
+        let value = result.Read(reader) |> Async.RunSynchronously 
+
+        let expected = 
+            [
+                {
+                    userId = 1
+                    name = "jacentino"
+                    email = "jacentino@gmail.com"
+                    created = DateTime(2023, 1, 1)
+                }
+                {
+                    userId = 2
+                    name = "mike"
+                    email = "mike@gmail.com"
+                    created = DateTime(2020, 1, 1)
+                }
+            ]
+        Assert.Equal<User list>(expected, value)

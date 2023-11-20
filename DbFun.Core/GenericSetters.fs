@@ -570,7 +570,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name or prefix (for indirect parameters).
         /// </param>
-        static member Simple<'Arg> (name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
+        static member Auto<'Arg> (name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
             fun (provider, prototype) -> provider.Setter<'Arg>(name, prototype)
 
         /// <summary>

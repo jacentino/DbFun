@@ -462,12 +462,12 @@ module GenericGetters =
             fun (provider, prototype) -> provider.Getter<unit>("", prototype)
 
         /// <summary>
-        /// Creates a builder handling simple values.
+        /// Creates a builder autmatically detecting its type.
         /// </summary>
         /// <param name="name">
         /// The column name or prefix (for indirect results).
         /// </param>
-        static member Simple<'Result>(name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
+        static member Auto<'Result>(name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
             fun (provider, prototype) -> provider.Getter<'Result>(name, prototype)
 
         /// <summary>

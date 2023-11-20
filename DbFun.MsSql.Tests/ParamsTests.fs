@@ -81,7 +81,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Simple<User seq>("users")(builderParams)).SetValue([user], command)
+        (Params.Auto<User seq>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -151,7 +151,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Simple<User list>("users")(builderParams)).SetValue([user], command)
+        (Params.Auto<User list>("users")(builderParams)).SetValue([user], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -221,7 +221,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Simple<User array>("users")(builderParams)).SetValue([| user |], command)
+        (Params.Auto<User array>("users")(builderParams)).SetValue([| user |], command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))

@@ -60,7 +60,7 @@ module RowTests =
         let active = activeGetter.Get(record)
         let createdGetter = Rows.DateTime "created" builderParams
         let created = createdGetter.Get(record)
-        let avaterGetter = Rows.Simple<byte array>("avatar") builderParams
+        let avaterGetter = Rows.Auto<byte array>("avatar") builderParams
         let avatar = avaterGetter.Get(record)
 
         Assert.Equal(5, id)
@@ -76,7 +76,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let ex = Assert.Throws(fun () -> Rows.Simple<int> "userId" builderParams |> ignore)
+        let ex = Assert.Throws(fun () -> Rows.Auto<int> "userId" builderParams |> ignore)
         Assert.Contains("Column doesn't exist: userId", ex.Message)
 
 
@@ -86,7 +86,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let ex = Assert.Throws(fun () -> Rows.Simple<string> "id" builderParams |> ignore)
+        let ex = Assert.Throws(fun () -> Rows.Auto<string> "id" builderParams |> ignore)
         Assert.Contains("Column type doesn't match field type: id (Int32 -> String)", ex.Message)
 
 
@@ -134,7 +134,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("status", 'A') ]
         let builderParams = provider, record
         
-        let getter = Rows.Simple<Status> "status" builderParams
+        let getter = Rows.Auto<Status> "status" builderParams
         let value = getter.Get(record)
 
         Assert.Equal(Status.Active, value)
@@ -146,7 +146,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("role", 2) ]
         let builderParams = provider, record
         
-        let getter = Rows.Simple<Role> "role" builderParams
+        let getter = Rows.Auto<Role> "role" builderParams
         let value = getter.Get(record)
 
         Assert.Equal(Role.Regular, value)
@@ -158,7 +158,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("access", "RW") ]
         let builderParams = provider, record
         
-        let getter = Rows.Simple<Access> "access" builderParams
+        let getter = Rows.Auto<Access> "access" builderParams
         let value = getter.Get(record)
 
         Assert.Equal(Access.ReadWrite, value)
@@ -282,7 +282,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("created", DateTime(2023, 1, 1)) ]
         let builderParams = provider, record
         
-        let getter = Rows.Simple<DateOnly> "created" builderParams
+        let getter = Rows.Auto<DateOnly> "created" builderParams
         let value = getter.Get(record)
 
         Assert.Equal(DateOnly.FromDateTime(DateTime(2023, 1, 1)), value)
@@ -294,7 +294,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("dayTime", TimeSpan.FromHours(5)) ]
         let builderParams = provider, record
         
-        let getter = Rows.Simple<TimeOnly> "dayTime" builderParams
+        let getter = Rows.Auto<TimeOnly> "dayTime" builderParams
         let value = getter.Get(record)
 
         Assert.Equal(TimeOnly.FromTimeSpan(TimeSpan.FromHours(5)), value)
@@ -318,7 +318,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5); vcol("name", "jacentino") ]
         let builderParams = provider, record
 
-        let getter = Rows.Tuple(Rows.Simple<int>("id"), Rows.Simple<string>("name")) builderParams
+        let getter = Rows.Tuple(Rows.Auto<int>("id"), Rows.Auto<string>("name")) builderParams
         let t = getter.Get(record)
 
         Assert.Equal((5, "jacentino"), t)
@@ -408,7 +408,7 @@ module RowTests =
         let builderParams = provider, record
 
         let u = any<User>
-        let getter = Rows.Record<User>(overrides = [RowOverride<int>(u.userId, Rows.Simple<int>("id"))]) builderParams
+        let getter = Rows.Record<User>(overrides = [RowOverride<int>(u.userId, Rows.Auto<int>("id"))]) builderParams
         let value = getter.Get(record)
 
         let expected = 
@@ -580,8 +580,8 @@ module RowTests =
         let builderParams = provider, record
 
         let a = any<Account>
-        let ovUpdatedAt = RowOverride(a.signature.updatedAt, Rows.Simple("modifiedAt"))
-        let ovUpdatedBy = RowOverride(a.signature.updatedBy, Rows.Simple("modifiedBy"))
+        let ovUpdatedAt = RowOverride(a.signature.updatedAt, Rows.Auto("modifiedAt"))
+        let ovUpdatedBy = RowOverride(a.signature.updatedBy, Rows.Auto("modifiedBy"))
         let getter = Rows.Record<Account>(overrides = [ovUpdatedAt; ovUpdatedBy]) builderParams
         let value = getter.Get(record)
 
@@ -600,7 +600,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let getter = Rows.Simple<int list>("") builderParams
+        let getter = Rows.Auto<int list>("") builderParams
         let t = getter.Get(record)
 
         Assert.Empty(t)
@@ -612,7 +612,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let getter = Rows.Simple<int array>("") builderParams
+        let getter = Rows.Auto<int array>("") builderParams
         let t = getter.Get(record)
 
         Assert.Empty(t)
@@ -624,7 +624,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let getter = Rows.Simple<int seq>("") builderParams
+        let getter = Rows.Auto<int seq>("") builderParams
         let t = getter.Get(record)
 
         Assert.Empty(t)
@@ -636,7 +636,7 @@ module RowTests =
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
 
-        let getter = Rows.Simple<unit>("") builderParams
+        let getter = Rows.Auto<unit>("") builderParams
         let t = getter.Get(record)
 
         Assert.Equal((), t)

@@ -24,7 +24,7 @@ module TestQueries =
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog"
 
     let getBlogsBefore = 
-        query.Sql(Params.Simple<DateTimeOffset> "createdTo") (Results.List<BlogTZ> "")
+        query.Sql(Params.Auto<DateTimeOffset> "createdTo") (Results.List<BlogTZ> "")
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where createdAt <= @createdTo"
 
     let getBlogOptional = 

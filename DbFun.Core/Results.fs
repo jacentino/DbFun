@@ -266,7 +266,7 @@ type Results() =
     /// The result column name or record prefix.
     /// </param>
     static member Array<'Result> (name: string): BuildResultReader<'Result array> = 
-        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+        fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = provider.Getter<'Result>(name, prototype)
             { new IResultReader<'Result array> with
                 member __.Read(reader: IDataReader) = 
@@ -275,6 +275,23 @@ type Results() =
                             getter.Get(reader)
                         |]
             }
+
+    static member Auto<'Result> (name: string): BuildResultReader<'Result> = 
+        if Types.isOptionType typeof<'Result> then
+            let optionalMethod = typeof<Results>.GetMethod("Optional", [| typeof<string> |])
+            let gOptionalMethod = optionalMethod.MakeGenericMethod(typeof<'Result>.GetGenericArguments().[0])
+            let reader = gOptionalMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
+            reader
+        elif Types.isCollectionType typeof<'Result> then
+            let methodName = 
+                if typedefof<'Result> = typedefof<List<_>> then "List"
+                elif typedefof<'Result>.IsArray then "Array"
+                else "Seq"
+            let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
+            let reader = collectionMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
+            reader
+        else
+            Results.Single<'Result>(name)
 
     /// <summary>
     /// Creates a builder of result with primary and foreign key, that can be used in result joins as a master, as well as a detail result.

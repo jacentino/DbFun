@@ -65,7 +65,7 @@ type OutParams() =
     static member ReturnAnd<'Arg>(retName: string, argName: string): BuildOutParamGetter<int * 'Arg> =
         fun (provider, _) -> 
             let retp = fun (provider, ()) -> returnBuilder.Build<int>(retName, provider, ())
-            let outp = OutParams.Simple<'Arg>(argName)
+            let outp = OutParams.Auto(argName)
             let createGetter = OutParams.Tuple<int, 'Arg>(retp, outp) 
             createGetter(provider, ())
             

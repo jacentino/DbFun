@@ -16,7 +16,7 @@ module TableValuedParamsTests =
         let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("id", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Simple<int>("id") (tvpProvider, record)
+        let setter = TVParams.Auto<int>("id") (tvpProvider, record)
         setter.SetValue(5, record)
         Assert.Equal(5, record.GetInt32(0))
 
@@ -26,7 +26,7 @@ module TableValuedParamsTests =
         let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("status", SqlDbType.Char, 1) |]
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Simple<Status>("status") (tvpProvider, record)
+        let setter = TVParams.Auto<Status>("status") (tvpProvider, record)
         setter.SetValue(Status.Blocked, record)
         Assert.Equal("B", record.GetString(0))
 
@@ -36,7 +36,7 @@ module TableValuedParamsTests =
         let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("role", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Simple<Role>("role") (tvpProvider, record)
+        let setter = TVParams.Auto<Role>("role") (tvpProvider, record)
         setter.SetValue(Role.Regular, record)
         Assert.Equal(2, record.GetInt32(0))
 
@@ -46,7 +46,7 @@ module TableValuedParamsTests =
         let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
         let metadata = [| SqlMetaData("access", SqlDbType.VarChar, 2) |]
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Simple<Access>("access") (tvpProvider, record)
+        let setter = TVParams.Auto<Access>("access") (tvpProvider, record)
         setter.SetValue(Access.ReadWrite, record)
         Assert.Equal("RW", record.GetString(0))
 
@@ -89,7 +89,7 @@ module TableValuedParamsTests =
             |]
         let u = any<User>
         let record = SqlDataRecord(metadata)
-        let setter = TVParams.Record<User>(overrides = [ TVParamOverride(u.userId, TVParams.Simple<int>("id")) ]) (tvpProvider, record)
+        let setter = TVParams.Record<User>(overrides = [ TVParamOverride(u.userId, TVParams.Auto<int>("id")) ]) (tvpProvider, record)
         let user = 
             {
                 User.userId = 3

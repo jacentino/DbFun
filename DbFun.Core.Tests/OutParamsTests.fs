@@ -17,7 +17,7 @@ module OutParamsTests =
     let ``Simple types``() = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Simple<int>("id") builderParams
+        let getter = OutParams.Auto("id") builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 5
@@ -30,7 +30,7 @@ module OutParamsTests =
     let ``Char enum types``() = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Simple<Status>("status") builderParams
+        let getter = OutParams.Auto("status") builderParams
 
         getter.Create(command)
         command.Parameters.["status"].Value <- 'A'
@@ -43,7 +43,7 @@ module OutParamsTests =
     let ``Int enum types``() = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Simple<Role>("role") builderParams
+        let getter = OutParams.Auto("role") builderParams
 
         getter.Create(command)
         command.Parameters.["role"].Value <- 1
@@ -156,7 +156,7 @@ module OutParamsTests =
 
         let command = connection.CreateCommand()
         let u = any<User>
-        let getter = OutParams.Record<User>(overrides = [OutParamOverride<int>(u.userId, OutParams.Simple<int>("id"))]) builderParams
+        let getter = OutParams.Record<User>(overrides = [OutParamOverride<int>(u.userId, OutParams.Auto("id"))]) builderParams
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2

@@ -46,7 +46,7 @@ module ParamsTests =
     
         use command = connection.CreateCommand()
 
-        (Params.Simple<int>("userId")(builderParams)).SetValue(1, command)
+        (Params.Auto<int>("userId")(builderParams)).SetValue(1, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Equal(box 1, command.Parameters.["userId"].Value)
@@ -57,7 +57,7 @@ module ParamsTests =
     
         use command = connection.CreateCommand()
 
-        (Params.Simple<unit>("userId")(builderParams)).SetValue((), command)
+        (Params.Auto<unit>("userId")(builderParams)).SetValue((), command)
 
         Assert.Equal(0, command.Parameters.Count)
 
@@ -68,7 +68,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where userId in (@userId)"
 
-        (Params.Simple<int list>("userId")(builderParams)).SetValue([ 5; 6; 7 ], command)
+        (Params.Auto<int list>("userId")(builderParams)).SetValue([ 5; 6; 7 ], command)
 
         Assert.Equal(3, command.Parameters.Count)
         Assert.Contains("(@userId0, @userId1, @userId2)", command.CommandText)
@@ -80,7 +80,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where userId in (@userId)"
 
-        (Params.Simple<int array>("userId")(builderParams)).SetValue([| 5; 6; 7 |], command)
+        (Params.Auto<int array>("userId")(builderParams)).SetValue([| 5; 6; 7 |], command)
 
         Assert.Equal(3, command.Parameters.Count)
         Assert.Contains("(@userId0, @userId1, @userId2)", command.CommandText)
@@ -92,7 +92,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where created in (@created)"
 
-        (Params.Simple<DateOnly array>("created")(builderParams)).SetValue([| DateOnly.FromDateTime(DateTime.Today) |], command)
+        (Params.Auto<DateOnly array>("created")(builderParams)).SetValue([| DateOnly.FromDateTime(DateTime.Today) |], command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@created0)", command.CommandText)
@@ -104,7 +104,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where created in (@created)"
 
-        (Params.Simple<DateOnly list>("created")(builderParams)).SetValue([DateOnly.FromDateTime(DateTime.Today)], command)
+        (Params.Auto<DateOnly list>("created")(builderParams)).SetValue([DateOnly.FromDateTime(DateTime.Today)], command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@created0)", command.CommandText)
@@ -117,7 +117,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where created in (@created)"
 
-        (Params.Simple<DateOnly seq>("created")(builderParams)).SetValue(Seq.singleton (DateOnly.FromDateTime(DateTime.Today)), command)
+        (Params.Auto<DateOnly seq>("created")(builderParams)).SetValue(Seq.singleton (DateOnly.FromDateTime(DateTime.Today)), command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@created0)", command.CommandText)
@@ -130,7 +130,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where status in (@status)"
 
-        (Params.Simple<Status array>("status")(builderParams)).SetValue([| Status.Active |], command)
+        (Params.Auto<Status array>("status")(builderParams)).SetValue([| Status.Active |], command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@status0)", command.CommandText)
@@ -143,7 +143,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where status in (@status)"
 
-        (Params.Simple<Status list>("status")(builderParams)).SetValue([ Status.Active ], command)
+        (Params.Auto<Status list>("status")(builderParams)).SetValue([ Status.Active ], command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@status0)", command.CommandText)
@@ -156,7 +156,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from User where status in (@status)"
 
-        (Params.Simple<Status seq>("status")(builderParams)).SetValue(Seq.singleton Status.Active, command)
+        (Params.Auto<Status seq>("status")(builderParams)).SetValue(Seq.singleton Status.Active, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@status0)", command.CommandText)
@@ -169,7 +169,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "select * from Role where access in (@access)"
 
-        (Params.Simple<Access seq>("access")(builderParams)).SetValue(Seq.singleton Access.ReadWrite, command)
+        (Params.Auto<Access seq>("access")(builderParams)).SetValue(Seq.singleton Access.ReadWrite, command)
 
         Assert.Equal(1, command.Parameters.Count)
         Assert.Contains("(@access0)", command.CommandText)
@@ -182,7 +182,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "insert into User (id, name, email, created) values (@id, @name, @email, @created)"
 
-        (Params.Simple<User seq>("users")(builderParams)).SetValue([], command)
+        (Params.Auto<User seq>("users")(builderParams)).SetValue([], command)
 
         Assert.Equal(0, command.Parameters.Count)
 
@@ -193,7 +193,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         command.CommandText <- "insert into User (id, name, email, created) values (@id, @name, @email, @created)"
 
-        (Params.Simple<(int * string * string * DateTime) seq>("users")(builderParams)).SetValue([], command)
+        (Params.Auto<(int * string * string * DateTime) seq>("users")(builderParams)).SetValue([], command)
 
         Assert.Equal(0, command.Parameters.Count)
     
@@ -326,7 +326,7 @@ module ParamsTests =
         use command = connection.CreateCommand()
         let u = any<User>
 
-        let setter = Params.Record<User>(overrides = [ParamOverride<int>(u.userId, Params.Simple<int>("id"))])(builderParams)
+        let setter = Params.Record<User>(overrides = [ParamOverride<int>(u.userId, Params.Auto<int>("id"))])(builderParams)
 
         setter.SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, command)
 
@@ -520,8 +520,8 @@ module ParamsTests =
                 signature = { createdAt = DateTime.Today; createdBy = "admin"; updatedAt = DateTime.Today; updatedBy = "admin" } 
             }
         let a = any<Account>
-        let ovUpdatedAt = ParamOverride(a.signature.updatedAt, Params.Simple("modifiedAt"))
-        let ovUpdatedBy = ParamOverride(a.signature.updatedBy, Params.Simple("modifiedBy"))
+        let ovUpdatedAt = ParamOverride(a.signature.updatedAt, Params.Auto("modifiedAt"))
+        let ovUpdatedBy = ParamOverride(a.signature.updatedBy, Params.Auto("modifiedBy"))
         (Params.Record<Account>(overrides = [ovUpdatedAt; ovUpdatedBy])(builderParams)).SetValue(account, command)
 
         Assert.Equal(6, command.Parameters.Count)
@@ -538,7 +538,7 @@ module ParamsTests =
 
         use command = connection.CreateCommand()
 
-        (Params.Simple<DateOnly>("date")(builderParams)).SetValue(DateOnly.FromDateTime(DateTime.Today), command)
+        (Params.Auto<DateOnly>("date")(builderParams)).SetValue(DateOnly.FromDateTime(DateTime.Today), command)
 
         Assert.Equal(box DateTime.Today, command.Parameters["date"].Value)
 
@@ -558,7 +558,7 @@ module ParamsTests =
     let ``Char enums``() =
         use command = connection.CreateCommand()
 
-        (Params.Simple<Status>("status")(builderParams)).SetValue(Status.Active, command)
+        (Params.Auto<Status>("status")(builderParams)).SetValue(Status.Active, command)
 
         Assert.Equal(box 'A', command.Parameters["status"].Value)
 
@@ -566,7 +566,7 @@ module ParamsTests =
     let ``Int enums``() =
         use command = connection.CreateCommand()
 
-        (Params.Simple<Role>("role")(builderParams)).SetValue(Role.Admin, command)
+        (Params.Auto<Role>("role")(builderParams)).SetValue(Role.Admin, command)
 
         Assert.Equal(box 3, command.Parameters["role"].Value)
 
@@ -575,7 +575,7 @@ module ParamsTests =
     let ``Discriminated unions - simple``() =
         use command = connection.CreateCommand()
 
-        (Params.Simple<Access>("access")(builderParams)).SetValue(Access.Read, command)
+        (Params.Auto<Access>("access")(builderParams)).SetValue(Access.Read, command)
 
         Assert.Equal(box "RD", command.Parameters["access"].Value)
 

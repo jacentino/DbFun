@@ -172,7 +172,7 @@ type Rows() =
     /// The name of the result column or record prefix.
     /// </param>
     static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, resultName: string) = 
-        Rows.Tuple(Rows.Key<'Primary, 'Foreign>(primaryName, foreignName), Rows.Simple<'Result>(resultName))
+        Rows.Tuple(Rows.Key<'Primary, 'Foreign>(primaryName, foreignName), Rows.Auto<'Result>(resultName))
 
     /// <summary>
     /// Creates a builder of result with primary and foreign key, that can be used in result joins as a master, as well as a detail result.
@@ -213,7 +213,7 @@ type Rows() =
     /// The name of the result column or record prefix.
     /// </param>
     static member PKeyed<'Primary, 'Result>(primaryName: string, resultName: string) = 
-        Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), Rows.Simple<'Result>(resultName))
+        Rows.Tuple(Rows.Key<'Primary, unit>(primaryName, ""), Rows.Auto<'Result>(resultName))
 
     /// <summary>
     /// Creates a builder of result with primary key, that can be used in result joins as a master result.
@@ -237,7 +237,7 @@ type Rows() =
     /// The result builder.
     /// </param>
     static member PKeyed<'Primary, 'Result>(primary: BuildRowGetter<'Primary>, result: BuildRowGetter<'Result>) = 
-        Rows.Tuple(Rows.Key<'Primary, unit>(primary, Rows.Simple<unit>("")), result)
+        Rows.Tuple(Rows.Key<'Primary, unit>(primary, Rows.Auto("")), result)
 
     /// <summary>
     /// Creates a builder of result with foreign key, that can be used in result joins as a detail result.
@@ -249,7 +249,7 @@ type Rows() =
     /// The name of the result column or record prefix.
     /// </param>
     static member FKeyed<'Foreign, 'Result>(foreignName: string, resultName: string) = 
-        Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), Rows.Simple<'Result>(resultName))
+        Rows.Tuple(Rows.Key<unit, 'Foreign>("", foreignName), Rows.Auto<'Result>(resultName))
 
     /// <summary>
     /// Creates a builder of result with foreign key, that can be used in result joins as a detail result.
@@ -273,7 +273,7 @@ type Rows() =
     /// The result builder.
     /// </param>
     static member FKeyed<'Foreign, 'Result>(foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
-        Rows.Tuple(Rows.Key<unit, 'Foreign>(Rows.Simple<unit>(""), foreign), result)
+        Rows.Tuple(Rows.Key<unit, 'Foreign>(Rows.Auto<unit>(""), foreign), result)
 
 /// <summary>
 /// The column-to-field mapping override.
