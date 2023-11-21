@@ -290,6 +290,8 @@ type Results() =
             let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
             let reader = collectionMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
             reader
+        elif typeof<'Result> = typeof<unit> then
+            Results.Unit |> box :?> BuildResultReader<'Result>
         else
             Results.Single<'Result>(name)
 

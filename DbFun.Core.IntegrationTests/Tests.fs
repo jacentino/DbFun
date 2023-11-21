@@ -16,24 +16,24 @@ module TestQueries =
     let p = any<Post>
 
     let getBlog = 
-        query.Sql(Params.Int "id") (Results.Single<Blog> "")
+        query.Sql(Params.Int "id", Results.Single<Blog> "")
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where id = @id"
 
     let getAllBlogs = 
-        query.Sql Params.Unit (Results.Seq<Blog> "") 
+        query.Sql(Params.Unit, Results.Seq<Blog> "") 
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog"
 
     let getBlogsBefore = 
-        query.Sql(Params.Auto<DateTimeOffset> "createdTo") (Results.List<BlogTZ> "")
+        query.Sql(Params.Auto<DateTimeOffset> "createdTo", Results.List<BlogTZ> "") 
             "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where createdAt <= @createdTo"
 
     let getBlogOptional = 
-        query.Sql(Params.Int "id") (Results.Optional<Blog> "") 
+        query.Sql(Params.Int "id", Results.Optional<Blog> "") 
             "select * from Blog where id = @id"
 
     let getPostsWithTagsAndComments = 
-        query.Sql (Params.Int "blogId") 
-                  (Results.PKeyed<int, Post>("id", "")
+        query.Sql (Params.Int "blogId", 
+                   Results.PKeyed<int, Post>("id", "")
                     |> Results.Join p.comments (Results.FKeyed("postId", ""))
                     |> Results.Join p.tags (Results.FKeyed("postId", "name"))
                     |> Results.Unkeyed)
@@ -42,8 +42,8 @@ module TestQueries =
              select t.postId, t.name from tag t join post p on t.postId = p.id where p.blogId = @blogId"
 
     let getOnePostWithTagsAndComments = 
-        query.Sql (Params.Int "postId") 
-                  (Results.Combine(fun post comments tags -> { post with comments = comments; tags = tags })
+        query.Sql (Params.Int "postId",
+                   Results.Combine(fun post comments tags -> { post with comments = comments; tags = tags })
                     <*> Results.Single<Post>("")
                     <*> Results.List<Comment>("")
                     <*> Results.List<string>("name"))                    
@@ -52,7 +52,7 @@ module TestQueries =
              select t.postId, t.name from tag t where t.postId = @postId"
 
     let findPosts = 
-        query.TemplatedSql (Params.Record<Criteria>()) (Results.Seq<Post> "")  
+        query.TemplatedSql (Params.Record<Criteria>(), Results.Seq<Post> "")  
             <| Templating.define 
                 "select p.id, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status from post p
                  {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"

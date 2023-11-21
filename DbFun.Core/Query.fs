@@ -202,6 +202,9 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="createParamSetter">
     /// The parameter builder.
     /// </param>
+    /// <param name="createResultReader">
+    /// The result reader builder.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
@@ -214,11 +217,13 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="template">
     /// The template expansion function.
     /// </param>
-    member __.TemplatedSql (createParamSetter: BuildParamSetter<'Params>, 
-                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : BuildResultReader<'Result> -> ('Params option -> string) -> 'Params -> IConnector -> Async<'Result> =         
-        fun (createResultReader: BuildResultReader<'Result>) (template: 'Params option -> string) ->
+    member __.TemplatedSql (
+            createParamSetter: BuildParamSetter<'Params>, 
+            createResultReader: BuildResultReader<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : ('Params option -> string) -> 'Params -> IConnector -> Async<'Result> =         
+        fun (template: 'Params option -> string) ->
             try
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter = createParamSetter(provider, ())
@@ -250,12 +255,14 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Sql(createParamSetter: BuildParamSetter<'Params>, 
-                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result> =         
-        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
-            this.TemplatedSql(createParamSetter, sourcePath, sourceLine) createResultReader (fun _ -> commandText)
+    member this.Sql(
+            createParamSetter: BuildParamSetter<'Params>, 
+            createResultReader: BuildResultReader<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : string -> 'Params -> IConnector -> Async<'Result> =         
+        fun (commandText: string) ->
+            this.TemplatedSql(createParamSetter, createResultReader, sourcePath, sourceLine)  (fun _ -> commandText)
 
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
@@ -276,11 +283,11 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params, 'Result> (
-            name: string, 
+            name: string, createResultBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params>(name), sourcePath, sourceLine)
+            : string -> 'Params -> IConnector -> Async<'Result> =         
+        this.Sql(Params.Auto<'Params>(name), createResultBuilder, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
@@ -303,12 +310,14 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member __.Sql (createParamSetter1: BuildParamSetter<'Params1>, 
-                   createParamSetter2: BuildParamSetter<'Params2>,
-                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
-        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
+    member __.Sql (
+        createParamSetter1: BuildParamSetter<'Params1>, 
+        createParamSetter2: BuildParamSetter<'Params2>,
+        createResultReader: BuildResultReader<'Result>,
+        [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+        [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+        : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -355,10 +364,11 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
             name1: string, name2: string, 
+            createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), sourcePath, sourceLine)
+            : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
+        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createResultReader, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
@@ -387,10 +397,11 @@ type QueryBuilder(config: QueryConfig) =
     member __.Sql (createParamSetter1: BuildParamSetter<'Params1>, 
                    createParamSetter2: BuildParamSetter<'Params2>,
                    createParamSetter3: BuildParamSetter<'Params3>,
+                   createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> = 
-        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -443,10 +454,11 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Result> (
             name1: string, name2: string, name3: string, 
+            createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), sourcePath, sourceLine)
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> =         
+        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), createResultReader, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
@@ -479,10 +491,11 @@ type QueryBuilder(config: QueryConfig) =
                    createParamSetter2: BuildParamSetter<'Params2>,
                    createParamSetter3: BuildParamSetter<'Params3>,
                    createParamSetter4: BuildParamSetter<'Params4>,
+                   createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> = 
-        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -541,11 +554,13 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
             name1: string, name2: string, name3: string, name4: string, 
+            createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> =         
         this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                 createResultReader,
                  sourcePath, sourceLine)
 
     /// <summary>
@@ -583,10 +598,11 @@ type QueryBuilder(config: QueryConfig) =
                    createParamSetter3: BuildParamSetter<'Params3>,
                    createParamSetter4: BuildParamSetter<'Params4>,
                    createParamSetter5: BuildParamSetter<'Params5>,
+                   createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> = 
-        fun (createResultReader: BuildResultReader<'Result>) (commandText: string) ->
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -651,12 +667,14 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
             name1: string, name2: string, name3: string, name4: string, name5: string, 
+            createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> =         
         this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                  Params.Auto<'Params5>(name5), 
+                 createResultReader,
                  sourcePath, sourceLine)
 
 
@@ -678,12 +696,12 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Simple<'Params, 'Result> (
+    member this.Sql<'Params, 'Result> (
             argName: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params>(argName), sourcePath, sourceLine) (Results.Auto<'Result>(resultName))
+        this.Sql<'Params, 'Result>(argName, Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
@@ -706,12 +724,12 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Simple<'Params1, 'Params2, 'Result> (
+    member this.Sql<'Params1, 'Params2, 'Result> (
             argName1: string, argName2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), sourcePath, sourceLine) (Results.Auto<'Result>(resultName))
+        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
@@ -737,12 +755,12 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Simple<'Params1, 'Params2, 'Params3, 'Result> (
+    member this.Sql<'Params1, 'Params2, 'Params3, 'Result> (
             argName1: string, argName2: string, argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), sourcePath, sourceLine) (Results.Auto<'Result>(resultName))
+        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
@@ -771,15 +789,15 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Simple<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
+    member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
             argName1: string, argName2: string, argName3: string, argName4: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> =         
         this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
+                 Results.Auto<'Result>(resultName), 
                  sourcePath, sourceLine) 
-                (Results.Auto<'Result>(resultName))
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
@@ -808,7 +826,7 @@ type QueryBuilder(config: QueryConfig) =
     /// <param name="commandText">
     /// The SQL command text.
     /// </param>
-    member this.Simple<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
+    member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
             argName1: string, argName2: string, argName3: string, argName4: string, argName5: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
@@ -816,8 +834,8 @@ type QueryBuilder(config: QueryConfig) =
         this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
                  Params.Auto<'Params5>(argName5), 
+                 Results.Auto<'Result>(resultName), 
                  sourcePath, sourceLine) 
-                (Results.Auto<'Result>(resultName))
 
     /// <summary>
     /// Builds a one arg query function invoking stored procedure.
@@ -841,10 +859,12 @@ type QueryBuilder(config: QueryConfig) =
     /// The stored procedure name.
     /// </param>
     member __.Proc (createParamSetter: BuildParamSetter<'Params>,
+                    createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                    resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (createOutParamGetter: BuildOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (procName: string) ->
+                    : string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (procName: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter = createParamSetter(provider, ())
@@ -888,10 +908,43 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Proc<'Params, 'OutParams, 'Result> (
                 name: string,
+                createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                resultReaderBuilder: BuildResultReader<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
-        this.Proc(Params.Auto<'Params>(name), sourcePath, sourceLine)
+                : string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params>(name), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
+
+
+    /// <summary>
+    /// Builds a one arg query function invoking stored procedure.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createOutParamGetter">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="commandText">
+    /// The stored procedure name.
+    /// </param>
+    member this.Proc<'Params, 'OutParams, 'Result> (
+                name: string,
+                [<Optional>] outParamName: string, 
+                [<Optional>] resultName: string,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : string -> 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params>(name), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with two curried args invoking stored procedure.
@@ -919,10 +972,12 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member __.Proc (createParamSetter1: BuildParamSetter<'Params1>,
                     createParamSetter2: BuildParamSetter<'Params2>,
+                    createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                    resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (createOutParamGetter: BuildOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (procName: string) ->
+                    : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (procName: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -976,10 +1031,46 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Proc<'Params1, 'Params2, 'OutParams, 'Result> (
                 name1: string, name2: string,
+                [<Optional>] outParamName: string, 
+                [<Optional>] resultName: string,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
-        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), sourcePath, sourceLine)
+                : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
+
+    /// <summary>
+    /// Builds a query function with two curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createOutParamGetter">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="commandText">
+    /// The stored procedure name.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'OutParams, 'Result> (
+                name1: string, name2: string,
+                createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                resultReaderBuilder: BuildResultReader<'Result>,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
+
 
     /// <summary>
     /// Builds a query function with three curried args invoking stored procedure.
@@ -1011,10 +1102,12 @@ type QueryBuilder(config: QueryConfig) =
     member __.Proc (createParamSetter1: BuildParamSetter<'Params1>,
                     createParamSetter2: BuildParamSetter<'Params2>,
                     createParamSetter3: BuildParamSetter<'Params3>,
+                    createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                    resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (createOutParamGetter: BuildOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (commandText: string) ->
+                    : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -1074,11 +1167,47 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'OutParams, 'Result> (
                 name1: string, name2: string, name3: string,
+                createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                resultReaderBuilder: BuildResultReader<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
-        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), sourcePath, sourceLine)
-                
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
+
+    /// <summary>
+    /// Builds a query function with two curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createOutParamGetter">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="commandText">
+    /// The stored procedure name.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'OutParams, 'Result> (
+                name1: string, name2: string, name3: string,
+                [<Optional>] outParamName: string, 
+                [<Optional>] resultName: string,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), 
+                  OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), 
+                  sourcePath, sourceLine)                
 
     /// <summary>
     /// Builds a query function with four curried args invoking stored procedure.
@@ -1114,10 +1243,12 @@ type QueryBuilder(config: QueryConfig) =
                     createParamSetter2: BuildParamSetter<'Params2>,
                     createParamSetter3: BuildParamSetter<'Params3>,
                     createParamSetter4: BuildParamSetter<'Params4>,
+                    createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                    resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (createOutParamGetter: BuildOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (commandText: string) ->
+                    : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -1183,11 +1314,56 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'OutParams, 'Result> (
                 name1: string, name2: string, name3: string, name4: string,
+                createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                resultReaderBuilder: BuildResultReader<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
         this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                  createOutParamGetter, resultReaderBuilder,
+                  sourcePath, sourceLine)
+    /// <summary>
+    /// Builds a query function with four curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
+    /// The third parameter name.
+    /// </param>
+    /// <param name="name4">
+    /// The fourth parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createOutParamGetter">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="commandText">
+    /// The stored procedure name.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'OutParams, 'Result> (
+                name1: string, name2: string, name3: string, name4: string,
+                [<Optional>] outParamName: string, 
+                [<Optional>] resultName: string,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                  OutParams.Auto<'OutParams>(outParamName), 
+                  Results.Auto<'Result>(resultName), 
                   sourcePath, sourceLine)
                 
     /// <summary>
@@ -1228,10 +1404,12 @@ type QueryBuilder(config: QueryConfig) =
                     createParamSetter3: BuildParamSetter<'Params3>,
                     createParamSetter4: BuildParamSetter<'Params4>,
                     createParamSetter5: BuildParamSetter<'Params5>,
+                    createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                    resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
-        fun (createOutParamGetter: BuildOutParamGetter<'OutParams>) (resultReaderBuilder: BuildResultReader<'Result>) (commandText: string) ->
+                    : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+        fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -1303,11 +1481,61 @@ type QueryBuilder(config: QueryConfig) =
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'OutParams, 'Result> (
                 name1: string, name2: string, name3: string, name4: string, name5: string,
+                createOutParamGetter: BuildOutParamGetter<'OutParams>, 
+                resultReaderBuilder: BuildResultReader<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : BuildOutParamGetter<'OutParams> -> BuildResultReader<'Result> -> string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
         this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                   Params.Auto<'Params5>(name5),
+                  createOutParamGetter,
+                  resultReaderBuilder,
                   sourcePath, sourceLine)
-                
+
+    /// <summary>
+    /// Builds a query function with five curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
+    /// The third parameter name.
+    /// </param>
+    /// <param name="name4">
+    /// The fourth parameter name.
+    /// </param>
+    /// <param name="name5">
+    /// The fifth parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createOutParamGetter">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="commandText">
+    /// The stored procedure name.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'OutParams, 'Result> (
+                name1: string, name2: string, name3: string, name4: string, name5: string,
+                [<Optional>] outParamName: string, 
+                [<Optional>] resultName: string,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+        this.Proc(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                  Params.Auto<'Params5>(name5),
+                  OutParams.Auto<'OutParams>(outParamName), 
+                  Results.Auto<'Result>(resultName), 
+                  sourcePath, sourceLine)                

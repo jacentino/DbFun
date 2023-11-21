@@ -27,7 +27,7 @@ module QueryTests =
 
         let qb = QueryBuilder (QueryConfig.Default(createConnection))
                
-        let query = qb.Proc(Params.Auto<int> "id") (OutParams.ReturnAnd<User>("ret_val", "user")) Results.Unit "getUser"
+        let query = qb.Proc(Params.Auto<int> "id", OutParams.ReturnAnd<User>("ret_val", "user"), Results.Unit) "getUser"
 
         let _, (retVal, user) = query 1 connector |> Async.RunSynchronously
 
@@ -61,7 +61,7 @@ module QueryTests =
 
         let connector = new Connector(createConnection(), null)
         let qb = QueryBuilder(QueryConfig.Default(createConnection))
-        let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users")) Results.Unit 
+        let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users"), Results.Unit)
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"
 
@@ -93,9 +93,9 @@ module QueryTests =
         let config = QueryConfig.Default(createConnection).AddRowConverter(UserId)
         let qb = QueryBuilder(config)
                
-        let query = qb.Proc(Params.Auto<int> "id")         
-                           (OutParams.Tuple(OutParams.Return("ret_val"), OutParams.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))
-                           Results.Unit 
+        let query = qb.Proc(Params.Auto<int> "id",
+                            OutParams.Tuple(OutParams.Return("ret_val"), OutParams.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")),
+                            Results.Unit)
                            "getUser"
 
         let _, (retVal, user) = query 1 connector |> Async.RunSynchronously
@@ -125,7 +125,7 @@ module QueryTests =
         let connector = new Connector(createConnection(), null)
         let config = QueryConfig.Default(createConnection).AddParamConverter(fun (UserId id) -> id)                        
         let qb = QueryBuilder(config)
-        let query = qb.Timeout(30).Sql(Params.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User")) Results.Unit 
+        let query = qb.Timeout(30).Sql(Params.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User"), Results.Unit)
                         "insert into User (userId, name, email, created) 
                          select userId, name, email, created from @users"
 
