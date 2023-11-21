@@ -14,7 +14,7 @@
     <Compile Include="GenericSetters.fs" />
     <Compile Include="Params.fs" />
     <Compile Include="OutParams.fs" />
-    <Compile Include="Row.fs" />
+    <Compile Include="Rows.fs" />
     <Compile Include="Executor.fs" />
     <Compile Include="Results.fs" />
     <Compile Include="Connector.fs" />
