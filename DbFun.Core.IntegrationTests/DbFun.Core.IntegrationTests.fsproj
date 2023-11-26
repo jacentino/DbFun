@@ -11,8 +11,8 @@
     <None Include="App.config" />
     <Compile Include="Commons.fs" />
     <Compile Include="Models.fs" />
+    <Compile Include="TestQueries.fs" />
     <Compile Include="Tests.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>

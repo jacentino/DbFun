@@ -570,8 +570,8 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name or prefix (for indirect parameters).
         /// </param>
-        static member Auto<'Arg> (name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
-            fun (provider, prototype) -> provider.Setter<'Arg>(name, prototype)
+        static member Auto<'Arg> (?name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
+            fun (provider, prototype) -> provider.Setter<'Arg>(defaultArg name "", prototype)
 
         /// <summary>
         /// Creates a builder handling integer values.
@@ -1024,9 +1024,9 @@ module GenericSetters =
         /// <param name="name">
         /// The column or prefix (for indirect parameters) name.
         /// </param>
-        static member Optional<'Arg> (name: string) = 
+        static member Optional<'Arg> (?name: string) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
-                provider.Setter<'Arg option>(name, prototype)
+                provider.Setter<'Arg option>(defaultArg name "", prototype)
 
         /// <summary>
         /// Creates a builder handling record types.

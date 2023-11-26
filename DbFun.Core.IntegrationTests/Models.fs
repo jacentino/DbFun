@@ -87,6 +87,20 @@ type Criteria =
         tags        : string list
         sortOrder   : SortOrder
     }
+    static member Default = 
+        {
+            name        = None
+            title       = None
+            content     = None
+            author      = None
+            createdFrom = None
+            createdTo   = None
+            modifiedFrom= None
+            modifiedTo  = None
+            statuses    = []
+            tags        = []
+            sortOrder   = { field = SortField.CreatedAt; direction = SortDirection.Desc }
+        }
 
 
 

@@ -210,7 +210,7 @@ module ResultTests =
                         ]
 
         let builderParams = provider :> IRowGetterProvider, reader 
-        let result = Results.Auto<User>("") (builderParams)
+        let result = Results.Auto<User>() (builderParams)
         let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
@@ -236,7 +236,7 @@ module ResultTests =
                         ]
 
         let builderParams = provider :> IRowGetterProvider, reader 
-        let result = Results.Auto<User option>("") builderParams
+        let result = Results.Auto<User option>() builderParams
         let value = result.Read(reader) |> Async.RunSynchronously
 
         let expected = 
@@ -264,7 +264,7 @@ module ResultTests =
 
         let builderParams = provider :> IRowGetterProvider, reader 
 
-        let result = Results.Auto<User list>("") builderParams
+        let result = Results.Auto<User list>() builderParams
         let value = result.Read(reader) |> Async.RunSynchronously 
 
         let expected = 

@@ -218,24 +218,92 @@ type QueryBuilder(config: QueryConfig) =
     /// The template expansion function.
     /// </param>
     member __.TemplatedSql (
+            template: 'Params option -> string,
             createParamSetter: BuildParamSetter<'Params>, 
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : ('Params option -> string) -> 'Params -> IConnector -> Async<'Result> =         
-        fun (template: 'Params option -> string) ->
-            try
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter = createParamSetter(provider, ())
+            : 'Params -> IConnector -> Async<'Result> =         
+        try
+            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
+            let paramSetter = createParamSetter(provider, ())
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
-                let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
-                let resultReader = executePrototypeQuery(CommandType.Text, template(None), paramSetter.SetArtificial, createResultReader')
+            let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
+            
+            
+            let createResultReader' prototype = 
+                try
+                    createResultReader(rowGetterProvider, prototype)
+                with ex ->
+                    reraise()
 
-                fun (parameters: 'Params) (provider: IConnector) ->
-                    executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
-            with ex ->
-                handleException(sourcePath, sourceLine, ex)
+
+            let resultReader = executePrototypeQuery(CommandType.Text, template(None), paramSetter.SetArtificial, createResultReader')
+
+            fun (parameters: 'Params) (provider: IConnector) ->
+                executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
+        with ex ->
+            handleException(sourcePath, sourceLine, ex)
+
+    /// <summary>
+    /// Builds a one arg query function based on command template.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result reader builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="template">
+    /// The template expansion function.
+    /// </param>
+    member this.TemplatedSql (
+            template: 'Params option -> string,
+            name: string, 
+            createResultReader: BuildResultReader<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params -> IConnector -> Async<'Result> =         
+        this.TemplatedSql(template, Params.Auto<'Params>(name), createResultReader)
+
+    /// <summary>
+    /// Builds a one arg query function based on command template.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result reader builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="createResultReader">
+    /// The result builder.
+    /// </param>
+    /// <param name="template">
+    /// The template expansion function.
+    /// </param>
+    member this.TemplatedSql (
+            template: 'Params option -> string,
+            name: string, 
+            [<Optional>] resultName: string,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params -> IConnector -> Async<'Result> =         
+        this.TemplatedSql(template, Params.Auto<'Params>(name), Results.Auto(resultName))
 
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
@@ -256,13 +324,13 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member this.Sql(
+            commandText: string,
             createParamSetter: BuildParamSetter<'Params>, 
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params -> IConnector -> Async<'Result> =         
-        fun (commandText: string) ->
-            this.TemplatedSql(createParamSetter, createResultReader, sourcePath, sourceLine)  (fun _ -> commandText)
+            : 'Params -> IConnector -> Async<'Result> =         
+            this.TemplatedSql((fun _ -> commandText), createParamSetter, createResultReader, sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
@@ -283,11 +351,38 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params, 'Result> (
+            commandText: string,
             name: string, createResultBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params>(name), createResultBuilder, sourcePath, sourceLine)
+            : 'Params -> IConnector -> Async<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params>(name), createResultBuilder, sourcePath, sourceLine) 
+
+    /// <summary>
+    /// Builds a one arg query function based on raw SQL text.
+    /// </summary>
+    /// <param name="argName">
+    /// The parameter name.
+    /// </param>
+    /// </summary>
+    /// <param name="resultName">
+    /// The result column name.
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
+    member this.Sql<'Params, 'Result> (
+            commandText: string,
+            [<Optional>] argName: string, [<Optional>] resultName: string,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params -> IConnector -> Async<'Result> =         
+        this.Sql<'Params, 'Result>(commandText, argName, Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
@@ -311,13 +406,13 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member __.Sql (
+        commandText: string,
         createParamSetter1: BuildParamSetter<'Params1>, 
         createParamSetter2: BuildParamSetter<'Params2>,
         createResultReader: BuildResultReader<'Result>,
         [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
         [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-        : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
-        fun (commandText: string) ->
+        : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -363,12 +458,13 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
+            commandText: string,
             name1: string, name2: string, 
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createResultReader, sourcePath, sourceLine)
+            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createResultReader, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
@@ -677,32 +773,6 @@ type QueryBuilder(config: QueryConfig) =
                  createResultReader,
                  sourcePath, sourceLine)
 
-
-    /// <summary>
-    /// Builds a one arg query function based on raw SQL text.
-    /// </summary>
-    /// <param name="argName">
-    /// The parameter name.
-    /// </param>
-    /// </summary>
-    /// <param name="resultName">
-    /// The result column name.
-    /// <param name="sourcePath">
-    /// The calling source path for diagnostic purposes.
-    /// </param>
-    /// <param name="sourceLine">
-    /// The calling source path for diagnostic purposes.
-    /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
-    member this.Sql<'Params, 'Result> (
-            argName: string, [<Optional>] resultName: string,
-            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params -> IConnector -> Async<'Result> =         
-        this.Sql<'Params, 'Result>(argName, Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
-
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
     /// </summary>
@@ -725,11 +795,12 @@ type QueryBuilder(config: QueryConfig) =
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
+            commandText: string,
             argName1: string, argName2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
+            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.

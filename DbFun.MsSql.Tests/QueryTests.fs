@@ -61,9 +61,12 @@ module QueryTests =
 
         let connector = new Connector(createConnection(), null)
         let qb = QueryBuilder(QueryConfig.Default(createConnection))
-        let query = qb.Timeout(30).Sql(Params.TableValuedSeq<User>("users"), Results.Unit)
-                        "insert into User (userId, name, email, created) 
-                         select userId, name, email, created from @users"
+        let query = qb.Timeout(30).Sql(
+            "insert into User (userId, name, email, created) 
+             select userId, name, email, created from @users",
+            Params.TableValuedSeq<User>("users"), 
+            Results.Unit)
+                        
 
         let user = 
             {
@@ -125,9 +128,11 @@ module QueryTests =
         let connector = new Connector(createConnection(), null)
         let config = QueryConfig.Default(createConnection).AddParamConverter(fun (UserId id) -> id)                        
         let qb = QueryBuilder(config)
-        let query = qb.Timeout(30).Sql(Params.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User"), Results.Unit)
-                        "insert into User (userId, name, email, created) 
-                         select userId, name, email, created from @users"
+        let query = qb.Timeout(30).Sql(
+            "insert into User (userId, name, email, created) 
+             select userId, name, email, created from @users",
+            Params.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User"), 
+            Results.Unit)                        
 
         let user = (3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
 

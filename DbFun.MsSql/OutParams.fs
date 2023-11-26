@@ -62,10 +62,10 @@ type OutParams() =
     /// <param name="argName">
     /// The name or record prefix of output parameters.
     /// </param>
-    static member ReturnAnd<'Arg>(retName: string, argName: string): BuildOutParamGetter<int * 'Arg> =
+    static member ReturnAnd<'Arg>(retName: string, ?argName: string): BuildOutParamGetter<int * 'Arg> =
         fun (provider, _) -> 
             let retp = fun (provider, ()) -> returnBuilder.Build<int>(retName, provider, ())
-            let outp = OutParams.Auto(argName)
+            let outp = OutParams.Auto(?name = argName)
             let createGetter = OutParams.Tuple<int, 'Arg>(retp, outp) 
             createGetter(provider, ())
             

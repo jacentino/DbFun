@@ -37,9 +37,7 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
                
-        let query = 
-            qb.Sql(Params.Auto<int> "id", Results.Single<User> "")
-            <| "select * from User where userId = @Id"
+        let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 
         let connector = new Connector(createConnection(), null)        
 
@@ -71,8 +69,7 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
 
-        let query = qb.Sql<int, User>("id", Results.Auto "") 
-                     "select * from User where userId = @Id"
+        let query = qb.Sql<int, User>("select * from User where userId = @Id", "id", Results.Auto()) 
 
         let connector = new Connector(createConnection(), null)        
 
@@ -104,7 +101,7 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
 
-        let query = qb.Sql<int, User>("id") "select * from User where userId = @Id"
+        let query = qb.Sql<int, User>("select * from User where userId = @Id", "id") 
 
         let connector = new Connector(createConnection(), null)        
 
@@ -141,10 +138,11 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
 
-        let query = 
-            qb.Sql(Params.Auto<int>("id"), Results.Multiple(Results.Single<User>(""), Results.Seq<string>("name")))
-            <| "select * from User where userId = @id;
-                select * from Role where userId = @id"
+        let query = qb.Sql(
+            "select * from User where userId = @id;
+             select * from Role where userId = @id",
+            Params.Auto<int>("id"), 
+            Results.Multiple(Results.Single<User>(""), Results.Seq<string>("name")))            
 
         let connector = new Connector(createConnection(), null)        
 
@@ -182,13 +180,13 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
 
-        let query = 
-            qb.Sql(Params.Auto<int>("id"),
-                   Results.Combine(fun user roles -> user, roles)
-                    <*> Results.Single<User>("") 
-                    <*> Results.Seq<string>("name"))
+        let query = qb.Sql(
                 "select * from User where userId = @id;
-                 select * from Role where userId = @id"
+                 select * from Role where userId = @id",
+                Params.Auto<int>("id"),
+                Results.Combine(fun user roles -> user, roles)
+                <*> Results.Single<User>("") 
+                <*> Results.Seq<string>("name"))                
 
         let connector = new Connector(createConnection(), null)        
 
@@ -226,13 +224,14 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
 
-        let query = 
-            qb.Sql (Params.Auto<int>("id"),
-                    Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join (fun (u, rs) -> { u with UserWithRoles.roles = rs }) (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
-                    |> Results.Map (Seq.map snd))
-                "select * from User where userId = @id;
-                 select * from Role where userId = @id"
+        let query = qb.Sql (
+            "select * from User where userId = @id;
+             select * from Role where userId = @id",
+            Params.Auto<int>("id"),
+            Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+            |> Results.Join (fun (u, rs) -> { u with UserWithRoles.roles = rs }) (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+            |> Results.Map (Seq.map snd))
+                
 
         let connector = new Connector(createConnection(), null)        
 
@@ -272,12 +271,14 @@ module QueryTests =
         let uwr = any<UserWithRoles>
 
         let query = 
-             qb.Sql (Params.Auto<int>("id"),
-                    Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                    |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
-                    |> Results.Unkeyed)
+             qb.Sql (
                 "select * from User where userId = @id;
-                 select * from Role where userId = @id" 
+                 select * from Role where userId = @id",             
+                Params.Auto<int>("id"),
+                Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+                |> Results.Unkeyed)
+                
 
         let connector = new Connector(createConnection(), null)        
 
@@ -293,6 +294,85 @@ module QueryTests =
             }
 
         Assert.Equal<UserWithRoles seq>([expected], user)
+
+
+    [<Fact>]
+    let ``Grouping with lambda merge``() =
+        
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created"; col<string> "roleName" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Administrator" ]
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Guest" ]
+                    ]
+                ]
+
+        let qb = QueryBuilder (createConfig createConnection)
+
+        let query = qb.Sql (
+            "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
+             where u.userId = @id",
+            Params.Auto<int>("id"),                        
+            Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
+            |> Results.Group (fun (u: UserWithRoles) rs -> { u with roles = rs }))
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query 1 connector |> Async.RunSynchronously 
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+                roles = [ "Administrator"; "Guest" ]
+            }
+
+        Assert.Equal<UserWithRoles list>([expected], user)
+
+
+    [<Fact>]
+    let ``Grouping with expr merge``() =
+        
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created"; col<string> "roleName" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Administrator" ]
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Guest" ]
+                    ]
+                ]
+
+        let qb = QueryBuilder (createConfig createConnection)
+
+        let query = qb.Sql (
+            "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
+             where u.userId = @id",
+            Params.Auto<int>("id"),                        
+            Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
+            |> Results.Group any<UserWithRoles>.roles)
+
+        let connector = new Connector(createConnection(), null)        
+
+        let user = query 1 connector |> Async.RunSynchronously 
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+                roles = [ "Administrator"; "Guest" ]
+            }
+
+        Assert.Equal<UserWithRoles list>([expected], user)
+
             
     [<Fact>]
     let ``Procedures``() = 
@@ -370,12 +450,9 @@ module QueryTests =
         let qb = QueryBuilder (createConfig createConnection)
                
         let ex = 
-            Assert.Throws<CompileTimeException>(fun () -> 
-                qb.Sql(Params.Auto<int> "id", Results.Single<User> "")
-                       <| "select * from User where userId = @Id"
-                |> ignore)
+            Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 312", ex.Message)
+        Assert.Contains("line: 374", ex.Message)
 
 
     [<Fact>]
@@ -394,13 +471,12 @@ module QueryTests =
 
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
-        qb.Sql(Params.Auto<int> "id", Results.Single<User> "")
-               <| "select * from User where userId = @Id"
+        qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
         |> ignore
 
         let line, file, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(335, line)
+        Assert.Equal(395, line)
         Assert.Contains("QueryTests.fs", file)
 
 
@@ -420,15 +496,13 @@ module QueryTests =
 
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
-        let query = 
-            qb.Sql(Params.Auto<int> "id", Results.Single<User> "")
-                   "select * from User where userId = @Id"
+        let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")                   
 
         let connector = new Connector(createConnection(), null)        
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 362", ex.InnerExceptions.[0].Message)
+        Assert.Contains("line: 420", ex.InnerExceptions.[0].Message)
 
 
     [<Fact>]
@@ -445,14 +519,16 @@ module QueryTests =
         let qb = QueryBuilder (createConfig createProtoConnection)
                
         let query = 
-            qb.TemplatedSql(Params.Record<Criteria>(), Results.Seq<User> "")
-            <| Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
-                (Templating.applyWhen (fun p -> p.name.IsSome)       
-                    (Templating.where "name like '%' + @name + '%'")
-                 >> Templating.applyWhen (fun p -> p.statuses.IsSome)   
-                    (Templating.where "status in (@statuses)")
-                 >> Templating.applyWhen  (fun p -> p.roles.IsSome)      
-                    (Templating.join "join Role r on r.postId = u.id" >> Templating.where "r.name in (@roles)"))
+            qb.TemplatedSql(
+                Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
+                    (Templating.applyWhen (fun p -> p.name.IsSome)       
+                        (Templating.where "name like '%' + @name + '%'")
+                     >> Templating.applyWhen (fun p -> p.statuses.IsSome)   
+                        (Templating.where "status in (@statuses)")
+                     >> Templating.applyWhen  (fun p -> p.roles.IsSome)
+                        (Templating.join "join Role r on r.postId = u.id" >> Templating.where "r.name in (@roles)")),
+                Params.Record<Criteria>(), 
+                Results.Seq<User> "")               
 
         let connection = 
             createConnectionMock
@@ -505,9 +581,8 @@ module QueryTests =
 
         let qb = QueryBuilder(config)
                
-        let query = 
-            qb.Sql (Params.Auto<UserId> "id", Results.Single<User> "")
-                    "select * from User where userId = @Id"
+        let query = qb.Sql ("select * from User where userId = @Id", Params.Auto<UserId> "id", Results.Single<User> "")
+                    
 
         let connector = new Connector(createConnection(), null)        
 
@@ -539,9 +614,8 @@ module QueryTests =
 
         let qb = QueryBuilder(config)
                
-        let query = 
-            qb.Sql(Params.Auto<UserId list> "id", Results.Single<User> "")
-                "select * from User where userId in (@id)"
+        let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")
+                
 
         let createConnection() = 
             createConnectionMock
@@ -585,9 +659,10 @@ module QueryTests =
 
         let qb = QueryBuilder(config)
                
-        let query = 
-            qb.Sql(Params.Auto<int> "id", Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))
-                "select * from User where userId = @Id"
+        let query = qb.Sql(
+            "select * from User where userId = @Id", 
+            Params.Auto<int> "id", 
+            Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))                
 
         let connector = new Connector(createConnection(), null)        
 
@@ -617,9 +692,10 @@ module QueryTests =
 
         let qb = QueryBuilder(config)
                
-        let query = 
-            qb.Sql(Params.Auto<UserId> "id", Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))
-                "select * from User where userId = @Id"
+        let query = qb.Sql(
+            "select * from User where userId = @Id", 
+            Params.Auto<UserId> "id", 
+            Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))                
 
         let connector = new Connector(createConnection(), null)        
 
@@ -655,13 +731,13 @@ module QueryTests =
         let qb = QueryBuilder (config)
         let uwr = any<UserWithRoles>
 
-        let query = 
-            qb.Sql (Params.Auto<int>("id"),
-                    Results.Seq(Rows.PKeyed<int, UserWithRoles>("user_userId", "user_")) 
-                    |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
-                    |> Results.Map (Seq.map snd))
-                "select * from User where userId = @id;
-                 select * from Role where userId = @id"
+        let query = qb.Sql<int, UserWithRoles seq> (
+            "select * from User where userId = @id;
+             select * from Role where userId = @id",
+            "id",
+            Results.Seq(Rows.PKeyed<int, UserWithRoles>("user_userId", "user_")) 
+            |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+            |> Results.Map (Seq.map snd))
 
         let connector = new Connector(createConnection(), null)        
 

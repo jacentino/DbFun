@@ -13,73 +13,6 @@ type IResultReader<'Result> =
 
 type BuildResultReader<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
 
-/// <summary>
-/// Definitions allowing for applicative functor-like result combining.
-/// </summary>
-module MultipleResults = 
-
-    type IAdvancer = 
-        abstract member Advance: IDataReader -> unit
-        abstract member AdvanceAsync: IDataReader -> Async<unit>
-
-    /// <summary>
-    /// Applies result builder containing ordinary result to result builder containing combiner function.
-    /// </summary>
-    /// <param name="multiple">
-    /// The result builder of function type.
-    /// </param>
-    /// <param name="resultBuilder">
-    /// The ordinary result builder to be appliied.
-    /// </param>
-    let (<*>) (multiple: BuildResultReader<'Result -> 'Next>) (resultBuilder: BuildResultReader<'Result>): BuildResultReader<'Next> =        
-        
-        let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
-            (combiner :?> IAdvancer).Advance(reader)
-
-        let advanceAsync(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
-            (combiner :?> IAdvancer).AdvanceAsync(reader)
-
-        fun (provider: IRowGetterProvider, prototype: IDataReader) ->
-            let combiner = multiple(provider, prototype)
-            advance(combiner, prototype)
-            let resultReader = resultBuilder(provider, prototype)
-            { new IResultReader<'Next> with
-                member __.Read(reader: IDataReader) = 
-                    async {
-                        let! combine = combiner.Read(reader)
-                        do! advanceAsync(combiner, reader)
-                        let! result = resultReader.Read(reader)
-                        return combine(result)                    
-                    }
-              interface IAdvancer with
-                member __.Advance(reader: IDataReader) = 
-                    if not(reader.NextResult()) then
-                        failwith "Not enough results"                         
-                member __.AdvanceAsync(reader: IDataReader) = 
-                    async {
-                        let! exists = Executor.nextResultAsync(reader)
-                        if not exists then
-                            failwith "Not enough results"                         
-                    }
-            }
-        
-    type Results() = 
-                
-        /// <summary>
-        /// Creates an initial result builder containing combiner function.
-        /// </summary>
-        /// <param name="combiner">
-        /// The combiner function.
-        /// </param>
-        static member Combine(combiner: 'ResultBuilder) =         
-            fun (_: IRowGetterProvider, _: IDataReader)  ->
-                { new IResultReader<'ResultBuilder> with
-                    member __.Read(_: IDataReader) = async.Return combiner
-                  interface IAdvancer with
-                    member __.Advance(_: IDataReader) = ()
-                    member __.AdvanceAsync(_: IDataReader) = async.Return ()
-                } 
-
 
 type Results() = 
 
@@ -129,9 +62,9 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Single<'Result> (name: string): BuildResultReader<'Result> = 
+    static member Single<'Result> (?name: string): BuildResultReader<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
-            let getter = provider.Getter(name, prototype)
+            let getter = provider.Getter(defaultArg name "", prototype)
             { new IResultReader<'Result> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
@@ -163,9 +96,9 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Optional<'Result> (name: string): BuildResultReader<'Result option>  = 
+    static member Optional<'Result> (?name: string): BuildResultReader<'Result option>  = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
-            let getter = provider.Getter(name, prototype)
+            let getter = provider.Getter(defaultArg name "", prototype)
             { new IResultReader<'Result option> with
                 member __.Read(reader: IDataReader) = 
                     if reader.Read() then
@@ -197,9 +130,9 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Seq<'Result> (name: string): BuildResultReader<'Result seq> = 
+    static member Seq<'Result> (?name: string): BuildResultReader<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
-            let getter = provider.Getter<'Result>(name, prototype)
+            let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result seq> with
                 member __.Read(reader: IDataReader) = 
                     async.Return 
@@ -231,9 +164,9 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member List<'Result> (name: string): BuildResultReader<'Result list> = 
+    static member List<'Result> (?name: string): BuildResultReader<'Result list> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
-            let getter = provider.Getter<'Result>(name, prototype)
+            let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result list> with
                 member __.Read(reader: IDataReader) = 
                     async.Return 
@@ -265,9 +198,9 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Array<'Result> (name: string): BuildResultReader<'Result array> = 
+    static member Array<'Result> (?name: string): BuildResultReader<'Result array> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
-            let getter = provider.Getter<'Result>(name, prototype)
+            let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result array> with
                 member __.Read(reader: IDataReader) = 
                     async.Return 
@@ -276,9 +209,9 @@ type Results() =
                         |]
             }
 
-    static member Auto<'Result> (name: string): BuildResultReader<'Result> = 
+    static member Auto<'Result> (?name: string): BuildResultReader<'Result> = 
         if Types.isOptionType typeof<'Result> then
-            let optionalMethod = typeof<Results>.GetMethod("Optional", [| typeof<string> |])
+            let optionalMethod = typeof<Results>.GetMethod("Optional", [| typeof<string option> |])
             let gOptionalMethod = optionalMethod.MakeGenericMethod(typeof<'Result>.GetGenericArguments().[0])
             let reader = gOptionalMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
             reader
@@ -287,13 +220,13 @@ type Results() =
                 if typedefof<'Result> = typedefof<List<_>> then "List"
                 elif typedefof<'Result>.IsArray then "Array"
                 else "Seq"
-            let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
+            let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string option> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
             let reader = collectionMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
             reader
         elif typeof<'Result> = typeof<unit> then
             Results.Unit |> box :?> BuildResultReader<'Result>
         else
-            Results.Single<'Result>(name)
+            Results.Single<'Result>(?name = name)
 
     /// <summary>
     /// Creates a builder of result with primary and foreign key, that can be used in result joins as a master, as well as a detail result.
@@ -347,8 +280,8 @@ type Results() =
     /// <param name="resultName">
     /// The name of the result column or record prefix.
     /// </param>
-    static member PKeyed<'Primary, 'Result>(primaryName: string, resultName: string) = 
-        Results.Seq(Rows.PKeyed<'Primary, 'Result>(primaryName, resultName))
+    static member PKeyed<'Primary, 'Result>(primaryName: string, ?resultName: string) = 
+        Results.Seq(Rows.PKeyed<'Primary, 'Result>(primaryName, ?resultName = resultName))
 
     /// <summary>
     /// Creates a builder of result with primary key, that can be used in result joins as a master result.
@@ -383,8 +316,8 @@ type Results() =
     /// <param name="resultName">
     /// The name of the result column or record prefix.
     /// </param>
-    static member FKeyed<'Foreign, 'Result>(foreignName: string, resultName: string) = 
-        Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreignName, resultName))
+    static member FKeyed<'Foreign, 'Result>(foreignName: string, ?resultName: string) = 
+        Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreignName, ?resultName = resultName))
 
     /// <summary>
     /// Creates a builder of result with foreign key, that can be used in result joins as a detail result.
@@ -713,3 +646,136 @@ type Results() =
     /// </param>
     static member Unkeyed<'PK, 'FK, 'Result>(keyedResult: IRowGetterProvider * IDataReader -> IResultReader<(RowsImpl.KeySpecifier<'PK, 'FK> * 'Result) seq>) = 
         Results.Map (Seq.map snd) keyedResult
+
+    /// <summary>
+    /// Groups list of tuples by first item and consilidates this item with list of corresponding second items using merge function.
+    /// </summary>
+    /// <param name="merge">
+    /// Function merging first tuple element with list of corresponding second items.
+    /// </param>
+    static member Group (merge: 'Result1 -> 'Result2 list -> 'Result1) =
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
+            Results.Map (List.groupBy fst >> List.map (fun (r1, r1r2s) ->  merge r1 (r1r2s |> List.map snd |> List.choose id))) sourceResult
+
+    /// <summary>
+    /// Groups array of tuples by first item and consilidates this item with list of corresponding second items using merge function.
+    /// </summary>
+    /// <param name="merge">
+    /// Function merging first tuple element with array of corresponding second items.
+    /// </param>
+    static member Group (merge: 'Result1 -> 'Result2 array -> 'Result1) =
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
+            Results.Map (Array.groupBy fst >> Array.map (fun (r1, r1r2s) -> merge r1 (r1r2s |> Array.map snd |> Array.choose id))) sourceResult
+
+    /// <summary>
+    /// Groups seq of tuples by first item and consilidates this item with list of corresponding second items using merge function.
+    /// </summary>
+    /// <param name="merge">
+    /// Function merging first tuple element with seq of corresponding second items
+    /// </param>
+    static member Group (merge: 'Result1 -> 'Result2 seq -> 'Result1) =
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
+            Results.Map (Seq.groupBy fst >> Seq.map (fun (r1, r1r2s) ->  merge r1 (r1r2s |> Seq.map snd |> Seq.choose id))) sourceResult
+
+    /// <summary>
+    /// Groups list of tuples by first item and consilidates this item with list of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group ([<ReflectedDefinition>] target: Expr<'Result2 list>): 
+            BuildResultReader<('Result1 * 'Result2 option) list> -> BuildResultReader<'Result1 list> =
+        let merge = Results.GenerateMerge(target)
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
+            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult
+
+    /// <summary>
+    /// Groups array of tuples by first item and consilidates this item with an array of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group ([<ReflectedDefinition>] target: Expr<'Result2 array>):
+            BuildResultReader<('Result1 * 'Result2 option) array> -> BuildResultReader<'Result1 array> =
+        let merge = Results.GenerateMerge(target)
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
+            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult
+
+    /// <summary>
+    /// Groups seq of tuples by first item and consilidates this item with seq of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group (target: Expr<'Result2 seq>):
+            BuildResultReader<('Result1 * 'Result2 option) seq> -> BuildResultReader<'Result1 seq> =
+        let merge = Results.GenerateMerge<'Result2 seq, 'Result1>(target)
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
+            Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
+
+/// <summary>
+/// Definitions allowing for applicative functor-like result combining.
+/// </summary>
+module MultipleResults = 
+
+    type IAdvancer = 
+        abstract member Advance: IDataReader -> unit
+        abstract member AdvanceAsync: IDataReader -> Async<unit>
+
+    /// <summary>
+    /// Applies result builder containing ordinary result to result builder containing combiner function.
+    /// </summary>
+    /// <param name="multiple">
+    /// The result builder of function type.
+    /// </param>
+    /// <param name="resultBuilder">
+    /// The ordinary result builder to be appliied.
+    /// </param>
+    let (<*>) (multiple: BuildResultReader<'Result -> 'Next>) (resultBuilder: BuildResultReader<'Result>): BuildResultReader<'Next> =        
+        
+        let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
+            (combiner :?> IAdvancer).Advance(reader)
+
+        let advanceAsync(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
+            (combiner :?> IAdvancer).AdvanceAsync(reader)
+
+        fun (provider: IRowGetterProvider, prototype: IDataReader) ->
+            let combiner = multiple(provider, prototype)
+            advance(combiner, prototype)
+            let resultReader = resultBuilder(provider, prototype)
+            { new IResultReader<'Next> with
+                member __.Read(reader: IDataReader) = 
+                    async {
+                        let! combine = combiner.Read(reader)
+                        do! advanceAsync(combiner, reader)
+                        let! result = resultReader.Read(reader)
+                        return combine(result)                    
+                    }
+              interface IAdvancer with
+                member __.Advance(reader: IDataReader) = 
+                    if not(reader.NextResult()) then
+                        failwith "Not enough results"                         
+                member __.AdvanceAsync(reader: IDataReader) = 
+                    async {
+                        let! exists = Executor.nextResultAsync(reader)
+                        if not exists then
+                            failwith "Not enough results"                         
+                    }
+            }
+        
+    type Results with  
+                
+        /// <summary>
+        /// Creates an initial result builder containing combiner function.
+        /// </summary>
+        /// <param name="combiner">
+        /// The combiner function.
+        /// </param>
+        static member Combine(combiner: 'ResultBuilder) =         
+            fun (_: IRowGetterProvider, _: IDataReader)  ->
+                { new IResultReader<'ResultBuilder> with
+                    member __.Read(_: IDataReader) = async.Return combiner
+                  interface IAdvancer with
+                    member __.Advance(_: IDataReader) = ()
+                    member __.AdvanceAsync(_: IDataReader) = async.Return ()
+                } 

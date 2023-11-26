@@ -467,8 +467,8 @@ module GenericGetters =
         /// <param name="name">
         /// The column name or prefix (for indirect results).
         /// </param>
-        static member Auto<'Result>(name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
-            fun (provider, prototype) -> provider.Getter<'Result>(name, prototype)
+        static member Auto<'Result>(?name: string): BuildGetter<'Prototype, 'DbObject, 'Result> = 
+            fun (provider, prototype) -> provider.Getter<'Result>(defaultArg name "", prototype)
 
         /// <summary>
         /// Creates a builder handling integer values.
@@ -602,9 +602,9 @@ module GenericGetters =
         /// <param name="name">
         /// The column or prefix (for indirect results) name.
         /// </param>
-        static member Optional<'Result>(name: string):  BuildGetter<'Prototype, 'DbObject, 'Result option> =            
+        static member Optional<'Result>(?name: string):  BuildGetter<'Prototype, 'DbObject, 'Result option> =            
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) -> 
-                provider.Getter<'Result option>(name, prototype)
+                provider.Getter<'Result option>(defaultArg name "", prototype)
 
         /// <summary>
         /// Creates a builder handling optional types.
