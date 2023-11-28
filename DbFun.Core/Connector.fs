@@ -27,3 +27,12 @@ type Connector(connection: IDbConnection, transaction: IDbTransaction) =
                 connection.Dispose()
 
 type DbCmd<'Result> = IConnector -> Async<'Result>
+
+type DbCmd() = 
+
+    static member Map (f: 'T -> 'U) (cmd: DbCmd<'T>): IConnector -> Async<'U> = 
+        fun (con: IConnector) ->
+            async {
+                let! v = cmd(con)
+                return f(v)
+            }

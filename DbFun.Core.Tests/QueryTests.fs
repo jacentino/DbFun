@@ -387,7 +387,7 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
                
-        let query = qb.Proc(Params.Auto<int> "id", OutParams.Record<User>(), Results.Unit) "getUser"
+        let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.Record<User>(), Results.Unit) 
 
         let connector = new Connector(createConnection(), null)        
 
@@ -417,7 +417,7 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
                
-        let query = qb.Proc<int, User, unit>("id") "getUser"
+        let query = qb.Proc<int, User, unit>("getUser", "id") 
 
         let connector = new Connector(createConnection(), null)        
 

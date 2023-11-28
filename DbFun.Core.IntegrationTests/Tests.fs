@@ -68,3 +68,11 @@ module Tests =
             |> run 
             |> Async.RunSynchronously
         Assert.Equal(1, blogs |> Seq.length)
+
+
+    [<Fact>]
+    let ``Stored procedure with transformed result``() = 
+        let pl = TestQueries.getAllPosts 1 |> run |> Async.RunSynchronously
+        Assert.Equal(2, pl |> List.length)
+        let p = pl |> List.head
+        Assert.Equal(1, p.comments |> List.length)

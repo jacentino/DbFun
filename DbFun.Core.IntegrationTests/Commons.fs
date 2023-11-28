@@ -9,7 +9,7 @@ module Commons =
 
     let createConnection () = 
         let config = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location)
-        let connectionString = config.ConnectionStrings.ConnectionStrings.["MoreSqlFunTests"].ConnectionString
+        let connectionString = config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
         new SqlConnection(connectionString)
 
     let defaultConfig = QueryConfig.Default(createConnection >> unbox)

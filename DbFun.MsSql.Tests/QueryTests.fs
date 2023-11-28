@@ -27,7 +27,7 @@ module QueryTests =
 
         let qb = QueryBuilder (QueryConfig.Default(createConnection))
                
-        let query = qb.Proc(Params.Auto<int> "id", OutParams.ReturnAnd<User>("ret_val", "user"), Results.Unit) "getUser"
+        let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.ReturnAnd<User>("ret_val", "user"), Results.Unit) 
 
         let _, (retVal, user) = query 1 connector |> Async.RunSynchronously
 
@@ -96,10 +96,12 @@ module QueryTests =
         let config = QueryConfig.Default(createConnection).AddRowConverter(UserId)
         let qb = QueryBuilder(config)
                
-        let query = qb.Proc(Params.Auto<int> "id",
-                            OutParams.Tuple(OutParams.Return("ret_val"), OutParams.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")),
-                            Results.Unit)
-                           "getUser"
+        let query = qb.Proc(
+            "getUser", 
+            Params.Auto<int> "id",
+            OutParams.Tuple(OutParams.Return("ret_val"), OutParams.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")),
+            Results.Unit)
+                           
 
         let _, (retVal, user) = query 1 connector |> Async.RunSynchronously
 
