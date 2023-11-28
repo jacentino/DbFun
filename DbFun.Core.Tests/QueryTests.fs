@@ -10,6 +10,12 @@ open DbFun.TestTools.Models
 open DbFun.TestTools.Mocks
 open DbFun.Core.Diagnostics
 open System.Data
+open System.Runtime.CompilerServices
+open System.Runtime.InteropServices
+open System.Diagnostics
+
+type Diag() = 
+    static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line
 
 module QueryTests = 
 
@@ -449,10 +455,10 @@ module QueryTests =
 
         let qb = QueryBuilder (createConfig createConnection)
                
-        let ex = 
-            Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
+        let line = Diag.GetLine()
+        let ex = Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains("line: 374", ex.Message)
+        Assert.Contains(sprintf "line: %d" (line + 1), ex.Message)
 
 
     [<Fact>]
@@ -471,13 +477,14 @@ module QueryTests =
 
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
+        let line = Diag.GetLine()
         qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
         |> ignore
 
-        let line, file, _ = qb.CompileTimeErrorLog |> List.head
+        let lineNo, fileName, _ = qb.CompileTimeErrorLog |> List.head
 
-        Assert.Equal(395, line)
-        Assert.Contains("QueryTests.fs", file)
+        Assert.Equal(line + 1, lineNo)
+        Assert.Contains("QueryTests.fs", fileName)
 
 
     [<Fact>]
@@ -490,19 +497,19 @@ module QueryTests =
                     [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
                     [
                         [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
-                    ]
-                            
+                    ]                            
                 ]
 
         let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
                
+        let line = Diag.GetLine()
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")                   
 
         let connector = new Connector(createConnection(), null)        
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains("line: 420", ex.InnerExceptions.[0].Message)
+        Assert.Contains(sprintf "line: %d" (line + 1), ex.InnerExceptions.[0].Message)
 
 
     [<Fact>]
