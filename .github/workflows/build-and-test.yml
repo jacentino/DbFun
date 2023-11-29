@@ -33,4 +33,4 @@ jobs:
     - name: Unit Test
       run: dotnet test --no-build --verbosity normal --filter FullyQualifiedName!~DbFun.Core.IntegrationTests
     - name: Setup Database
-      run: sqlcmd -U sa -P DbFunTesting -S localhost -d master -Q "SELECT * FROM INFORMATION_SCHEMA.TABLES"
+      run: sqlcmd -U sa -P DbFunTesting -S localhost,1433 -d master -Q "SELECT * FROM INFORMATION_SCHEMA.TABLES"
