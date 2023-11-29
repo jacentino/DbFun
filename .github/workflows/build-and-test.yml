@@ -24,11 +24,5 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-      
-  test:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Unit tests
+    - name: Test
       run: dotnet test --no-build --verbosity normal --filter FullyQualifiedName!~DbFun.Core.IntegrationTests
