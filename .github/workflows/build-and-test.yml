@@ -22,12 +22,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Unit Test
-      run: dotnet test --no-build --verbosity normal --filter FullyQualifiedName!~DbFun.Core.IntegrationTests
     - name: Download and start container
       run: docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=DbFunTesting" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2019-latest
-    - name: Run example
-      run: |
-          echo ${{ github.workspace }}
-          echo $GITHUB_WORKSPACE
+    - name: Unit Test
+      run: dotnet test --no-build --verbosity normal --filter FullyQualifiedName!~DbFun.Core.IntegrationTests
     
