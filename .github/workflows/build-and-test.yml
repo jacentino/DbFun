@@ -27,4 +27,9 @@ jobs:
     - name: Download and start container
       run: docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=DbFunTesting" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2019-latest
     - name: Run sqlcmd
-      run: sqlcmd -U sa -P DbFunTesting -S localhost -d tempdb -Q "select @@version;"
+      run: sqlcmd -U sa -P DbFunTesting -S 127.0.0.1 -d tempdb -Q "select @@version;"
+    - name: Try sqlcmd again
+      run: sqlcmd -U sa -P DbFunTesting -S 127.0.0.1 -d tempdb -Q "select @@version;"
+    - name: And again
+      run: sqlcmd -U sa -P DbFunTesting -S 127.0.0.1 -d tempdb -Q "select @@version;"
+
