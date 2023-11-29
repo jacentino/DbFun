@@ -19,7 +19,7 @@ jobs:
           SA_PASSWORD: DbFunTesting
           ACCEPT_EULA: 'Y'
         ports:
-          - 1433:1433    
+          - 1430:1430
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET
@@ -33,4 +33,4 @@ jobs:
     - name: Unit Test
       run: dotnet test --no-build --verbosity normal --filter FullyQualifiedName!~DbFun.Core.IntegrationTests
     - name: Setup Database
-      run: sqlcmd -U sa -P DbFunTesting -S localhost,1433 -d master -Q "SELECT * FROM INFORMATION_SCHEMA.TABLES"
+      run: sqlcmd -U sa -P DbFunTesting -S localhost,1430 -d master -Q "SELECT * FROM INFORMATION_SCHEMA.TABLES"
