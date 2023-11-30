@@ -1,12 +1,11 @@
 namespace DbFun.Core.IntegrationTests
 
 open System
+open Xunit
 open DbFun.Core.IntegrationTests.Models
 open Commons
 
 module Tests = 
-
-    open Xunit
 
     [<Fact>]
     let ``Warm up`` () =
@@ -68,6 +67,18 @@ module Tests =
             |> run 
             |> Async.RunSynchronously
         Assert.Equal(1, blogs |> Seq.length)
+
+
+    [<Fact>]
+    let ``Queries utilizing TVP-s``() = 
+        let tags = [
+            (2, "Dapper")
+            (2, "EntityFramework")
+            (2, "FSharp.Data.SqlClient")
+        ]
+        TestQueries.updateTags 2 tags |> run |> Async.RunSynchronously
+        let result = TestQueries.getTags 2 |> run |> Async.RunSynchronously
+        Assert.Equal<string list>(tags |> List.map snd, result)
 
 
     [<Fact>]

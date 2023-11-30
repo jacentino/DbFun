@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DbFun.Core\DbFun.Core.fsproj" />
+    <ProjectReference Include="..\DbFun.MsSql\DbFun.MsSql.fsproj" />
     <ProjectReference Include="..\DbFun.TestTools\DbFun.TestTools.fsproj" />
   </ItemGroup>
 

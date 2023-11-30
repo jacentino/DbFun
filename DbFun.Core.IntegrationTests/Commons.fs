@@ -3,7 +3,7 @@
 open Microsoft.Data.SqlClient
 open System.Configuration
 open DbFun.Core
-open DbFun.Core.Builders
+open DbFun.MsSql.Builders
 
 module Commons = 
 

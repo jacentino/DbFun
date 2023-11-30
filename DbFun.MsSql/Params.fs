@@ -109,8 +109,10 @@ module ParamsImpl =
                     param.Value <- DBNull.Value
                     command.Parameters.Add param |> ignore
                 member __.SetArtificial(command: IDbCommand) = 
-                    let param = command.CreateParameter()
+                    let param = command.CreateParameter() :?> SqlParameter
                     param.ParameterName <- name
+                    param.SqlDbType <- SqlDbType.Structured
+                    param.TypeName <- tvpName
                     param.Value <- artificialValues
                     command.Parameters.Add param |> ignore                    
             }
@@ -183,7 +185,11 @@ type Params() =
         
     static member GetTvpBuilder<'Arg>(provider: IParamSetterProvider) = 
         match provider.Builder(typeof<'Arg>) with
-        | Some builder -> builder :?> TVPCollectionBuilder
+        | Some builder -> 
+            try
+                builder :?> TVPCollectionBuilder
+            with ex ->
+                reraise()
         | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
 
     /// <summary>

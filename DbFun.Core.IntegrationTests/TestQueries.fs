@@ -5,6 +5,8 @@ open DbFun.Core
 open DbFun.TestTools
 open DbFun.Core.IntegrationTests.Models
 open DbFun.Core.Builders
+open DbFun.MsSql.Builders
+
 open DbFun.Core.Builders.MultipleResults
 
 open Commons
@@ -99,3 +101,10 @@ module TestQueries =
             |> Results.Unkeyed) 
         >> DbCmd.Map (fst >> Seq.toList)
 
+    let getTags = query.Sql<int, string list>("select name from Tag where postId = @postId", "postId", "name")
+
+    let updateTags = query.Sql(    
+        "delete from tag where postId = @id;
+        insert into tag (postId, name) select @id, name from @tags",
+        Params.Int("id"), Params.TableValuedList(TVParams.Tuple<int, string>("postId", "name"), "tags", "Tag"),
+        Results.Unit)
