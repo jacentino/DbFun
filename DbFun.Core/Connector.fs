@@ -1,38 +1,18 @@
 ﻿namespace DbFun.Core
 
-open System
 open System.Data
-
 
 type IConnector = 
     abstract member Connection: IDbConnection
     abstract member Transaction: IDbTransaction
+    abstract member With: IDbTransaction -> IConnector
 
 type Connector(connection: IDbConnection, transaction: IDbTransaction) = 
 
-    member __.BeginTransaction() =
-        new Connector(connection, connection.BeginTransaction())
-
-    member __.Commit() = 
-        transaction.Commit()
+    new (connection: IDbConnection) = Connector(connection, null)
 
     interface IConnector with
         member __.Connection: IDbConnection = connection
         member __.Transaction: IDbTransaction = transaction
-    interface IDisposable with
-        member __.Dispose() =
-            if transaction <> null then
-                transaction.Dispose()
-            else
-                connection.Dispose()
-
-type DbCmd<'Result> = IConnector -> Async<'Result>
-
-type DbCmd() = 
-
-    static member Map (f: 'T -> 'U) (cmd: DbCmd<'T>): IConnector -> Async<'U> = 
-        fun (con: IConnector) ->
-            async {
-                let! v = cmd(con)
-                return f(v)
-            }
+        member __.With(transaction: IDbTransaction) = 
+            Connector(connection, transaction)

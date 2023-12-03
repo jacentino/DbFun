@@ -23,7 +23,7 @@ module QueryTests =
                     "ret_val", box 5
                 ]
 
-        let connector = new Connector(createConnection(), null)
+        let connector = new Connector(createConnection())
 
         let qb = QueryBuilder (QueryConfig.Default(createConnection))
                
@@ -59,7 +59,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let connector = new Connector(createConnection(), null)
+        let connector = new Connector(createConnection())
         let qb = QueryBuilder(QueryConfig.Default(createConnection))
         let query = qb.Timeout(30).Sql(
             "insert into User (userId, name, email, created) 
@@ -91,7 +91,7 @@ module QueryTests =
                     "ret_val", box 5
                 ]
 
-        let connector = new Connector(createConnection(), null)
+        let connector = new Connector(createConnection())
 
         let config = QueryConfig.Default(createConnection).AddRowConverter(UserId)
         let qb = QueryBuilder(config)
@@ -127,7 +127,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let connector = new Connector(createConnection(), null)
+        let connector = new Connector(createConnection())
         let config = QueryConfig.Default(createConnection).AddParamConverter(fun (UserId id) -> id)                        
         let qb = QueryBuilder(config)
         let query = qb.Timeout(30).Sql(

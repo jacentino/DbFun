@@ -18,6 +18,8 @@
     <Compile Include="Executor.fs" />
     <Compile Include="Results.fs" />
     <Compile Include="Connector.fs" />
+    <Compile Include="DbCall.fs" />
+    <Compile Include="DbSession.fs" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Query.fs" />
     <Compile Include="Templating.fs" />

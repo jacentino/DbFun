@@ -99,7 +99,7 @@ module TestQueries =
             |> Results.Join (fun (p, cs) -> { p with comments = buildTree cs }) (Results.FKeyed<int, Comment>("postId"))
             |> Results.Join p.tags (Results.FKeyed<int, string>("postId", "name"))
             |> Results.Unkeyed) 
-        >> DbCmd.Map (fst >> Seq.toList)
+        >> DbCall.Map (fst >> Seq.toList)
 
     let getTags = query.Sql<int, string list>("select name from Tag where postId = @postId", "postId", "name")
 

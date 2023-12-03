@@ -4,6 +4,7 @@ open System
 open Xunit
 open DbFun.Core.IntegrationTests.Models
 open Commons
+open DbFun.Core
 
 module Tests = 
 
@@ -87,3 +88,39 @@ module Tests =
         Assert.Equal(2, pl |> List.length)
         let p = pl |> List.head
         Assert.Equal(1, p.comments |> List.length)
+
+
+    [<Fact>]
+    let ``Combining queries together with dbsession``() = 
+        let post1, post2 = 
+            dbsession {
+                let! post1 = TestQueries.getOnePostWithTagsAndComments 1
+                let! post2 = TestQueries.getOnePostWithTagsAndComments 2
+                return post1, post2
+            } |> run |> Async.RunSynchronously
+        Assert.Equal("Yet another sql framework", post1.title)
+        Assert.Equal("What's wrong with existing frameworks", post2.title)
+
+
+    [<Fact>]
+    let ``Updating in transaction``() = 
+        let tags = [
+            (2, "Dapper")
+            (2, "EntityFramework")
+            (2, "FSharp.Data.SqlClient")
+        ]
+        TestQueries.updateTags 2 tags |> DbCall.InTransaction |> run |> Async.RunSynchronously
+        let result = TestQueries.getTags 2 |> run |> Async.RunSynchronously
+        Assert.Equal<string list>(tags |> List.map snd, result)
+
+
+    [<Fact>]
+    let ``Using dbsession and transactions together``() = 
+        let post1, post2 = 
+            dbsession {
+                let! post1 = TestQueries.getOnePostWithTagsAndComments 1
+                let! post2 = TestQueries.getOnePostWithTagsAndComments 2
+                return post1, post2
+            } |> DbCall.InTransaction |> run |> Async.RunSynchronously
+        Assert.Equal("Yet another sql framework", post1.title)
+        Assert.Equal("What's wrong with existing frameworks", post2.title)

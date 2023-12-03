@@ -4,26 +4,18 @@ open Microsoft.Data.SqlClient
 open System.Configuration
 open DbFun.Core
 open DbFun.MsSql.Builders
+open System.Data
 
 module Commons = 
 
-    let createConnection () = 
+    let createConnection (): IDbConnection = 
         let config = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location)
         let connectionString = config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
         new SqlConnection(connectionString)
 
-    let defaultConfig = QueryConfig.Default(createConnection >> unbox)
+    let defaultConfig = QueryConfig.Default(createConnection)
 
     let query = QueryBuilder(defaultConfig)
 
     let run (command: IConnector -> Async<'Result>): Async<'Result> = 
-        async {
-            use connection = createConnection()
-            connection.Open()
-            let connector = 
-                { new IConnector with 
-                    member __.Connection = connection
-                    member __.Transaction = null
-                }
-            return! command(connector)        
-        }
+        DbCall.Run(createConnection, command)

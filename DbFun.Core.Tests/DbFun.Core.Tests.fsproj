@@ -13,6 +13,8 @@
     <Compile Include="RowTests.fs" />
     <Compile Include="ResultTests.fs" />
     <Compile Include="QueryTests.fs" />
+    <Compile Include="DbSessionTests.fs" />
+    <Compile Include="DbCallTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
