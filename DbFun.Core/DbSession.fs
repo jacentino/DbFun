@@ -4,6 +4,9 @@ open System
 
 module ComputationBuilderImpl = 
     
+    /// <summary>
+    /// The computation builder for database computations.
+    /// </summary>
     type DbSessionBuilder() = 
         member __.Return(value: 't): DbCall<'t> = fun _ -> async { return value }
         member __.ReturnFrom(value: DbCall<'t>): DbCall<'t> = value
@@ -30,6 +33,10 @@ module ComputationBuilderImpl =
     
 [<AutoOpen>]
 module ComputationBuilder =
+
+    /// <summary>
+    /// Builds database workflow using computation expressions syntax.
+    /// </summary>
     let dbsession = ComputationBuilderImpl.DbSessionBuilder()
 
 
