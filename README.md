@@ -9,14 +9,14 @@ The differences are explained in the project [wiki](https://github.com/jacentino
 * All SQL features available
 * Type safety
 * High performance
-* Compound, hierarchical query parameters
-* Compound, hierarchical query results
-* Support for parameter conversions
+* support for record/tuple/discrimnated union parameters
+* support for record/tuple/discrimnated union results
+* Support for parameter and column conversions
 * Support for result transformations
 * Support for enum types
-* Asynchronous queries
+* Asynchrony
 * Template-based queries
-* Computation expressions for connection and transaction handling
+* Computation expression for database operations
 
 ## How it works
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
