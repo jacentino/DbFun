@@ -6,11 +6,11 @@ This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
 ## Features
-* All SQL features available
+* Plain-old SQL commands
 * Type safety
 * High performance
-* support for record/tuple/discrimnated union parameters
-* support for record/tuple/discrimnated union results
+* support for record/tuple/discriminated union parameters
+* support for record/tuple/discriminated union results
 * Support for parameter and column conversions
 * Support for result transformations
 * Support for enum types
