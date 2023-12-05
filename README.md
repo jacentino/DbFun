@@ -1,12 +1,17 @@
 # DbFun 
 ![Latest build](https://github.com/jacentino/DbFun/actions/workflows/build-and-test.yml/badge.svg)
 
+DbFun is a tool for writing data access code in F# functional way. 
+It's fast, type safe and gives you full control on your queries.
+No custom query DSL enabled - just raw SQL.
+
 This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
+
 ## Features
-* Plain-old SQL commands
+* All SQL features available
 * Type safety
 * High performance
 * support for record/tuple/discriminated union parameters
@@ -21,7 +26,7 @@ The differences are explained in the project [wiki](https://github.com/jacentino
 ## How it works
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
 Better way is to build an API exposing your database, consisting of structures representing database data, and functions responsible for processing this data. 
-DbFun makes it a design requirement.
+DbFun promotes good architectures by making it a design requirement.
 
 ### Configuration
 First step is to define function creating database connection and config record:
