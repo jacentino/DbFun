@@ -101,8 +101,7 @@ let insertPost = query.Sql<Post, int>(
     "insert into post 
             (blogId, name, title, content, author, createdAt, status)
      values (@blogId, @name, @title, @content, @author, @createdAt, @status);
-     select scope_identity() as id"
-    "", "id")
+     select scope_identity()")
 ```
 ### Explicit parameter and result definition
 There is an alternative way of defining parameters and results by using specifiers. It's more verbose, that method presented above:
@@ -111,29 +110,34 @@ let insertPost = query.Sql(
     "insert into post 
             (blogId, name, title, content, author, createdAt, status)
      values (@blogId, @name, @title, @content, @author, @createdAt, @status);
-     select scope_identity() as id",
+     select scope_identity()",
     Params.Record<Post>(),
-    Results.Int "id")
+    Results.Int "")
 ```
 but gives the user lot of flexibility, e.g. provide parameter names:
 ```fsharp
 let insertTag = query.Sql(
-    "insert into tag postId, name) values (@postId, @name)",
+    "insert into tag (postId, name) values (@postId, @name)",
     Params.Tuple<int, string>("postId", "name"),
     Results.Unit)
 ```
-
 
 ### Result transformations
 ADO.NET commands allow to specify queries returning multiple results. DbFun leverages it by providing special types of result specifiers, that allow to combine subsequent results,
 either for single master records with details:
 ```fsharp
 let getOnePostWithTagsAndComments = query.Sql<int, Post>(
-    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status from post where id = @postId;
-     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c where c.postId = @postId
-     select t.postId, t.name from tag t where t.postId = @postId",
+    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status
+     from post
+     where id = @postId;
+     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt
+     from comment c
+     where c.postId = @postId
+     select t.postId, t.name
+     from tag t
+     where t.postId = @postId",
     "postId",
-    Results.Combine(fun post comments tags -> { post with comments = buildTree comments; tags = tags })
+    Results.Combine(fun post comments tags -> { post with comments = comments; tags = tags })
     <*> Results.Single<Post>()
     <*> Results.List<Comment>()
     <*> Results.List<string> "name")
@@ -141,13 +145,39 @@ let getOnePostWithTagsAndComments = query.Sql<int, Post>(
 or for collections of master and details records, matched by key:
 ```fsharp
 let getManyPostsWithTagsAndComments = query.Sql<int, Post seq>(
-    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status from post where blogId = @blogId;
-     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c join post p on c.postId = p.id where p.blogId = @blogId
-     select t.postId, t.name from tag t join post p on t.postId = p.id where p.blogId = @blogId",
+    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status
+     from post
+     where blogId = @blogId;
+     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt
+     from comment c join post p on c.postId = p.id
+     where p.blogId = @blogId
+     select t.postId, t.name
+     from tag t join post p on t.postId = p.id
+     where p.blogId = @blogId",
     "blogId", 
     Results.PKeyed<int, Post> "id"
-    |> Results.Join (fun (p, cs) -> { p with comments = buildTree cs }) (Results.FKeyed "postId")
+    |> Results.Join (fun (post, comments) -> { post with comments = comments }) (Results.FKeyed "postId")
+    |> Results.Join (fun (post, tags) -> { post with tags = tags }) (Results.FKeyed("postId", "name"))
+    |> Results.Unkeyed)
+```
+The code updating master record with detail values can be simplified thanks to quoting and ReflectedDefinition attribute:
+```fsharp
+let p = any<Post>
+let getManyPostsWithTagsAndComments = query.Sql<int, Post seq>(
+    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status
+     from post
+     where blogId = @blogId;
+     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt
+     from comment c join post p on c.postId = p.id
+     where p.blogId = @blogId
+     select t.postId, t.name
+     from tag t join post p on t.postId = p.id
+     where p.blogId = @blogId",
+    "blogId", 
+    Results.PKeyed<int, Post> "id"
+    |> Results.Join p.comments (Results.FKeyed "postId")
     |> Results.Join p.tags (Results.FKeyed("postId", "name"))
     |> Results.Unkeyed)
 ```
-        
+
+
