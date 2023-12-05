@@ -16,11 +16,11 @@ First step is to define function creating database connection and config record:
 let createConnection () = new SqlConnection(<your database connection string>)
 let defaultConfig = QueryConfig.Default(createConnection)
 ```
-and wire it up with functions responsible for generating queries:
+and wire it up creating object responsible for generating queries:
 ```fsharp 
 let query = QueryBuilder(defaultConfig)
 ```
-and for executing them:
+and definiing function for executing them:
 ```fsharp 
 let run dbCall = DbCall.Run(createConnection, dbCall)
 ```    
@@ -114,7 +114,7 @@ let insertPost = query.Sql(
     Params.Record<Post>(),
     Results.Int "")
 ```
-but gives the user lot of flexibility, e.g. provide parameter names:
+but gives the user lot of flexibility, e.g. provide parameter names representing tuple items:
 ```fsharp
 let insertTag = query.Sql(
     "insert into tag (postId, name) values (@postId, @name)",
@@ -123,7 +123,7 @@ let insertTag = query.Sql(
 ```
 
 ### Result transformations
-ADO.NET commands allow to specify queries returning multiple results. DbFun leverages it by providing special types of result specifiers, that allow to combine subsequent results,
+ADO.NET commands allow to specify queries returning multiple results. DbFun leverages it by providing special types of result specifiers, that combine subsequent results,
 either for single master records with details:
 ```fsharp
 let getOnePostWithTagsAndComments = query.Sql<int, Post>(
