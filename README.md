@@ -1,16 +1,15 @@
 # DbFun 
 ![Latest build](https://github.com/jacentino/DbFun/actions/workflows/build-and-test.yml/badge.svg)
 
-DbFun is a tool for writing data access code in F# functional way. 
-It's fast, type safe and gives you full control on your queries.
-No custom query DSL enabled - just raw SQL.
-
 This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
-
 ## Features
+DbFun is a tool for writing data access code in F# functional way. 
+It's fast, type safe and gives you full control on your queries.
+No custom query DSL enabled - just raw SQL.
+
 * All SQL features available
 * Type safety
 * High performance
