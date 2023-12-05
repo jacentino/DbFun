@@ -5,11 +5,14 @@ This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
-## Features
+## What's this tool?
 DbFun is a tool for writing data access code in F# functional way. 
+
 It's fast, type safe and gives you full control on your queries.
+
 No custom query DSL enabled - just raw SQL.
 
+## Features
 * All SQL features available
 * Type safety
 * High performance
@@ -25,6 +28,7 @@ No custom query DSL enabled - just raw SQL.
 ## How it works
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
 Better way is to build an API exposing your database, consisting of structures representing database data, and functions responsible for processing this data. 
+
 DbFun promotes good architectures by making it a design requirement.
 
 ### Configuration
@@ -37,7 +41,7 @@ and wire it up creating object responsible for generating queries:
 ```fsharp 
 let query = QueryBuilder(defaultConfig)
 ```
-and definiing function for executing them:
+and defining function for executing them:
 ```fsharp 
 let run dbCall = DbCall.Run(createConnection, dbCall)
 ```    
@@ -95,7 +99,7 @@ At that stage, all the type checking is performed, so it's easy to make type che
 The generating process uses little bit of reflection, but no reflection is used while processing a query, since generated code is executed.
 
 ### Executing queries
-Queries defined above return `DbCall<'t>`, that is function taking IConnector object and returning data wrapped in Async. They can be passed to the `run` function after applying preceding parameters.
+Queries defined above return `DbCall<'t>`, that is function taking IConnector (object carrying database connection and optionally transaction) and returning data wrapped in Async. They can be passed to the `run` function after applying preceding parameters.
 ```fsharp
 async {
     let! blog = Blogging.getBlog 1 |> run
