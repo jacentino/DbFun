@@ -46,7 +46,10 @@ module RowsImpl =
             member this.Build(name: string, _, prototype: IDataRecord): IRowGetter<'Result> = 
                 let ordinal = 
                     try
-                        prototype.GetOrdinal(name)
+                        if String.IsNullOrEmpty(name) && prototype.FieldCount = 1 then
+                            0
+                        else
+                            prototype.GetOrdinal(name)
                     with ex -> raise <| Exception(sprintf "Column doesn't exist: %s" name, ex)
                 let fieldType = prototype.GetFieldType(ordinal)
                 let colGetter = typedColAccessMethods |> List.tryFind (fst >> (=) fieldType) |> Option.map snd |> Option.defaultValue getValueMethod

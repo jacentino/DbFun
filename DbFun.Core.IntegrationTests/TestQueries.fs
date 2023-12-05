@@ -19,6 +19,8 @@ module TestQueries =
 
     let getBlog = query.Sql<int, Blog>("select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where id = @id", "id")
             
+    let getBlogName = query.Sql<int, string>("select name from Blog where id = @id", "id")
+
     let getAllBlogs = query.Sql<unit, Blog seq>("select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog") 
             
 

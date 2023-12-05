@@ -17,5 +17,4 @@ module Commons =
 
     let query = QueryBuilder(defaultConfig)
 
-    let run (command: IConnector -> Async<'Result>): Async<'Result> = 
-        DbCall.Run(createConnection, command)
+    let run dbCall = DbCall.Run(createConnection, dbCall)

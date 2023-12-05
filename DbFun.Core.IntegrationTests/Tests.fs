@@ -18,6 +18,11 @@ module Tests =
         Assert.Equal(1, blog.id)
 
     [<Fact>]
+    let ``Query returning scalar`` () =
+        let name = TestQueries.getBlogName 1 |> run |> Async.RunSynchronously
+        Assert.Equal("functional-data-access-with-sqlfun", name)
+
+    [<Fact>]
     let ``Query returning many rows`` () =
         let blogs = TestQueries.getAllBlogs() |> run |> Async.RunSynchronously
         Assert.Equal(1, blogs |> Seq.length)
