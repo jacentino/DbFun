@@ -67,9 +67,9 @@ module Blogging =
             
     let getPosts = query.Sql<int, Post list>(
         "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status 
-             from post 
-             where blogId = @blogId",
-         "blogId") 
+         from post 
+         where blogId = @blogId",
+        "blogId") 
 ```        
 The functions executing queries are generated during a first access to the module contents. 
 
