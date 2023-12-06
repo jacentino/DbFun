@@ -5,10 +5,31 @@ This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
+## What's this tool?
+DbFun is a tool for writing data access code in F# functional way. 
+
+It's fast, type safe and gives you full control on your queries.
+
+No custom query DSL enabled - just raw SQL.
+
+## Features
+* All SQL features available
+* Type safety
+* High performance
+* support for record/tuple/discriminated union parameters
+* support for record/tuple/discriminated union results
+* Support for parameter and column conversions
+* Support for result transformations
+* Support for enum types
+* Asynchrony
+* Template-based queries
+* Computation expression for database operations
+
 ## How it works
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
 Better way is to build an API exposing your database, consisting of structures representing database data, and functions responsible for processing this data. 
-DbFun makes it a design requirement.
+
+DbFun promotes good architectures by making it a design requirement.
 
 ### Configuration
 First step is to define function creating database connection and config record:
@@ -20,9 +41,9 @@ and wire it up creating object responsible for generating queries:
 ```fsharp 
 let query = QueryBuilder(defaultConfig)
 ```
-and definiing function for executing them:
+and defining function for executing them:
 ```fsharp 
-let run dbCall = DbCall.Run(createConnection, dbCall)
+let run f = DbCall.Run(createConnection, f)
 ```    
 ### Data structures
 Then, data structures should be defined for results of your queries.
@@ -78,7 +99,7 @@ At that stage, all the type checking is performed, so it's easy to make type che
 The generating process uses little bit of reflection, but no reflection is used while processing a query, since generated code is executed.
 
 ### Executing queries
-Queries defined above return `DbCall<'t>`, that is function taking IConnector object and returning data wrapped in Async. They can be passed to the `run` function after applying preceding parameters.
+Queries defined above return `DbCall<'t>`, that is function taking IConnector (object carrying database connection and optionally transaction) and returning data wrapped in Async. They can be passed to the `run` function after applying preceding parameters.
 ```fsharp
 async {
     let! blog = Blogging.getBlog 1 |> run
@@ -114,14 +135,26 @@ let insertPost = query.Sql(
     Params.Record<Post>(),
     Results.Int "")
 ```
-but gives the user lot of flexibility, e.g. provide parameter names representing tuple items:
+but gives the user lot of flexibility, e.g. provide parameter names represented by tuple items:
 ```fsharp
 let insertTag = query.Sql(
     "insert into tag (postId, name) values (@postId, @name)",
     Params.Tuple<int, string>("postId", "name"),
     Results.Unit)
 ```
-
+### Stored procedures
+Functions invoking stored procedures return tuple results, containing regular result and, optionally, output parameters.
+If no out params are specified, unit type is used.
+```fsharp
+let getAllPosts = query.Proc<int, unit, Post list>("GetAllPosts", "blogid") >> DbCall.Map fst
+```
+In case of MS SQL Server, it's possible to specify return parameter, that becomes part of out parameters structure:
+```fsharp
+let getAllPosts = query.Proc("GetAllPosts",
+    Params.Int "blogid",
+    OutParams.Return("ret_val"),
+    Results.List<Post>())
+```
 ### Result transformations
 ADO.NET commands allow to specify queries returning multiple results. DbFun leverages it by providing special types of result specifiers, that combine subsequent results,
 either for single master records with details:
