@@ -148,9 +148,12 @@ If no out params are specified, unit type is used.
 ```fsharp
 let getAllPosts = query.Proc<int, unit, Post list>("GetAllPosts", "blogid") >> DbCall.Map fst
 ```
-In case of MS SQL Server, it's possible to specify return parameter:
+In case of MS SQL Server, it's possible to specify return parameter, that becomes part of out parameters structure:
 ```fsharp
-let getAllPosts = query.Proc("GetAllPosts", Params.Int "blogid", OutParams.Return("ret_val"), Results.List<Post>())
+let getAllPosts = query.Proc("GetAllPosts",
+    Params.Int "blogid",
+    OutParams.Return("ret_val"),
+    Results.List<Post>())
 ```
 ### Result transformations
 ADO.NET commands allow to specify queries returning multiple results. DbFun leverages it by providing special types of result specifiers, that combine subsequent results,
