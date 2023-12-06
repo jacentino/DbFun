@@ -43,7 +43,7 @@ let query = QueryBuilder(defaultConfig)
 ```
 and defining function for executing them:
 ```fsharp 
-let run dbCall = DbCall.Run(createConnection, dbCall)
+let run f = DbCall.Run(createConnection, f)
 ```    
 ### Data structures
 Then, data structures should be defined for results of your queries.
@@ -135,7 +135,7 @@ let insertPost = query.Sql(
     Params.Record<Post>(),
     Results.Int "")
 ```
-but gives the user lot of flexibility, e.g. provide parameter names representing tuple items:
+but gives the user lot of flexibility, e.g. provide parameter names represented by tuple items:
 ```fsharp
 let insertTag = query.Sql(
     "insert into tag (postId, name) values (@postId, @name)",
