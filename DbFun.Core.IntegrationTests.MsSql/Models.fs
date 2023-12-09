@@ -1,4 +1,4 @@
-﻿namespace DbFun.Core.IntegrationTests.Models
+﻿namespace DbFun.Core.IntegrationTests.MsSql.Models
 
 open System
 

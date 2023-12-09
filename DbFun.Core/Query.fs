@@ -223,7 +223,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
         try
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter = createParamSetter(provider, ())
@@ -272,7 +272,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
         this.TemplatedSql(template, Params.Auto<'Params>(name), createResultReader)
 
     /// <summary>
@@ -302,7 +302,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
         this.TemplatedSql(template, Params.Auto<'Params>(name), Results.Auto(resultName))
 
     /// <summary>
@@ -329,7 +329,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
             this.TemplatedSql((fun _ -> commandText), createParamSetter, createResultReader, sourcePath, sourceLine) 
 
     /// <summary>
@@ -355,7 +355,7 @@ type QueryBuilder(config: QueryConfig) =
             name: string, createResultBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
         this.Sql(commandText, Params.Auto<'Params>(name), createResultBuilder, sourcePath, sourceLine) 
 
     /// <summary>
@@ -381,7 +381,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] argName: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result> =         
+            : 'Params -> DbCall<'Result> =         
         this.Sql<'Params, 'Result>(commandText, argName, Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -412,7 +412,7 @@ type QueryBuilder(config: QueryConfig) =
         createResultReader: BuildResultReader<'Result>,
         [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
         [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-        : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> = 
+        : 'Params1 -> 'Params2 -> DbCall<'Result> = 
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = createParamSetter1(provider, ())
@@ -463,7 +463,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createResultReader, sourcePath, sourceLine)
 
     /// <summary>
@@ -496,7 +496,7 @@ type QueryBuilder(config: QueryConfig) =
                    createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> = 
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> = 
         fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
@@ -553,7 +553,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), createResultReader, sourcePath, sourceLine)
 
     /// <summary>
@@ -590,7 +590,7 @@ type QueryBuilder(config: QueryConfig) =
                    createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> = 
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> = 
         fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
@@ -653,7 +653,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                  createResultReader,
@@ -697,7 +697,7 @@ type QueryBuilder(config: QueryConfig) =
                    createResultReader: BuildResultReader<'Result>,
                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> = 
+                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> = 
         fun (commandText: string) ->
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
@@ -766,7 +766,7 @@ type QueryBuilder(config: QueryConfig) =
             createResultReader: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                  Params.Auto<'Params5>(name5), 
@@ -799,7 +799,7 @@ type QueryBuilder(config: QueryConfig) =
             argName1: string, argName2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -830,7 +830,7 @@ type QueryBuilder(config: QueryConfig) =
             argName1: string, argName2: string, argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -864,7 +864,7 @@ type QueryBuilder(config: QueryConfig) =
             argName1: string, argName2: string, argName3: string, argName4: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
                  Results.Auto<'Result>(resultName), 
@@ -901,7 +901,7 @@ type QueryBuilder(config: QueryConfig) =
             argName1: string, argName2: string, argName3: string, argName4: string, argName5: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result> =         
+            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
         this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
                  Params.Auto<'Params5>(argName5), 
@@ -935,7 +935,7 @@ type QueryBuilder(config: QueryConfig) =
                     resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+                    : 'Params -> DbCall<'Result * 'OutParams> = 
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter = createParamSetter(provider, ())
@@ -984,7 +984,7 @@ type QueryBuilder(config: QueryConfig) =
             resultReaderBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params>(name), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
 
 
@@ -1016,7 +1016,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params>(name), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -1050,7 +1050,7 @@ type QueryBuilder(config: QueryConfig) =
                     resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = createParamSetter1(provider, ())
@@ -1109,7 +1109,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -1143,7 +1143,7 @@ type QueryBuilder(config: QueryConfig) =
             resultReaderBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
 
 
@@ -1182,7 +1182,7 @@ type QueryBuilder(config: QueryConfig) =
                     resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = createParamSetter1(provider, ())
@@ -1247,7 +1247,7 @@ type QueryBuilder(config: QueryConfig) =
             resultReaderBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), createOutParamGetter, resultReaderBuilder, sourcePath, sourceLine)
 
     /// <summary>
@@ -1281,7 +1281,7 @@ type QueryBuilder(config: QueryConfig) =
                 [<Optional>] resultName: string,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : 'Params1 -> 'Params2 -> 'Params3 -> IConnector -> Async<'Result * 'OutParams> = 
+                : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, 
                   Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), 
                   OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), 
@@ -1326,7 +1326,7 @@ type QueryBuilder(config: QueryConfig) =
                     resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = createParamSetter1(provider, ())
@@ -1397,7 +1397,7 @@ type QueryBuilder(config: QueryConfig) =
                 resultReaderBuilder: BuildResultReader<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+                : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, 
                   Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
@@ -1440,7 +1440,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName,
                   Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
@@ -1491,7 +1491,7 @@ type QueryBuilder(config: QueryConfig) =
                     resultReaderBuilder: BuildResultReader<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = createParamSetter1(provider, ())
@@ -1568,7 +1568,7 @@ type QueryBuilder(config: QueryConfig) =
             resultReaderBuilder: BuildResultReader<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName,
                   Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
@@ -1617,7 +1617,7 @@ type QueryBuilder(config: QueryConfig) =
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> IConnector -> Async<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
         this.Proc(procName, 
                   Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                   Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 

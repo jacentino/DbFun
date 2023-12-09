@@ -1,9 +1,9 @@
-﻿namespace DbFun.Core.IntegrationTests
+﻿namespace DbFun.Core.IntegrationTests.MsSql
 
 open System
 open DbFun.Core
 open DbFun.TestTools
-open DbFun.Core.IntegrationTests.Models
+open DbFun.Core.IntegrationTests.MsSql.Models
 open DbFun.Core.Builders
 open DbFun.MsSql.Builders
 

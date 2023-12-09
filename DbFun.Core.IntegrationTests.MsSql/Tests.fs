@@ -1,16 +1,12 @@
-namespace DbFun.Core.IntegrationTests
+namespace DbFun.Core.IntegrationTests.MsSql
 
 open System
 open Xunit
-open DbFun.Core.IntegrationTests.Models
-open Commons
 open DbFun.Core
+open DbFun.Core.IntegrationTests.MsSql.Models
+open Commons
 
 module Tests = 
-
-    [<Fact>]
-    let ``Warm up`` () =
-        ignore TestQueries.getBlog
 
     [<Fact>]
     let ``Query returning one row`` () =
