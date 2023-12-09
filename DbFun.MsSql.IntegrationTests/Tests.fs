@@ -1,9 +1,9 @@
-namespace DbFun.Core.IntegrationTests.MsSql
+namespace DbFun.MsSql.IntegrationTests
 
 open System
 open Xunit
 open DbFun.Core
-open DbFun.Core.IntegrationTests.MsSql.Models
+open DbFun.MsSql.IntegrationTests.Models
 open Commons
 
 module Tests = 

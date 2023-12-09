@@ -13,7 +13,7 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MsSql.Tests", "DbFun.
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.TestTools", "DbFun.TestTools\DbFun.TestTools.fsproj", "{EFDEB5CA-E5AD-47E1-9F7F-51B40DE89E7C}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.Core.IntegrationTests.MsSql", "DbFun.Core.IntegrationTests.MsSql\DbFun.Core.IntegrationTests.MsSql.fsproj", "{84F3CD59-21AB-4FFD-8414-7F7565C3B105}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MsSql.IntegrationTests", "DbFun.MsSql.IntegrationTests\DbFun.MsSql.IntegrationTests.fsproj", "{84F3CD59-21AB-4FFD-8414-7F7565C3B105}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

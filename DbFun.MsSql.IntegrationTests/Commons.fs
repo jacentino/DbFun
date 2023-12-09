@@ -1,4 +1,4 @@
-﻿namespace DbFun.Core.IntegrationTests.MsSql
+﻿namespace DbFun.MsSql.IntegrationTests
 
 open Microsoft.Data.SqlClient
 open System.Configuration
