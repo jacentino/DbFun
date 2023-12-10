@@ -155,7 +155,8 @@ type QueryBuilder(config: QueryConfig) =
             fun _ -> 
                 raise <| AggregateException("One or more exceptions occured when compiling queries.", 
                             errorLog.Value 
-                            |> List.map (fun (line, source, ex) -> CompileTimeException($"Cannot compile query in {sourcePath}, line: {sourceLine}", ex) :> exn))
+                            |> List.rev
+                            |> List.map (fun (line, source, ex) -> CompileTimeException($"Cannot compile query in {source}, line: {line}", ex) :> exn))
         | None ->
             raise <| CompileTimeException($"Cannot compile query in {sourcePath}, line: {sourceLine}", ex)
 
@@ -193,7 +194,7 @@ type QueryBuilder(config: QueryConfig) =
     /// </summary>
     member __.CompileTimeErrorLog = 
         match compileTimeErrorLog with
-        | Some log -> log.Value
+        | Some log -> log.Value |> List.rev
         | None -> []
 
     /// <summary>
