@@ -9,7 +9,7 @@ open NpgsqlTypes
 
 module ParamsImpl =
 
-    type PostgressArrayBuilder() = 
+    type PostgresArrayBuilder() = 
         
         let getNpgSqlDbType t = 
             if t = typeof<int> then NpgsqlDbType.Integer

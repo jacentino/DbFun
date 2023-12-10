@@ -6,7 +6,7 @@ open DbFun.Core.Builders
 module Config = 
     type QueryConfig with
         /// <summary>
-        /// Adds Postgress array support.
+        /// Adds Postgres array support.
         /// </summary>
-        member this.UsePostgressArrays() = 
-            { this with ParamBuilders = ParamsImpl.PostgressArrayBuilder() :: this.ParamBuilders }
+        member this.UsePostgresArrays() = 
+            { this with ParamBuilders = ParamsImpl.PostgresArrayBuilder() :: this.ParamBuilders }

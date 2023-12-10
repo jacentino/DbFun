@@ -68,6 +68,18 @@ module BulkImportParamsImpl =
                           names.Value <- name :: names.Value
                 }
 
+    type Converter<'Source, 'Target> = GenericSetters.Converter<unit, NpgsqlBinaryImporter, 'Source, 'Target>
+
+    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<unit, NpgsqlBinaryImporter, 'Source, 'Target>
+
+    type NameConverter<'Source, 'Target> = GenericSetters.Converter<unit, string list ref, 'Source, 'Target>
+
+    type NameSeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<unit, string list ref, 'Source, 'Target>
+
+    type Configurator<'Config> = GenericSetters.Configurator<unit, NpgsqlBinaryImporter, 'Config>
+
+    type NameConfigurator<'Config> = GenericSetters.Configurator<unit, string list ref, 'Config>
+
     let getDefaultNameBuilders(): INameBuilder list = 
         SimpleNameBuilder() :: GenericSetters.getDefaultBuilders()
 
@@ -82,6 +94,39 @@ type BulkImportConfig =
         ParamBuilders   : IBuilder list
         NameBuilders    : INameBuilder list
     }
+    with
+        /// <summary>
+        /// Adds a converter mapping application values of a given type to ptoper database parameter values.
+        /// </summary>
+        /// <param name="convert">
+        /// Function converting application values to database parameter values.
+        /// </param>
+        member this.AddConverter(convert: 'Source -> 'Target) = 
+            { this with 
+                ParamBuilders = 
+                    BulkImportParamsImpl.Converter<'Source, 'Target>(convert) :: 
+                    BulkImportParamsImpl.SeqItemConverter<'Source, 'Target>(convert) :: 
+                    this.ParamBuilders 
+                NameBuilders = 
+                    BulkImportParamsImpl.NameConverter<'Source, 'Target>(convert) :: 
+                    BulkImportParamsImpl.NameSeqItemConverter<'Source, 'Target>(convert) :: 
+                    this.NameBuilders 
+            }
+
+        /// <summary>
+        /// Adds a configurator for parameter builders of types determined by canBuild function.
+        /// </summary>
+        /// <param name="getConfig">
+        /// Creates a configuration object.
+        /// </param>
+        /// <param name="canBuild">
+        /// Function determining whether a given type is handled by the configurator.
+        /// </param>
+        member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
+            { this with 
+                ParamBuilders = BulkImportParamsImpl.Configurator<'Config>(getConfig, canBuild) :: this.ParamBuilders 
+                NameBuilders = BulkImportParamsImpl.NameConfigurator<'Config>(getConfig, canBuild) :: this.NameBuilders 
+            }
 
 /// <summary>
 /// Provides methods creating bulk import functions.

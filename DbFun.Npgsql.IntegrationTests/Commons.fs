@@ -14,7 +14,7 @@ module Commons =
         let connectionString = config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
         new NpgsqlConnection(connectionString)
 
-    let config = QueryConfig.Default(createConnection).UsePostgressArrays()
+    let config = QueryConfig.Default(createConnection).UsePostgresArrays()
 
     let query = QueryBuilder(config)
 
