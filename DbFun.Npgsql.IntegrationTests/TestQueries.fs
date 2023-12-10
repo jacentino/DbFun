@@ -1,6 +1,7 @@
 ﻿namespace DbFun.Npgsql.IntegrationTests
 
 open DbFun.Core
+open DbFun.Npgsql.Builders
 open Commons
 open Models
 
@@ -26,6 +27,7 @@ module TestQueries =
          values (2, @name, @title, @description, @owner, @createdAt, @modifiedAt, @modifiedBy);
          select 2")
 
-    let bulkInsertBlogs = bulkImport.WriteToServer<Blog>()
+    let bulkInsertBlogs = 
+        bulkImport.WriteToServer<Blog>()
 
-    let bulkInsertUsers = bulkImport.WriteToServer<UserProfile>()
+    let bulkInsertUsers = bulkImport.WriteToServer(BulkImportParams.Record<UserProfile>())
