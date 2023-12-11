@@ -6,9 +6,9 @@ open Commons
 module Models = 
 
     type PostStatus = 
-        | New = 'N'
+        | New       = 'N'
         | Published = 'P'
-        | Archived = 'A'
+        | Archived  = 'A'
 
     type Post = {
         postId: int
@@ -33,13 +33,6 @@ module Models =
         modifiedAt: DateTime option
         modifiedBy: string option
         posts: Post list
-    }
-
-    type UserProfile = {
-        id: string
-        name: string
-        email: string
-        avatar: byte array
     }
 
 
