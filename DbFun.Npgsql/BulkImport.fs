@@ -112,11 +112,12 @@ type BulkImportBuilder(?config: BulkImportConfig) =
         fun (records: 'Record seq) (connector: IConnector) ->
             let npgcon = connector.Connection :?> NpgsqlConnection
             async {
+                let! token = Async.CancellationToken
                 use importer = npgcon.BeginBinaryImport(copyCommand)
                 for r in records do
-                    importer.StartRow()
+                    do! importer.StartRowAsync(token) |> Async.AwaitTask
                     setter.SetValue(r, importer)
-                importer.Complete() |> ignore
+                do! importer.CompleteAsync(token).AsTask() |> Async.AwaitTask |> Async.Ignore
             }
             
     /// <summary>
