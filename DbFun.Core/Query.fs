@@ -111,9 +111,11 @@ type QueryBuilder(config: QueryConfig) =
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         use connection = config.CreateConnection()
         connection.Open()
+        use transaction = connection.BeginTransaction()
         use command = connection.CreateCommand()
         command.CommandType <- commandType
         command.CommandText <- commandText
+        command.Transaction <- transaction
         setParams(command)
         use prototype = command.ExecuteReader(CommandBehavior.SchemaOnly)
         resultReaderBuilder(prototype)
