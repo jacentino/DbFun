@@ -22,6 +22,7 @@
     <Compile Include="DbSession.fs" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Query.fs" />
+    <Compile Include="Sqlite.fs" />
     <Compile Include="Templating.fs" />
   </ItemGroup>
 
