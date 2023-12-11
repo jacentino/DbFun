@@ -8,9 +8,11 @@ open MySql.Data.MySqlClient
 
 module Commons = 
 
-    let createConnection (): IDbConnection = 
+    let connectionString = 
         let config = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location)
-        let connectionString = config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
+        config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
+
+    let createConnection (): IDbConnection = 
         new MySqlConnection(connectionString)
 
     let config = QueryConfig.Default(createConnection)

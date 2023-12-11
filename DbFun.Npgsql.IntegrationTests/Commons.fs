@@ -9,10 +9,11 @@ open Npgsql
 
 module Commons = 
 
-    let createConnection (): IDbConnection = 
+    let connectionString = 
         let config = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location)
-        let connectionString = config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
-        new NpgsqlConnection(connectionString)
+        config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
+
+    let createConnection (): IDbConnection = new NpgsqlConnection(connectionString)
 
     let config = QueryConfig.Default(createConnection).UsePostgresArrays()
 

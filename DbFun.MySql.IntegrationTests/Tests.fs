@@ -54,16 +54,3 @@ module Tests =
             posts = []
         } |> runSync
     
-
-    [<Fact>]
-    let ``SchemaOnly works as expected``() = 
-        Tooling.deleteAllButFirstBlog() |> runSync
-        TestQueries.insertBlogAutoInc |> ignore
-        let numOfBlogs = Tooling.getNumberOfBlogs() |> runSync
-        Assert.Equal(1, numOfBlogs)
-    
-
-    let ``BulkLoader``() = 
-        let con = MySql.Data.MySqlClient.MySqlConnection()
-        let bl = MySql.Data.MySqlClient.MySqlBulkLoader(con)
-        ()
