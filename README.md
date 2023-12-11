@@ -25,6 +25,17 @@ No custom query DSL enabled - just raw SQL.
 * Template-based queries
 * Computation expression for database operations
 
+## Supported databases
+In its core DbFun does not use any features specific to some db provider, so it works with any ADO.NET provider. 
+The only limitation is possibility of execution of commands in `SchemaOnly` mode.
+
+It was tested against MS SqlServer, PostgreSQL, MySQL and SQLite.
+
+There are extensions, enabling provider-specific features:
+* the extension for MS SQL, that allows to use table valued parameters
+* the extension for PostgreSQL, making use of array parameters possible and adding more comfortable bulk import mechanism
+* the extension for SQLite, that allows to use date and time values
+
 ## How it works
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
 Better way is to build an API exposing your database, consisting of structures representing database data, and functions responsible for processing this data. 
