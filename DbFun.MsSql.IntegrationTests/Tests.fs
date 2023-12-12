@@ -16,7 +16,7 @@ module Tests =
     [<Fact>]
     let ``Query returning scalar`` () =
         let name = TestQueries.getBlogName 1 |> run |> Async.RunSynchronously
-        Assert.Equal("functional-data-access-with-sqlfun", name)
+        Assert.Equal("functional-data-access-with-dbfun", name)
 
     [<Fact>]
     let ``Query returning many rows`` () =

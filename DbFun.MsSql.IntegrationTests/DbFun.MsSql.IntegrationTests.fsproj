@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Database\DbFunTests.sql" />
     <None Include="App.config" />
     <Compile Include="Commons.fs" />
     <Compile Include="Models.fs" />
