@@ -49,7 +49,7 @@ type BulkImportParams() =
     inherit DbFun.Core.Builders.GenericSetters.GenericSetterBuilder<string list ref, NpgsqlBinaryImporter>()
 
 /// <summary>
-/// Bulk import cofig.
+/// Bulk import config.
 /// </summary>
 type BulkImportConfig = 
     {

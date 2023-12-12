@@ -19,9 +19,13 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.Npgsql.IntegrationTes
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.Npgsql", "DbFun.Npgsql\DbFun.Npgsql.fsproj", "{8C00CC02-477C-405A-A02A-B1EC8DD395F3}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.MySql.IntegrationTests", "DbFun.MySql.IntegrationTests\DbFun.MySql.IntegrationTests.fsproj", "{2C33C442-1A98-4C46-AB46-C10EC552F2E6}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MySql.IntegrationTests", "DbFun.MySql.IntegrationTests\DbFun.MySql.IntegrationTests.fsproj", "{2C33C442-1A98-4C46-AB46-C10EC552F2E6}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.Sqlite.IntegrationTests", "DbFun.Sqlite.IntegrationTests\DbFun.Sqlite.IntegrationTests.fsproj", "{7BDDF172-0C11-4F02-A7A3-3621621D03DF}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.Sqlite.IntegrationTests", "DbFun.Sqlite.IntegrationTests\DbFun.Sqlite.IntegrationTests.fsproj", "{7BDDF172-0C11-4F02-A7A3-3621621D03DF}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.MySqlConnector.IntegrationTests", "DbFun.MySqlConnector.IntegrationTests\DbFun.MySqlConnector.IntegrationTests.fsproj", "{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.MySqlConnector", "DbFun.MySqlConnector\DbFun.MySqlConnector.fsproj", "{98AD61A2-F003-454E-BE96-49DF22303002}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +73,14 @@ Global
 		{7BDDF172-0C11-4F02-A7A3-3621621D03DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BDDF172-0C11-4F02-A7A3-3621621D03DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7BDDF172-0C11-4F02-A7A3-3621621D03DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98AD61A2-F003-454E-BE96-49DF22303002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98AD61A2-F003-454E-BE96-49DF22303002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98AD61A2-F003-454E-BE96-49DF22303002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98AD61A2-F003-454E-BE96-49DF22303002}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
