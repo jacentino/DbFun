@@ -23,14 +23,16 @@ module BulkCopyParamsImpl =
             member __.CanBuild(argType: System.Type): bool = 
                 Types.isSimpleType argType
 
-            member this.Build(name: string, _: IParamSetterProvider, table: DataTable): IParamSetter<'Arg> = 
+            member __.Build(name: string, _: IParamSetterProvider, table: DataTable): IParamSetter<'Arg> = 
+                let ordinal = ref 0
                 { new IParamSetter<'Arg> with
                       member __.SetValue(value: 'Arg, row: DataRow): unit = 
-                          row.SetField(name, value)
+                          row.SetField(ordinal.Value, value)
                       member __.SetNull(row: DataRow): unit = 
-                          row.[name] <- DBNull.Value
+                          row.[ordinal.Value] <- DBNull.Value
                       member __.SetArtificial(_: DataRow): unit = 
-                          table.Columns.Add(name, typeof<'Arg>) |> ignore
+                          let column = table.Columns.Add(name, typeof<'Arg>) 
+                          ordinal.Value <- column.Ordinal
                 }
 
     let getDefaultBuilders(): IBuilder list = 
