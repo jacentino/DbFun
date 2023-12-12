@@ -34,6 +34,7 @@ It was tested against MS SqlServer, PostgreSQL, MySQL and SQLite.
 There are extensions, enabling provider-specific features:
 * the extension for MS SQL, that allows to use table valued parameters
 * the extension for PostgreSQL, making use of array parameters possible and adding more comfortable bulk import mechanism
+* the extension for MySQL (when using MySqlConnector) improving use of bulk copy 
 * the extension for SQLite, that allows to use date and time values
 
 ## How it works
