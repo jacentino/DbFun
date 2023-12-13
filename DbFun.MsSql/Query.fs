@@ -1,6 +1,7 @@
 ﻿namespace DbFun.MsSql.Builders
 
 open DbFun.Core.Builders
+open DbFun.Core.Diagnostics
 open DbFun.MsSql.Builders
 open System.Data
 open System
@@ -106,8 +107,8 @@ type QueryConfig =
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig) =
-    inherit DbFun.Core.Builders.QueryBuilder(config.Common)
+type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
+    inherit DbFun.Core.Builders.QueryBuilder(config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The configuration of the query builder.
@@ -130,11 +131,11 @@ type QueryBuilder(config: QueryConfig) =
     /// The timeout value in seconds.
     /// </param>
     member this.Timeout(timeout: int) = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with Timeout = Some timeout } })
+        QueryBuilder({ this.Config with Common = { this.Config.Common with Timeout = Some timeout } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder with compile-time error logging and deferred exceptions.
     /// </summary>
     member this.LogCompileTimeErrors() = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } })
+        QueryBuilder({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 

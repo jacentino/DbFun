@@ -125,3 +125,15 @@ module Tests =
             } |> DbCall.InTransaction |> run |> Async.RunSynchronously
         Assert.Equal("Yet another sql framework", post1.title)
         Assert.Equal("What's wrong with existing frameworks", post2.title)
+
+
+    [<Fact>]
+    let ``Compile-time errors - logging & derived QueryBuilder``() = 
+
+              
+        TestQueries.invalidQuery |> ignore
+
+        let lineNo, fileName, _ = TestQueries.query.CompileTimeErrors |> List.head
+
+        Assert.Equal(TestQueries.invalidLine, lineNo)
+        Assert.Contains("TestQueries.fs", fileName)

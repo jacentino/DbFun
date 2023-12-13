@@ -481,7 +481,7 @@ module QueryTests =
         qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
         |> ignore
 
-        let lineNo, fileName, _ = qb.CompileTimeErrorLog |> List.head
+        let lineNo, fileName, _ = qb.CompileTimeErrors |> List.head
 
         Assert.Equal(line + 1, lineNo)
         Assert.Contains("QueryTests.fs", fileName)
@@ -510,6 +510,31 @@ module QueryTests =
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
         Assert.Contains(sprintf "line: %d" (line + 1), ex.InnerExceptions.[0].Message)
+
+
+    [<Fact>]
+    let ``Compile-time errors - logging & derived QueryBuilder``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "wrongName", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+               
+        let line = Diag.GetLine()
+        qb.Timeout(30).Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
+        |> ignore
+
+        let lineNo, fileName, _ = qb.CompileTimeErrors |> List.head
+
+        Assert.Equal(line + 1, lineNo)
+        Assert.Contains("QueryTests.fs", fileName)
 
 
     [<Fact>]

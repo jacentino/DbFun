@@ -13,7 +13,7 @@ module Tests =
 
     [<Fact>]
     let ``TestQueries passes compile-time checks``() =
-        Assert.True(TestQueries.query.CompileTimeErrorLog.IsEmpty, sprintf "%A" TestQueries.query.CompileTimeErrorLog)
+        Assert.True(TestQueries.query.CompileTimeErrors.IsEmpty, sprintf "%A" TestQueries.query.CompileTimeErrors)
 
     [<Fact>]
     let ``Simple queries to PostgreSQL return valid results``() =

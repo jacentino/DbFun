@@ -104,9 +104,13 @@ type QueryConfig =
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig) =
+type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) =
 
-    let compileTimeErrorLog = if config.LogCompileTimeErrors then Some (ref<CompileTimeErrorLog> []) else None
+    let compileTimeErrorLog = 
+        if config.LogCompileTimeErrors then 
+            compileTimeErrorLog |> Option.orElse (Some (ref<CompileTimeErrorLog> []))
+        else 
+            None
 
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         use connection = config.CreateConnection()
@@ -183,21 +187,23 @@ type QueryBuilder(config: QueryConfig) =
     /// The timeout value in seconds.
     /// </param>
     member __.Timeout(timeout: int) = 
-        QueryBuilder({ config with Timeout = Some timeout })
+        QueryBuilder({ config with Timeout = Some timeout }, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder with compile-time error logging and deferred exceptions.
     /// </summary>
     member __.LogCompileTimeErrors() = 
-        QueryBuilder({ config with LogCompileTimeErrors = true })
+        QueryBuilder({ config with LogCompileTimeErrors = true }, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The list of compile time errors.
     /// </summary>
-    member __.CompileTimeErrorLog = 
+    member __.CompileTimeErrors = 
         match compileTimeErrorLog with
         | Some log -> log.Value |> List.rev
         | None -> []
+
+    member __.RawCompileTimeErrorLog = compileTimeErrorLog 
 
     /// <summary>
     /// Builds a one arg query function based on command template.
@@ -232,14 +238,8 @@ type QueryBuilder(config: QueryConfig) =
             let paramSetter = createParamSetter(provider, ())
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
-            
-            
-            let createResultReader' prototype = 
-                try
-                    createResultReader(rowGetterProvider, prototype)
-                with ex ->
-                    reraise()
-
+                       
+            let createResultReader' prototype = createResultReader(rowGetterProvider, prototype)
 
             let resultReader = executePrototypeQuery(CommandType.Text, template(None), paramSetter.SetArtificial, createResultReader')
 

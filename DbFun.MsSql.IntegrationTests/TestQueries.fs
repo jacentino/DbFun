@@ -1,15 +1,18 @@
 ﻿namespace DbFun.MsSql.IntegrationTests
 
 open System
+open System.Runtime.CompilerServices
+open System.Runtime.InteropServices
 open DbFun.Core
 open DbFun.TestTools
 open DbFun.MsSql.IntegrationTests.Models
 open DbFun.Core.Builders
 open DbFun.MsSql.Builders
-
 open DbFun.Core.Builders.MultipleResults
-
 open Commons
+
+type Diag() = 
+    static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line
 
 module TestQueries = 
     
@@ -110,3 +113,6 @@ module TestQueries =
         insert into tag (postId, name) select @id, name from @tags",
         Params.Int("id"), Params.TableValuedList(TVParams.Tuple<int, string>("postId", "name"), "tags", "Tag"),
         Results.Unit)
+
+    let invalidLine = Diag.GetLine() + 1
+    let invalidQuery = query.Timeout(30).Sql<unit, Blog list>("select * from NotExistingTable")
