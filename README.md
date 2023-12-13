@@ -125,7 +125,7 @@ dbsession {
     do! Blogging.insertTags postId tags
 }
 |> run
-|> Async.RunSynchronously // because run returns Async
+// It's Async, so you should call Async.RunSynchronously to obtain raw result
 ```
 ### Compound parameters
 Records can be parameters as well::
