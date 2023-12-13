@@ -41,7 +41,7 @@ There are extensions, enabling provider-specific features:
 Most of us think about data access code as a separate layer. We don't like to spread SQL queries across all the application.
 Better way is to build an API exposing your database, consisting of structures representing database data, and functions responsible for processing this data. 
 
-DbFun promotes good architectures by making it a design requirement.
+DbFun promotes good architectures by making it a design requirement. Instead of providing API to execute queries it provides API to generate functions executing queries (in some sens it provides API allowing to create another API).
 
 ### Configuration
 First step is to define function creating database connection and config record:
@@ -88,7 +88,7 @@ type Blog = {
 The most preferrable way is to use F# record types. Record fields should reflect query result columns, because they are mapped by name.
     
 ### Defining queries
-The best way of defining queries is to create variables for them and place in some module:
+The usual way of defining query functions is to create variables for them and place in some module:
 ```fsharp 
 module Blogging =    
  
