@@ -7,6 +7,7 @@ open Moq
 
 open DbFun.Core.Builders
 open DbFun.TestTools.Models
+open DbFun.Core.Builders.RowsImpl
 
 module RowTests = 
 
@@ -640,3 +641,44 @@ module RowTests =
         let t = getter.Get(record)
 
         Assert.Equal((), t)
+
+
+
+    [<Fact>]
+    let ``No prototype calls - char enums``() = 
+
+        let record = createDataRecordMock [ vcol("status", 'A') ]
+        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders())
+        let builderParams = provider, record
+        
+        let getter = Rows.Auto<Status> "status" builderParams
+        let value = getter.Get(record)
+
+        Assert.Equal(Status.Active, value)
+
+
+    [<Fact>]
+    let ``No prototype calls - records``() = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders())
+        let builderParams = provider, record
+
+        let getter = Rows.Record<User>() builderParams
+        let value = getter.Get(record)
+
+        let expected = 
+            {
+                userId  = 5
+                name    = "jacentino"
+                email   = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+        Assert.Equal(expected, value)
+                            
+

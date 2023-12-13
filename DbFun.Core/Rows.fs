@@ -68,12 +68,42 @@ module RowsImpl =
                         call :> Expression
                 let getter = Expression.Lambda<Func<IDataRecord, 'Result>>(convertedCall, recParam).Compile()
                 { new IRowGetter<'Result> with
-                        member __.Get(record: IDataRecord): 'Result = 
-                            getter.Invoke(record)
-                        member __.IsNull(record: IDataRecord): bool = 
-                            record.IsDBNull(ordinal)
-                        member this.Create(arg1: IDataRecord): unit = 
-                            raise (System.NotImplementedException())
+                    member __.Get(record: IDataRecord): 'Result = 
+                        getter.Invoke(record)
+                    member __.IsNull(record: IDataRecord): bool = 
+                        record.IsDBNull(ordinal)
+                    member this.Create(_: IDataRecord): unit = 
+                        raise (System.NotImplementedException())
+                }
+
+
+    type NoPrototypeColumnBuilder() = 
+
+        let getOrdinal(record: IDataRecord, name: string) = 
+            try
+                if String.IsNullOrEmpty(name) && record.FieldCount = 1 then 0 else record.GetOrdinal(name)
+            with ex -> raise <| Exception(sprintf "Column doesn't exist: %s" name, ex)
+
+        interface IBuilder with
+                
+            member __.CanBuild(argType: Type): bool = Types.isSimpleType argType
+                    
+            member this.Build(name: string, _, _: IDataRecord): IRowGetter<'Result> = 
+                { new IRowGetter<'Result> with
+                    member __.Get(record: IDataRecord): 'Result = 
+                        let ordinal = getOrdinal(record, name)
+                        let fieldType = record.GetFieldType(ordinal)
+                        let value = record.GetValue(ordinal)
+                        if typeof<'Result> = typeof<char> && fieldType = typeof<string> then
+                            (value :?> string).[0] |> box :?> 'Result
+                        elif typeof<'Result> <> fieldType then
+                            Convert.ChangeType(value, typeof<'Result>) :?> 'Result
+                        else    
+                            value :?> 'Result
+                    member __.IsNull(record: IDataRecord): bool = 
+                        record.IsDBNull(getOrdinal(record, name))
+                    member this.Create(_: IDataRecord): unit = 
+                        raise (System.NotImplementedException())
                 }
     
 

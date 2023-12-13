@@ -129,7 +129,6 @@ module Tests =
 
     [<Fact>]
     let ``Compile-time errors - logging & derived QueryBuilder``() = 
-
               
         TestQueries.invalidQuery |> ignore
 
@@ -137,3 +136,18 @@ module Tests =
 
         Assert.Equal(TestQueries.invalidLine, lineNo)
         Assert.Contains("TestQueries.fs", fileName)
+
+    [<Fact>]
+    let ``Query returning many results using join to combine them with disabled prototype calls``() = 
+        let pl = TestQueries.unsafeGetPostsWithTagsAndComments 1 |> run |> Async.RunSynchronously |> Seq.toList
+        Assert.Equal(2, pl |> List.length)
+        let p = pl |> List.head
+        Assert.Equal(1, p.blogId)
+        Assert.Equal(3, p.tags |> List.length)
+
+
+    [<Fact>]
+    let ``Query returning many results using applicative functor to combine them with disabled prototype calls``() = 
+        let p = TestQueries.unsafeGetOnePostWithTagsAndComments 1 |> run |> Async.RunSynchronously
+        Assert.Equal(1, p.blogId)
+        Assert.Equal(3, p.tags |> List.length)

@@ -17,7 +17,7 @@ type BuildResultReader<'Result> = IRowGetterProvider * IDataReader -> IResultRea
 type Results() = 
 
     static let advance (resultTypes: Type seq) (reader: IDataReader) = 
-        if not (reader.NextResult()) then
+        if reader <> null && not (reader.NextResult()) then
             failwithf "Not enough results when reading %A" resultTypes
 
     static let advanceAsync (resultTypes: Type seq) (reader: IDataReader) = 
@@ -753,7 +753,7 @@ module MultipleResults =
                     }
               interface IAdvancer with
                 member __.Advance(reader: IDataReader) = 
-                    if not(reader.NextResult()) then
+                    if reader <> null && not(reader.NextResult()) then
                         failwith "Not enough results"                         
                 member __.AdvanceAsync(reader: IDataReader) = 
                     async {

@@ -18,6 +18,7 @@ type QueryConfig =
         RowBuilders         : RowsImpl.IBuilder list
         Timeout             : int option
         LogCompileTimeErrors: bool
+        PrototypeCalls      : bool
     }
     with 
         /// <summary>
@@ -34,6 +35,7 @@ type QueryConfig =
                 RowBuilders         = RowsImpl.getDefaultBuilders()
                 Timeout             = None
                 LogCompileTimeErrors= false
+                PrototypeCalls      = true
             }
 
         /// <summary>
@@ -101,6 +103,15 @@ type QueryConfig =
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
 
+        /// <summary>
+        /// Allows to generate functions executing queries without discovering resultset structure using SchemaOnly calls.
+        /// </summary>
+        member this.DisablePrototypeCalls() = 
+            { this with 
+                PrototypeCalls = false
+                RowBuilders = RowsImpl.NoPrototypeColumnBuilder() :: this.RowBuilders
+            }
+
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
@@ -113,16 +124,19 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             None
 
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
-        use connection = config.CreateConnection()
-        connection.Open()
-        use transaction = connection.BeginTransaction()
-        use command = connection.CreateCommand()
-        command.CommandType <- commandType
-        command.CommandText <- commandText
-        command.Transaction <- transaction
-        setParams(command)
-        use prototype = command.ExecuteReader(CommandBehavior.SchemaOnly)
-        resultReaderBuilder(prototype)
+        if config.PrototypeCalls then
+            use connection = config.CreateConnection()
+            connection.Open()
+            use transaction = connection.BeginTransaction()
+            use command = connection.CreateCommand()
+            command.CommandType <- commandType
+            command.CommandText <- commandText
+            command.Transaction <- transaction
+            setParams(command)
+            use prototype = command.ExecuteReader(CommandBehavior.SchemaOnly)
+            resultReaderBuilder(prototype)
+        else
+            resultReaderBuilder(null)
 
     let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
@@ -194,6 +208,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </summary>
     member __.LogCompileTimeErrors() = 
         QueryBuilder({ config with LogCompileTimeErrors = true }, ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Creates new builder generating query functions without discovering resultset structure using SchemaOnly calls.
+    /// </summary>
+    member __.DisablePrototypeCalls() = 
+        QueryBuilder(config.DisablePrototypeCalls(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The list of compile time errors.

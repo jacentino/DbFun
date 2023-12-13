@@ -139,3 +139,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     member this.LogCompileTimeErrors() = 
         QueryBuilder({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
+    /// <summary>
+    /// Creates new builder generating query functions without discovering resultset structure using SchemaOnly calls.
+    /// </summary>
+    member this.DisablePrototypeCalls() = 
+        QueryBuilder({ this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+

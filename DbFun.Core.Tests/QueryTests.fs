@@ -12,7 +12,6 @@ open DbFun.Core.Diagnostics
 open System.Data
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
-open System.Diagnostics
 
 type Diag() = 
     static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line
@@ -785,3 +784,35 @@ module QueryTests =
             }
 
         Assert.Equal<UserWithRoles seq>([expected], user)
+
+
+    [<Fact>]
+    let ``Simple queries - no prototype calls``() = 
+
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]                            
+                ]
+
+        let qb = QueryBuilder (createConfig createConnection)
+               
+        let query = qb.DisablePrototypeCalls().Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
+
+        let connector = new Connector(createConnection())        
+
+        let user = query  1 connector |> Async.RunSynchronously
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+            }
+
+        Assert.Equal(expected, user)
