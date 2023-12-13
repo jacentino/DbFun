@@ -321,7 +321,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.TemplatedSql (
             template: 'Params option -> string,
-            name: string, 
+            [<Optional>] name: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
@@ -819,7 +819,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
             commandText: string,
-            argName1: string, argName2: string, [<Optional>] resultName: string,
+            [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params1 -> 'Params2 -> DbCall<'Result> =         
@@ -850,7 +850,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Result> (
-            argName1: string, argName2: string, argName3: string, [<Optional>] resultName: string,
+            [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
@@ -884,7 +884,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
-            argName1: string, argName2: string, argName3: string, argName4: string, [<Optional>] resultName: string,
+            [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] argName4: string, 
+            [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
@@ -921,7 +922,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
-            argName1: string, argName2: string, argName3: string, argName4: string, argName5: string, [<Optional>] resultName: string,
+            [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, argName4: string, [<Optional>] argName5: string, 
+            [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
@@ -1034,7 +1036,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Proc<'Params, 'OutParams, 'Result> (
             procName: string,
-            name: string,
+            [<Optional>] name: string,
             [<Optional>] outParamName: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
@@ -1127,7 +1129,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Proc<'Params1, 'Params2, 'OutParams, 'Result> (
             procName: string,
-            name1: string, name2: string,
+            [<Optional>] name1: string, [<Optional>] name2: string,
             [<Optional>] outParamName: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
@@ -1299,7 +1301,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'OutParams, 'Result> (
                 procName: string,
-                name1: string, name2: string, name3: string,
+                [<Optional>] name1: string, [<Optional>] name2: string, [<Optional>] name3: string,
                 [<Optional>] outParamName: string, 
                 [<Optional>] resultName: string,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
@@ -1458,7 +1460,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'OutParams, 'Result> (
             procName: string,
-            name1: string, name2: string, name3: string, name4: string,
+            [<Optional>] name1: string, [<Optional>] name2: string, [<Optional>] name3: string, [<Optional>] name4: string,
             [<Optional>] outParamName: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
@@ -1635,7 +1637,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'OutParams, 'Result> (
             procName: string,
-            name1: string, name2: string, name3: string, name4: string, name5: string,
+            [<Optional>] name1: string, [<Optional>] name2: string, [<Optional>] name3: string, [<Optional>] name4: string, [<Optional>] name5: string,
             [<Optional>] outParamName: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
