@@ -654,19 +654,19 @@ module GenericGetters =
         /// <summary>
         /// Creates a builder handling 2-element tuple types.
         /// </summary>
-        /// <param name="createGetter1">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createGetter2">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
         static member Tuple<'Result1, 'Result2>(
-                createGetter1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
-                createGetter2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>)
+                specifier1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
+                specifier2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>)
                 : GetterSpecifier<'Prototype, 'DbObject, 'Result1 * 'Result2> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let getter1 = createGetter1(provider, prototype)
-                let getter2 = createGetter2(provider, prototype)
+                let getter1 = specifier1(provider, prototype)
+                let getter2 = specifier2(provider, prototype)
                 { new IGetter<'DbObject, 'Result1 * 'Result2> with
                     member __.IsNull(record: 'DbObject): bool = 
                         getter1.IsNull(record) && getter2.IsNull(record)
@@ -708,24 +708,24 @@ module GenericGetters =
         /// <summary>
         /// Creates a builder handling 3-element tuple types.
         /// </summary>
-        /// <param name="createGetter1">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createGetter2">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createGetter3">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3>(
-                createGetter1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
-                createGetter2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
-                createGetter3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>)
+                specifier1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
+                specifier2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
+                specifier3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>)
                 : GetterSpecifier<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let getter1 = createGetter1(provider, prototype)
-                let getter2 = createGetter2(provider, prototype)
-                let getter3 = createGetter3(provider, prototype)
+                let getter1 = specifier1(provider, prototype)
+                let getter2 = specifier2(provider, prototype)
+                let getter3 = specifier3(provider, prototype)
                 { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3> with
                     member __.IsNull(record: 'DbObject): bool = 
                         getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record)
@@ -773,29 +773,29 @@ module GenericGetters =
         /// <summary>
         /// Creates a builder handling 4-element tuple types.
         /// </summary>
-        /// <param name="createGetter1">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createGetter2">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createGetter3">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
-        /// <param name="createGetter4">
+        /// <param name="specifier4">
         /// The builder of the fourth tuple element.
         /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4>(
-                createGetter1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
-                createGetter2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
-                createGetter3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>, 
-                createGetter4: GetterSpecifier<'Prototype, 'DbObject, 'Result4>)
+                specifier1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
+                specifier2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
+                specifier3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>, 
+                specifier4: GetterSpecifier<'Prototype, 'DbObject, 'Result4>)
                 : GetterSpecifier<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let getter1 = createGetter1(provider, prototype)
-                let getter2 = createGetter2(provider, prototype)
-                let getter3 = createGetter3(provider, prototype)
-                let getter4 = createGetter4(provider, prototype)
+                let getter1 = specifier1(provider, prototype)
+                let getter2 = specifier2(provider, prototype)
+                let getter3 = specifier3(provider, prototype)
+                let getter4 = specifier4(provider, prototype)
                 { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4> with
                     member __.IsNull(record: 'DbObject): bool = 
                         getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record)
@@ -849,34 +849,34 @@ module GenericGetters =
         /// <summary>
         /// Creates a builder handling 5-element tuple types.
         /// </summary>
-        /// <param name="createGetter1">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createGetter2">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createGetter3">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
-        /// <param name="createGetter4">
+        /// <param name="specifier4">
         /// The builder of the fourth tuple element.
         /// </param>
-        /// <param name="createGetter5">
+        /// <param name="specifier5">
         /// The builder of the fourth tuple element.
         /// </param>
         static member Tuple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(
-                createGetter1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
-                createGetter2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
-                createGetter3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>, 
-                createGetter4: GetterSpecifier<'Prototype, 'DbObject, 'Result4>, 
-                createGetter5: GetterSpecifier<'Prototype, 'DbObject, 'Result5>)
+                specifier1: GetterSpecifier<'Prototype, 'DbObject, 'Result1>, 
+                specifier2: GetterSpecifier<'Prototype, 'DbObject, 'Result2>, 
+                specifier3: GetterSpecifier<'Prototype, 'DbObject, 'Result3>, 
+                specifier4: GetterSpecifier<'Prototype, 'DbObject, 'Result4>, 
+                specifier5: GetterSpecifier<'Prototype, 'DbObject, 'Result5>)
                 : GetterSpecifier<'Prototype, 'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
             fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let getter1 = createGetter1(provider, prototype)
-                let getter2 = createGetter2(provider, prototype)
-                let getter3 = createGetter3(provider, prototype)
-                let getter4 = createGetter4(provider, prototype)
-                let getter5 = createGetter5(provider, prototype)
+                let getter1 = specifier1(provider, prototype)
+                let getter2 = specifier2(provider, prototype)
+                let getter3 = specifier3(provider, prototype)
+                let getter4 = specifier4(provider, prototype)
+                let getter5 = specifier5(provider, prototype)
                 { new IGetter<'DbObject, 'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> with
                     member __.IsNull(record: 'DbObject): bool = 
                         getter1.IsNull(record) && getter2.IsNull(record) && getter3.IsNull(record) && getter4.IsNull(record) && getter5.IsNull(record)

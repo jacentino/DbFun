@@ -100,10 +100,10 @@ type BulkImportBuilder(?config: BulkImportConfig) =
     /// <param name="setterBuilder">
     /// The parameter builder.
     /// </param>
-    member __.WriteToServer<'Record>(setterBuilder: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
         let fieldNames = ref List.empty<string>
         let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders)
-        let setter = setterBuilder(provider, fieldNames)
+        let setter = specifier(provider, fieldNames)
         setter.SetArtificial(null)
         let copyCommand = 
             sprintf "COPY %s (%s) FROM STDIN (FORMAT BINARY)" 

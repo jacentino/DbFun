@@ -722,18 +722,18 @@ module GenericSetters =
         /// <summary>
         /// Creates a builder handling 2-element tuple types.
         /// </summary>
-        /// <param name="createItem1Setter">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createItem2Setter">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2>(
-                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>) = 
+                specifier1: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                specifier2: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let item1Setter = createItem1Setter(provider, prototype)
-                let item2Setter = createItem2Setter(provider, prototype)
+                let item1Setter = specifier1(provider, prototype)
+                let item2Setter = specifier2(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2> with
                     member __.SetValue((val1: 'Arg1, val2: 'Arg2), command: 'DbObject) =
                         item1Setter.SetValue(val1, command)
@@ -774,23 +774,23 @@ module GenericSetters =
         /// <summary>
         /// Creates a builder handling 3-element tuple types.
         /// </summary>
-        /// <param name="createItem1Setter">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createItem2Setter">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createItem3Setter">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3>(
-                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>) = 
+                specifier1: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                specifier2: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                specifier3: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let item1Setter = createItem1Setter(provider, prototype)
-                let item2Setter = createItem2Setter(provider, prototype)
-                let item3Setter = createItem3Setter(provider, prototype)
+                let item1Setter = specifier1(provider, prototype)
+                let item2Setter = specifier2(provider, prototype)
+                let item3Setter = specifier3(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3> with
                     member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3), command: 'DbObject) =
                         item1Setter.SetValue(val1, command)
@@ -841,28 +841,28 @@ module GenericSetters =
         /// <summary>
         /// Creates a builder handling 4-element tuple types.
         /// </summary>
-        /// <param name="createItem1Setter">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createItem2Setter">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createItem3Setter">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
-        /// <param name="createItem4Setter">
+        /// <param name="specifier4">
         /// The builder of the fourth tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4>(
-                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
-                createItem4Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>) = 
+                specifier1: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                specifier2: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                specifier3: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
+                specifier4: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let item1Setter = createItem1Setter(provider, prototype)
-                let item2Setter = createItem2Setter(provider, prototype)
-                let item3Setter = createItem3Setter(provider, prototype)
-                let item4Setter = createItem4Setter(provider, prototype)
+                let item1Setter = specifier1(provider, prototype)
+                let item2Setter = specifier2(provider, prototype)
+                let item3Setter = specifier3(provider, prototype)
+                let item4Setter = specifier4(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4> with
                     member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), command: 'DbObject) =
                         item1Setter.SetValue(val1, command)
@@ -924,33 +924,33 @@ module GenericSetters =
         /// <summary>
         /// Creates a builder handling 5-element tuple types.
         /// </summary>
-        /// <param name="createItem1Setter">
+        /// <param name="specifier1">
         /// The builder of the first tuple element.
         /// </param>
-        /// <param name="createItem2Setter">
+        /// <param name="specifier2">
         /// The builder of the second tuple element.
         /// </param>
-        /// <param name="createItem3Setter">
+        /// <param name="specifier3">
         /// The builder of the third tuple element.
         /// </param>
-        /// <param name="createItem4Setter">
+        /// <param name="specifier4">
         /// The builder of the fourth tuple element.
         /// </param>
-        /// <param name="createItem5Setter">
+        /// <param name="specifier5">
         /// The builder of the fifth tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4, 'Arg5>(
-                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
-                createItem4Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>, 
-                createItem5Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg5>) = 
+                specifier1: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                specifier2: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                specifier3: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
+                specifier4: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>, 
+                specifier5: SetterSpecifier<'Prototype, 'DbObject, 'Arg5>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
-                let item1Setter = createItem1Setter(provider, prototype)
-                let item2Setter = createItem2Setter(provider, prototype)
-                let item3Setter = createItem3Setter(provider, prototype)
-                let item4Setter = createItem4Setter(provider, prototype)
-                let item5Setter = createItem5Setter(provider, prototype)
+                let item1Setter = specifier1(provider, prototype)
+                let item2Setter = specifier2(provider, prototype)
+                let item3Setter = specifier3(provider, prototype)
+                let item4Setter = specifier4(provider, prototype)
+                let item5Setter = specifier5(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
                     member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), command: 'DbObject) =
                         item1Setter.SetValue(val1, command)

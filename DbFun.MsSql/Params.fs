@@ -246,7 +246,7 @@ type Params() =
     /// <summary>
     /// Creates a table-valued builder for a list of values (records or tuples).
     /// </summary>
-    /// <param name="createTvpSetter">
+    /// <param name="tvpSpecifier">
     /// The table-valued parameter builder.
     /// </param>
     /// <param name="name">
@@ -255,13 +255,13 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedList<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
-        fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(createTvpSetter, defaultArg name "", tvpName)
+    static member TableValuedList<'Record>(tvpSpecifier: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(tvpSpecifier, defaultArg name "", tvpName)
 
     /// <summary>
     /// Creates a table-valued builder for an array of values (records or tuples).
     /// </summary>
-    /// <param name="createTvpSetter">
+    /// <param name="tvpSpecifier">
     /// The table-valued parameter builder.
     /// </param>
     /// <param name="name">
@@ -270,5 +270,5 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedArray<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
-        fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(createTvpSetter, defaultArg name "", tvpName)
+    static member TableValuedArray<'Record>(tvpSpecifier: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
+        fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(tvpSpecifier, defaultArg name "", tvpName)

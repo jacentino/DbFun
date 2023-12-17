@@ -104,10 +104,10 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
     /// <param name="setterBuilder">
     /// The parameter builder.
     /// </param>
-    member __.WriteToServer<'Record>(setterBuilder: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<MySqlBulkCopyResult> = 
+    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<MySqlBulkCopyResult> = 
         let dataTable = new DataTable()
         let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders)
-        let setter = setterBuilder(provider, dataTable)
+        let setter = specifier(provider, dataTable)
         setter.SetArtificial(null)
         fun (records: 'Record seq) (connector: IConnector) ->
             let dataRow = dataTable.NewRow()
