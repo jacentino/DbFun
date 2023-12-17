@@ -29,7 +29,7 @@ module GenericSetters =
     type IConfigurableBuilder<'Prototype, 'DbObject, 'Config> = 
         abstract member Build: string * ISetterProvider<'Prototype, 'DbObject> * 'Config * 'Prototype -> ISetter<'DbObject, 'Arg>
 
-    type BuildSetter<'Prototype, 'DbObject, 'Arg> = ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
+    type SetterSpecifier<'Prototype, 'DbObject, 'Arg> = ISetterProvider<'Prototype, 'DbObject> * 'Prototype -> ISetter<'DbObject, 'Arg>
 
     type IOverride<'Prototype, 'DbObject> = 
         abstract member IsRelevant: string -> bool
@@ -561,7 +561,7 @@ module GenericSetters =
         /// <summary>
         /// Creates a builder handling no parameters.
         /// </summary>
-        static member Unit: BuildSetter<'Prototype, 'DbObject, Unit> = 
+        static member Unit: SetterSpecifier<'Prototype, 'DbObject, Unit> = 
             fun (provider, prototype) -> provider.Setter<unit>("", prototype)
 
         /// <summary>
@@ -570,7 +570,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name or prefix (for indirect parameters).
         /// </param>
-        static member Auto<'Arg> (?name: string): BuildSetter<'Prototype, 'DbObject, 'Arg> = 
+        static member Auto<'Arg> (?name: string): SetterSpecifier<'Prototype, 'DbObject, 'Arg> = 
             fun (provider, prototype) -> provider.Setter<'Arg>(defaultArg name "", prototype)
 
         /// <summary>
@@ -579,7 +579,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Int (name: string): BuildSetter<'Prototype, 'DbObject, int> = 
+        static member Int (name: string): SetterSpecifier<'Prototype, 'DbObject, int> = 
             fun (provider, prototype) -> provider.Setter<int>(name, prototype)
 
         /// <summary>
@@ -588,7 +588,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Int64 (name: string): BuildSetter<'Prototype, 'DbObject, int64> = 
+        static member Int64 (name: string): SetterSpecifier<'Prototype, 'DbObject, int64> = 
             fun (provider, prototype) -> provider.Setter<int64>(name, prototype)
 
         /// <summary>
@@ -597,7 +597,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Byte (name: string): BuildSetter<'Prototype, 'DbObject, byte> = 
+        static member Byte (name: string): SetterSpecifier<'Prototype, 'DbObject, byte> = 
             fun (provider, prototype) -> provider.Setter<byte>(name, prototype)
 
         /// <summary>
@@ -606,7 +606,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Char (name: string): BuildSetter<'Prototype, 'DbObject, char> = 
+        static member Char (name: string): SetterSpecifier<'Prototype, 'DbObject, char> = 
             fun (provider, prototype) -> provider.Setter<char>(name, prototype)
 
         /// <summary>
@@ -615,7 +615,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member String (name: string): BuildSetter<'Prototype, 'DbObject, string> = 
+        static member String (name: string): SetterSpecifier<'Prototype, 'DbObject, string> = 
             fun (provider, prototype) -> provider.Setter<string>(name, prototype)
 
         /// <summary>
@@ -624,7 +624,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member DateTime (name: string): BuildSetter<'Prototype, 'DbObject, DateTime> = 
+        static member DateTime (name: string): SetterSpecifier<'Prototype, 'DbObject, DateTime> = 
             fun (provider, prototype) -> provider.Setter<DateTime>(name, prototype)
 
         /// <summary>
@@ -633,7 +633,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member DateOnly (name: string): BuildSetter<'Prototype, 'DbObject, DateOnly> = 
+        static member DateOnly (name: string): SetterSpecifier<'Prototype, 'DbObject, DateOnly> = 
             fun (provider, prototype) -> provider.Setter<DateOnly>(name, prototype)
 
         /// <summary>
@@ -642,7 +642,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member TimeOnly (name: string): BuildSetter<'Prototype, 'DbObject, TimeOnly> = 
+        static member TimeOnly (name: string): SetterSpecifier<'Prototype, 'DbObject, TimeOnly> = 
             fun (provider, prototype) -> provider.Setter<TimeOnly>(name, prototype)
 
         /// <summary>
@@ -651,7 +651,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Decimal (name: string): BuildSetter<'Prototype, 'DbObject, decimal> = 
+        static member Decimal (name: string): SetterSpecifier<'Prototype, 'DbObject, decimal> = 
             fun (provider, prototype) -> provider.Setter<decimal>(name, prototype)
 
         /// <summary>
@@ -660,7 +660,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Float (name: string): BuildSetter<'Prototype, 'DbObject, float> = 
+        static member Float (name: string): SetterSpecifier<'Prototype, 'DbObject, float> = 
             fun (provider, prototype) -> provider.Setter<float>(name, prototype)
 
         /// <summary>
@@ -669,7 +669,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Double (name: string): BuildSetter<'Prototype, 'DbObject, double> = 
+        static member Double (name: string): SetterSpecifier<'Prototype, 'DbObject, double> = 
             fun (provider, prototype) -> provider.Setter<double>(name, prototype)
 
         /// <summary>
@@ -678,7 +678,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Bool (name: string): BuildSetter<'Prototype, 'DbObject, bool> = 
+        static member Bool (name: string): SetterSpecifier<'Prototype, 'DbObject, bool> = 
             fun (provider, prototype) -> provider.Setter<bool>(name, prototype)
 
         /// <summary>
@@ -687,7 +687,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member Guid (name: string): BuildSetter<'Prototype, 'DbObject, Guid> = 
+        static member Guid (name: string): SetterSpecifier<'Prototype, 'DbObject, Guid> = 
             fun (provider, prototype) -> provider.Setter<Guid>(name, prototype)
 
         /// <summary>
@@ -696,7 +696,7 @@ module GenericSetters =
         /// <param name="name">
         /// The parameter name.
         /// </param>
-        static member ByteArray (name: string): BuildSetter<'Prototype, 'DbObject, byte array> = 
+        static member ByteArray (name: string): SetterSpecifier<'Prototype, 'DbObject, byte array> = 
             fun (provider, prototype) -> provider.Setter<byte array>(name, prototype)
 
         /// <summary>
@@ -705,7 +705,7 @@ module GenericSetters =
         /// <param name="createUnderlyingSetter">
         /// The builder of the option unerlying type.
         /// </param>
-        static member Optional<'Arg> (createUnderlyingSetter: BuildSetter<'Prototype, 'DbObject, 'Arg>) = 
+        static member Optional<'Arg> (createUnderlyingSetter: SetterSpecifier<'Prototype, 'DbObject, 'Arg>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let underlyingSetter = createUnderlyingSetter(provider, prototype)
                 { new ISetter<'DbObject, 'Arg option> with
@@ -729,8 +729,8 @@ module GenericSetters =
         /// The builder of the second tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2>(
-                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>) = 
+                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)
@@ -784,9 +784,9 @@ module GenericSetters =
         /// The builder of the third tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3>(
-                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>) = 
+                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)
@@ -854,10 +854,10 @@ module GenericSetters =
         /// The builder of the fourth tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4>(
-                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>, 
-                createItem4Setter: BuildSetter<'Prototype, 'DbObject, 'Arg4>) = 
+                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
+                createItem4Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)
@@ -940,11 +940,11 @@ module GenericSetters =
         /// The builder of the fifth tuple element.
         /// </param>
         static member Tuple<'Arg1, 'Arg2, 'Arg3, 'Arg4, 'Arg5>(
-                createItem1Setter: BuildSetter<'Prototype, 'DbObject, 'Arg1>, 
-                createItem2Setter: BuildSetter<'Prototype, 'DbObject, 'Arg2>, 
-                createItem3Setter: BuildSetter<'Prototype, 'DbObject, 'Arg3>, 
-                createItem4Setter: BuildSetter<'Prototype, 'DbObject, 'Arg4>, 
-                createItem5Setter: BuildSetter<'Prototype, 'DbObject, 'Arg5>) = 
+                createItem1Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg1>, 
+                createItem2Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg2>, 
+                createItem3Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg3>, 
+                createItem4Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg4>, 
+                createItem5Setter: SetterSpecifier<'Prototype, 'DbObject, 'Arg5>) = 
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let item1Setter = createItem1Setter(provider, prototype)
                 let item2Setter = createItem2Setter(provider, prototype)

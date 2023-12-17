@@ -11,7 +11,7 @@ open DbFun.Core
 type IResultReader<'Result> = 
     abstract member Read: IDataReader -> Async<'Result>
 
-type BuildResultReader<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
+type ResultSpecifier<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
 
 
 type Results() = 
@@ -36,7 +36,7 @@ type Results() =
     /// <summary>
     /// The artificial result builder representing return type of command not returning any result.
     /// </summary>
-    static member Unit: BuildResultReader<unit> = 
+    static member Unit: ResultSpecifier<unit> = 
         fun (_: IRowGetterProvider, _: IDataReader) -> Results.EmptyReader<unit>()
             
     /// <summary>
@@ -45,7 +45,7 @@ type Results() =
     /// <param name="rowBuilder">
     /// The row builder.
     /// </param>
-    static member Single<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): BuildResultReader<'Result> = 
+    static member Single<'Result> (rowBuilder: IRowGetterProvider * IDataRecord -> IRowGetter<'Result>): ResultSpecifier<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result> with
@@ -62,7 +62,7 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Single<'Result> (?name: string): BuildResultReader<'Result> = 
+    static member Single<'Result> (?name: string): ResultSpecifier<'Result> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = provider.Getter(defaultArg name "", prototype)
             { new IResultReader<'Result> with
@@ -79,7 +79,7 @@ type Results() =
     /// <param name="rowBuilder">
     /// The underlying row builder.
     /// </param>
-    static member Optional<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result option> = 
+    static member Optional<'Result> (rowBuilder: RowSpecifier<'Result>): ResultSpecifier<'Result option> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result option> with
@@ -96,7 +96,7 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Optional<'Result> (?name: string): BuildResultReader<'Result option>  = 
+    static member Optional<'Result> (?name: string): ResultSpecifier<'Result option>  = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter(defaultArg name "", prototype)
             { new IResultReader<'Result option> with
@@ -113,7 +113,7 @@ type Results() =
     /// <param name="rowBuilder">
     /// The underlying row builder.
     /// </param>
-    static member Seq<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result seq> = 
+    static member Seq<'Result> (rowBuilder: RowSpecifier<'Result>): ResultSpecifier<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result seq> with
@@ -130,7 +130,7 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Seq<'Result> (?name: string): BuildResultReader<'Result seq> = 
+    static member Seq<'Result> (?name: string): ResultSpecifier<'Result seq> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result seq> with
@@ -147,7 +147,7 @@ type Results() =
     /// <param name="rowBuilder">
     /// The underlying row builder.
     /// </param>
-    static member List<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result list> = 
+    static member List<'Result> (rowBuilder: RowSpecifier<'Result>): ResultSpecifier<'Result list> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result list> with
@@ -164,7 +164,7 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member List<'Result> (?name: string): BuildResultReader<'Result list> = 
+    static member List<'Result> (?name: string): ResultSpecifier<'Result list> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result list> with
@@ -181,7 +181,7 @@ type Results() =
     /// <param name="rowBuilder">
     /// The underlying row builder.
     /// </param>
-    static member Array<'Result> (rowBuilder: BuildRowGetter<'Result>): BuildResultReader<'Result array> = 
+    static member Array<'Result> (rowBuilder: RowSpecifier<'Result>): ResultSpecifier<'Result array> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let getter = rowBuilder(provider, prototype)
             { new IResultReader<'Result array> with
@@ -198,7 +198,7 @@ type Results() =
     /// <param name="name">
     /// The result column name or record prefix.
     /// </param>
-    static member Array<'Result> (?name: string): BuildResultReader<'Result array> = 
+    static member Array<'Result> (?name: string): ResultSpecifier<'Result array> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let getter = provider.Getter<'Result>(defaultArg name "", prototype)
             { new IResultReader<'Result array> with
@@ -209,11 +209,11 @@ type Results() =
                         |]
             }
 
-    static member Auto<'Result> (?name: string): BuildResultReader<'Result> = 
+    static member Auto<'Result> (?name: string): ResultSpecifier<'Result> = 
         if Types.isOptionType typeof<'Result> then
             let optionalMethod = typeof<Results>.GetMethod("Optional", [| typeof<string option> |])
             let gOptionalMethod = optionalMethod.MakeGenericMethod(typeof<'Result>.GetGenericArguments().[0])
-            let reader = gOptionalMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
+            let reader = gOptionalMethod.Invoke(null, [| name |]) :?> ResultSpecifier<'Result>
             reader
         elif Types.isCollectionType typeof<'Result> then
             let methodName = 
@@ -221,10 +221,10 @@ type Results() =
                 elif typedefof<'Result>.IsArray then "Array"
                 else "Seq"
             let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string option> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
-            let reader = collectionMethod.Invoke(null, [| name |]) :?> BuildResultReader<'Result>
+            let reader = collectionMethod.Invoke(null, [| name |]) :?> ResultSpecifier<'Result>
             reader
         elif typeof<'Result> = typeof<unit> then
-            Results.Unit |> box :?> BuildResultReader<'Result>
+            Results.Unit |> box :?> ResultSpecifier<'Result>
         else
             Results.Single<'Result>(?name = name)
 
@@ -253,7 +253,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: BuildRowGetter<'Result>) = 
+    static member Keyed<'Primary, 'Foreign, 'Result>(primaryName: string, foreignName: string, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.Keyed<'Primary, 'Foreign, 'Result>(primaryName, foreignName, result))
 
     /// <summary>
@@ -268,7 +268,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member Keyed<'Primary, 'Foreign, 'Result>(primary: BuildRowGetter<'Primary>, foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
+    static member Keyed<'Primary, 'Foreign, 'Result>(primary: RowSpecifier<'Primary>, foreign: RowSpecifier<'Foreign>, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.Keyed<'Primary, 'Foreign, 'Result>(primary, foreign, result))
 
     /// <summary>
@@ -292,7 +292,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member PKeyed<'Primary, 'Result>(primaryName: string, result: BuildRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primaryName: string, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.PKeyed<'Primary, 'Result>(primaryName, result))
 
     /// <summary>
@@ -304,7 +304,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member PKeyed<'Primary, 'Result>(primary: BuildRowGetter<'Primary>, result: BuildRowGetter<'Result>) = 
+    static member PKeyed<'Primary, 'Result>(primary: RowSpecifier<'Primary>, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.PKeyed<'Primary, 'Result>(primary, result))
 
     /// <summary>
@@ -328,7 +328,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member FKeyed<'Foreign, 'Result>(foreignName: string, result: BuildRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreignName: string, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreignName, result))
 
     /// <summary>
@@ -340,7 +340,7 @@ type Results() =
     /// <param name="result">
     /// The result builder.
     /// </param>
-    static member FKeyed<'Foreign, 'Result>(foreign: BuildRowGetter<'Foreign>, result: BuildRowGetter<'Result>) = 
+    static member FKeyed<'Foreign, 'Result>(foreign: RowSpecifier<'Foreign>, result: RowSpecifier<'Result>) = 
         Results.Seq(Rows.FKeyed<'Foreign, 'Result>(foreign, result))
 
     /// <summary>
@@ -352,7 +352,7 @@ type Results() =
     /// <param name="builder2">
     /// Second source result builder.
     /// </param>
-    static member Multiple<'Result1, 'Result2>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>): BuildResultReader<'Result1 * 'Result2> = 
+    static member Multiple<'Result1, 'Result2>(builder1: ResultSpecifier<'Result1>, builder2: ResultSpecifier<'Result2>): ResultSpecifier<'Result1 * 'Result2> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let reader1 = builder1(provider, prototype)
             advance [ typeof<'Result1>; typeof<'Result2> ] prototype
@@ -379,8 +379,8 @@ type Results() =
     /// <param name="builder3">
     /// Third source result builder.
     /// </param>
-    static member Multiple<'Result1, 'Result2, 'Result3>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>, builder3: BuildResultReader<'Result3>)
-                    : BuildResultReader<'Result1 * 'Result2 * 'Result3> = 
+    static member Multiple<'Result1, 'Result2, 'Result3>(builder1: ResultSpecifier<'Result1>, builder2: ResultSpecifier<'Result2>, builder3: ResultSpecifier<'Result3>)
+                    : ResultSpecifier<'Result1 * 'Result2 * 'Result3> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3> ]
             let reader1 = builder1(provider, prototype)
@@ -416,8 +416,8 @@ type Results() =
     /// <param name="builder4">
     /// Fourth source result builder.
     /// </param>
-    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4>(builder1: BuildResultReader<'Result1>, builder2: BuildResultReader<'Result2>, builder3: BuildResultReader<'Result3>, builder4: BuildResultReader<'Result4>)
-                    : BuildResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4> = 
+    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4>(builder1: ResultSpecifier<'Result1>, builder2: ResultSpecifier<'Result2>, builder3: ResultSpecifier<'Result3>, builder4: ResultSpecifier<'Result4>)
+                    : ResultSpecifier<'Result1 * 'Result2 * 'Result3 * 'Result4> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4> ]
             let reader1 = builder1(provider, prototype)
@@ -461,12 +461,12 @@ type Results() =
     /// Fifth source result builder.
     /// </param>
     static member Multiple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(
-            builder1: BuildResultReader<'Result1>, 
-            builder2: BuildResultReader<'Result2>, 
-            builder3: BuildResultReader<'Result3>, 
-            builder4: BuildResultReader<'Result4>, 
-            builder5: BuildResultReader<'Result5>)
-            : BuildResultReader<'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
+            builder1: ResultSpecifier<'Result1>, 
+            builder2: ResultSpecifier<'Result2>, 
+            builder3: ResultSpecifier<'Result3>, 
+            builder4: ResultSpecifier<'Result4>, 
+            builder5: ResultSpecifier<'Result5>)
+            : ResultSpecifier<'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
             let advance = advance [ typeof<'Result1>; typeof<'Result2>; typeof<'Result3>; typeof<'Result4>; typeof<'Result5> ]
             let reader1 = builder1(provider, prototype)
@@ -504,7 +504,7 @@ type Results() =
     /// <param name="source">
     /// The source result builder.
     /// </param>
-    static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: BuildResultReader<'Source>): BuildResultReader<'Target> = 
+    static member Map<'Source, 'Target>(mapper: 'Source -> 'Target) (source: ResultSpecifier<'Source>): ResultSpecifier<'Target> = 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let srcReader = source(provider, prototype)
             { new IResultReader<'Target> with
@@ -523,11 +523,11 @@ type Results() =
     /// Function consolidating master value ('Result1) with sequence of detail values ('Result2).
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 seq -> 'Result1): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
-        fun (builder2: BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
-            (builder1: BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+        fun (builder2: ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>) 
+            (builder1: ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>) 
             (provider: IRowGetterProvider, prototype: IDataReader) ->
                 let reader1 = builder1(provider, prototype)
                 advance [ typeof<'Key * 'Result1>; typeof<'Key * 'Result2> ] prototype
@@ -552,9 +552,9 @@ type Results() =
     /// Function consolidating master value ('Result1) with list of detail values ('Result2).
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 list -> 'Result1): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge(r1, r2s |> Seq.toList))
 
     /// <summary>
@@ -565,9 +565,9 @@ type Results() =
     /// Function consolidating master value ('Result1) with array of detail values ('Result2).
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(merge: 'Result1 * 'Result2 array -> 'Result1): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge(r1, r2s |> Seq.toArray))
 
     static member private GetPropChain(expr: Expr) = 
@@ -604,9 +604,9 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 list>): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
 
@@ -618,9 +618,9 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result2 array>): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toArray))
 
@@ -632,9 +632,9 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>(target: Expr<'Result2 seq>): 
-            BuildResultReader<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
-            BuildResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
 
@@ -684,7 +684,7 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Group ([<ReflectedDefinition>] target: Expr<'Result2 list>): 
-            BuildResultReader<('Result1 * 'Result2 option) list> -> BuildResultReader<'Result1 list> =
+            ResultSpecifier<('Result1 * 'Result2 option) list> -> ResultSpecifier<'Result1 list> =
         let merge = Results.GenerateMerge(target)
         fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
             Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult
@@ -696,7 +696,7 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Group ([<ReflectedDefinition>] target: Expr<'Result2 array>):
-            BuildResultReader<('Result1 * 'Result2 option) array> -> BuildResultReader<'Result1 array> =
+            ResultSpecifier<('Result1 * 'Result2 option) array> -> ResultSpecifier<'Result1 array> =
         let merge = Results.GenerateMerge(target)
         fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
             Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult
@@ -708,7 +708,7 @@ type Results() =
     /// The expression specifying a path to a property that should be updated with details values.
     /// </param>
     static member Group (target: Expr<'Result2 seq>):
-            BuildResultReader<('Result1 * 'Result2 option) seq> -> BuildResultReader<'Result1 seq> =
+            ResultSpecifier<('Result1 * 'Result2 option) seq> -> ResultSpecifier<'Result1 seq> =
         let merge = Results.GenerateMerge<'Result2 seq, 'Result1>(target)
         fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
             Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
@@ -731,7 +731,7 @@ module MultipleResults =
     /// <param name="resultBuilder">
     /// The ordinary result builder to be appliied.
     /// </param>
-    let (<*>) (multiple: BuildResultReader<'Result -> 'Next>) (resultBuilder: BuildResultReader<'Result>): BuildResultReader<'Next> =        
+    let (<*>) (multiple: ResultSpecifier<'Result -> 'Next>) (resultBuilder: ResultSpecifier<'Result>): ResultSpecifier<'Next> =        
         
         let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
             (combiner :?> IAdvancer).Advance(reader)

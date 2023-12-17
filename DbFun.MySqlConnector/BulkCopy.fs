@@ -12,7 +12,7 @@ module BulkCopyParamsImpl =
 
     type IParamSetterProvider = GenericSetters.ISetterProvider<DataTable, DataRow>
 
-    type BuildParamSetter<'Arg> = IParamSetterProvider * DataTable -> IParamSetter<'Arg>
+    type ParamSpecifier<'Arg> = IParamSetterProvider * DataTable -> IParamSetter<'Arg>
 
     type IBuilder = GenericSetters.IBuilder<DataTable, DataRow>
 
@@ -104,7 +104,7 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
     /// <param name="setterBuilder">
     /// The parameter builder.
     /// </param>
-    member __.WriteToServer<'Record>(setterBuilder: BuildParamSetter<'Record>, ?tableName: string): 'Record seq -> DbCall<MySqlBulkCopyResult> = 
+    member __.WriteToServer<'Record>(setterBuilder: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<MySqlBulkCopyResult> = 
         let dataTable = new DataTable()
         let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders)
         let setter = setterBuilder(provider, dataTable)

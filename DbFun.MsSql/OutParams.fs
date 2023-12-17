@@ -50,7 +50,7 @@ type OutParams() =
     /// <param name="name">
     /// The return parameter name.
     /// </param>
-    static member Return(name: string): BuildOutParamGetter<int> = 
+    static member Return(name: string): OutParamSpecifier<int> = 
         fun (provider, _) -> returnBuilder.Build<int>(name, provider, ())
 
     /// <summary>
@@ -62,7 +62,7 @@ type OutParams() =
     /// <param name="argName">
     /// The name or record prefix of output parameters.
     /// </param>
-    static member ReturnAnd<'Arg>(retName: string, ?argName: string): BuildOutParamGetter<int * 'Arg> =
+    static member ReturnAnd<'Arg>(retName: string, ?argName: string): OutParamSpecifier<int * 'Arg> =
         fun (provider, _) -> 
             let retp = fun (provider, ()) -> returnBuilder.Build<int>(retName, provider, ())
             let outp = OutParams.Auto(?name = argName)

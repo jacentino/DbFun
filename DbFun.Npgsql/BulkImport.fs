@@ -11,7 +11,7 @@ module BulkImportParamsImpl =
 
     type IParamSetterProvider = GenericSetters.ISetterProvider<string list ref, NpgsqlBinaryImporter>
 
-    type BuildParamSetter<'Arg> = IParamSetterProvider * string list ref -> IParamSetter<'Arg>
+    type ParamSpecifier<'Arg> = IParamSetterProvider * string list ref -> IParamSetter<'Arg>
 
     type IBuilder = GenericSetters.IBuilder<string list ref, NpgsqlBinaryImporter>
 
@@ -100,7 +100,7 @@ type BulkImportBuilder(?config: BulkImportConfig) =
     /// <param name="setterBuilder">
     /// The parameter builder.
     /// </param>
-    member __.WriteToServer<'Record>(setterBuilder: BuildParamSetter<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member __.WriteToServer<'Record>(setterBuilder: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
         let fieldNames = ref List.empty<string>
         let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders)
         let setter = setterBuilder(provider, fieldNames)

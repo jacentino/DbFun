@@ -8,7 +8,7 @@ type IParamSetter<'Arg> = GenericSetters.ISetter<IDbCommand, 'Arg>
 
 type IParamSetterProvider = GenericSetters.ISetterProvider<unit, IDbCommand>
 
-type BuildParamSetter<'Arg> = GenericSetters.BuildSetter<unit, IDbCommand, 'Arg>
+type ParamSpecifier<'Arg> = GenericSetters.SetterSpecifier<unit, IDbCommand, 'Arg>
 
 module ParamsImpl = 
 

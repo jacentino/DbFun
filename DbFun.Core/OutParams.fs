@@ -8,7 +8,7 @@ type IOutParamGetter<'Result> = GenericGetters.IGetter<IDbCommand, 'Result>
 
 type IOutParamGetterProvider = GenericGetters.IGetterProvider<unit, IDbCommand>
 
-type BuildOutParamGetter<'Result> = IOutParamGetterProvider * unit -> IOutParamGetter<'Result>
+type OutParamSpecifier<'Result> = IOutParamGetterProvider * unit -> IOutParamGetter<'Result>
 
 module OutParamsImpl = 
 

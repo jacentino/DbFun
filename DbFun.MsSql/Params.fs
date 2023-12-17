@@ -201,7 +201,7 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedSeq<'Record>(?name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
+    static member TableValuedSeq<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(defaultArg name "", tvpName)
 
     /// <summary>
@@ -213,7 +213,7 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedList<'Record>(?name: string, ?tvpName: string): BuildParamSetter<'Record list> =
+    static member TableValuedList<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(defaultArg name "", tvpName)
 
     /// <summary>
@@ -225,7 +225,7 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedArray<'Record>(?name: string, ?tvpName: string): BuildParamSetter<'Record array> =
+    static member TableValuedArray<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(defaultArg name "", tvpName)
 
     /// <summary>
@@ -240,7 +240,7 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedSeq<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, ?name: string, ?tvpName: string): BuildParamSetter<'Record seq> =
+    static member TableValuedSeq<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record seq> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(createTvpSetter, defaultArg name "", tvpName)
 
     /// <summary>
@@ -255,7 +255,7 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedList<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, ?name: string, ?tvpName: string): BuildParamSetter<'Record list> =
+    static member TableValuedList<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(createTvpSetter, defaultArg name "", tvpName)
 
     /// <summary>
@@ -270,5 +270,5 @@ type Params() =
     /// <param name="tvpName">
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
-    static member TableValuedArray<'Record>(createTvpSetter: BuildTVParamSetter<'Record>, ?name: string, ?tvpName: string): BuildParamSetter<'Record array> =
+    static member TableValuedArray<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
         fun (provider, _) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(createTvpSetter, defaultArg name "", tvpName)
