@@ -1,8 +1,6 @@
 USE [master]
 GO
 CREATE DATABASE [DbFunTests]
- CONTAINMENT = NONE
- ON  PRIMARY 
 GO
 ALTER DATABASE [DbFunTests] SET COMPATIBILITY_LEVEL = 150
 GO
@@ -124,7 +122,7 @@ CREATE TYPE [dbo].[UserProfile] AS TABLE(
 	[id] [nvarchar](20) NOT NULL,
 	[name] [nvarchar](80) NOT NULL,
 	[email] [nvarchar](200) NOT NULL,
-	[avatar] [varbinary](max) NOT NULL
+	[avatar] [varbinary](max) NULL
 )
 GO
 SET ANSI_NULLS ON
