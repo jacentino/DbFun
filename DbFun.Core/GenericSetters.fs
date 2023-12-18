@@ -535,13 +535,17 @@ module GenericSetters =
 
 
     let getDefaultBuilders(): IBuilder<'Prototype, 'DbObject> list = 
+#if !DOTNET_FRAMEWORK
         let dateOnlyToDateTime (dtOnly: DateOnly) = dtOnly.ToDateTime(TimeOnly.MinValue)
         let timeOnlyToTimeSpan (tmOnly: TimeOnly) = tmOnly.ToTimeSpan()
+#endif
         [
+#if !DOTNET_FRAMEWORK
             Converter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
             Converter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
             SeqItemConverter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
             SeqItemConverter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
+#endif
             UnionBuilder<'Prototype, 'DbObject>()
             UnionSeqBuilder<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
@@ -627,6 +631,7 @@ module GenericSetters =
         static member DateTime (name: string): SetterSpecifier<'Prototype, 'DbObject, DateTime> = 
             fun (provider, prototype) -> provider.Setter<DateTime>(name, prototype)
 
+#if !DOTNET_FRAMEWORK
         /// <summary>
         /// Creates a builder handling DateOnly values.
         /// </summary>
@@ -644,6 +649,7 @@ module GenericSetters =
         /// </param>
         static member TimeOnly (name: string): SetterSpecifier<'Prototype, 'DbObject, TimeOnly> = 
             fun (provider, prototype) -> provider.Setter<TimeOnly>(name, prototype)
+#endif
 
         /// <summary>
         /// Creates a builder handling decimal values.

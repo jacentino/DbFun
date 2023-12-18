@@ -228,6 +228,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a one arg query function based on command template.
     /// </summary>
+    /// <param name="template">
+    /// The template expansion function.
+    /// </param>
     /// <param name="paramSpecifier">
     /// The parameter builder.
     /// </param>
@@ -239,12 +242,6 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
-    /// </param>
-    /// <param name="resultSpecifier">
-    /// The result builder.
-    /// </param>
-    /// <param name="template">
-    /// The template expansion function.
     /// </param>
     member __.TemplatedSql (
             template: 'Params option -> string,
@@ -325,6 +322,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="paramSpecifier">
     /// The parameter builder.
     /// </param>
@@ -336,9 +336,6 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     /// <param name="resultSpecifier">
     /// The result builder.
-    /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
     /// </param>
     member this.Sql(
             commandText: string,
@@ -352,6 +349,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="name">
     /// The parameter name.
     /// </param>
@@ -364,9 +364,6 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params, 'Result> (
             commandText: string,
             name: string, resultSpecifier: ResultSpecifier<'Result>,
@@ -378,20 +375,20 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="argName">
     /// The parameter name.
     /// </param>
-    /// </summary>
     /// <param name="resultName">
     /// The result column name.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
     /// <param name="sourceLine">
     /// The calling source line for diagnostic purposes.
-    /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
     /// </param>
     member this.Sql<'Params, 'Result> (
             commandText: string,
@@ -404,6 +401,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
     /// </param>
@@ -418,9 +418,6 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </param>
     /// <param name="resultSpecifier">
     /// The result builder.
-    /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
     /// </param>
     member __.Sql (
         commandText: string,
@@ -456,6 +453,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -471,9 +471,6 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
             commandText: string,
             name1: string, name2: string, 
@@ -486,6 +483,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
     /// </param>
@@ -504,46 +504,47 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
-    member __.Sql (paramSpecifier1: ParamSpecifier<'Params1>, 
-                   paramSpecifier2: ParamSpecifier<'Params2>,
-                   paramSpecifier3: ParamSpecifier<'Params3>,
-                   resultSpecifier: ResultSpecifier<'Result>,
-                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> = 
-        fun (commandText: string) ->
-            try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter1 = paramSpecifier1(provider, ())
-                let paramSetter2 = paramSpecifier2(provider, ())
-                let paramSetter3 = paramSpecifier3(provider, ())
+    member __.Sql (
+            commandText: string,
+            paramSpecifier1: ParamSpecifier<'Params1>, 
+            paramSpecifier2: ParamSpecifier<'Params2>,
+            paramSpecifier3: ParamSpecifier<'Params3>,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> = 
+        try                        
+            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
+            let paramSetter1 = paramSpecifier1(provider, ())
+            let paramSetter2 = paramSpecifier2(provider, ())
+            let paramSetter3 = paramSpecifier3(provider, ())
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
-                let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
+            let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
+            let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-                let setArtificial(command: IDbCommand) = 
-                    paramSetter1.SetArtificial(command)
-                    paramSetter2.SetArtificial(command)
-                    paramSetter3.SetArtificial(command)                    
+            let setArtificial(command: IDbCommand) = 
+                paramSetter1.SetArtificial(command)
+                paramSetter2.SetArtificial(command)
+                paramSetter3.SetArtificial(command)                    
 
-                let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
-                let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
-                    paramSetter1.SetValue(parameters1, command) 
-                    paramSetter2.SetValue(parameters2, command)
-                    paramSetter3.SetValue(parameters3, command)
+            let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
+                paramSetter1.SetValue(parameters1, command) 
+                paramSetter2.SetValue(parameters2, command)
+                paramSetter3.SetValue(parameters3, command)
 
-                fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
-                    executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3))
-            with ex ->
-                handleException(sourcePath, sourceLine, ex)
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
+                executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3))
+        with ex ->
+            handleException(sourcePath, sourceLine, ex)
 
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -562,20 +563,21 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Result> (
+            commandText: string,
             name1: string, name2: string, name3: string, 
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), resultSpecifier, sourcePath, sourceLine)
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
     /// </param>
@@ -597,50 +599,51 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
-    member __.Sql (paramSpecifier1: ParamSpecifier<'Params1>, 
-                   paramSpecifier2: ParamSpecifier<'Params2>,
-                   paramSpecifier3: ParamSpecifier<'Params3>,
-                   paramSpecifier4: ParamSpecifier<'Params4>,
-                   resultSpecifier: ResultSpecifier<'Result>,
-                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> = 
-        fun (commandText: string) ->
-            try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter1 = paramSpecifier1(provider, ())
-                let paramSetter2 = paramSpecifier2(provider, ())
-                let paramSetter3 = paramSpecifier3(provider, ())
-                let paramSetter4 = paramSpecifier4(provider, ())
+    member __.Sql (
+            commandText: string,
+            paramSpecifier1: ParamSpecifier<'Params1>, 
+            paramSpecifier2: ParamSpecifier<'Params2>,
+            paramSpecifier3: ParamSpecifier<'Params3>,
+            paramSpecifier4: ParamSpecifier<'Params4>,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> = 
+        try                        
+            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
+            let paramSetter1 = paramSpecifier1(provider, ())
+            let paramSetter2 = paramSpecifier2(provider, ())
+            let paramSetter3 = paramSpecifier3(provider, ())
+            let paramSetter4 = paramSpecifier4(provider, ())
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
-                let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
+            let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
+            let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-                let setArtificial(command: IDbCommand) = 
-                    paramSetter1.SetArtificial(command)
-                    paramSetter2.SetArtificial(command)
-                    paramSetter3.SetArtificial(command)                    
-                    paramSetter4.SetArtificial(command)                    
+            let setArtificial(command: IDbCommand) = 
+                paramSetter1.SetArtificial(command)
+                paramSetter2.SetArtificial(command)
+                paramSetter3.SetArtificial(command)                    
+                paramSetter4.SetArtificial(command)                    
 
-                let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
-                let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
-                    paramSetter1.SetValue(parameters1, command) 
-                    paramSetter2.SetValue(parameters2, command)
-                    paramSetter3.SetValue(parameters3, command)
-                    paramSetter4.SetValue(parameters4, command)
+            let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
+                paramSetter1.SetValue(parameters1, command) 
+                paramSetter2.SetValue(parameters2, command)
+                paramSetter3.SetValue(parameters3, command)
+                paramSetter4.SetValue(parameters4, command)
 
-                fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
-                    executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
-            with ex ->
-                handleException(sourcePath, sourceLine, ex)
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
+                executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
+        with ex ->
+            handleException(sourcePath, sourceLine, ex)
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -662,16 +665,14 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
+            commandText: string,
             name1: string, name2: string, name3: string, name4: string, 
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                  resultSpecifier,
                  sourcePath, sourceLine)
@@ -679,6 +680,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with five curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
     /// </param>
@@ -703,54 +707,55 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
-    member __.Sql (paramSpecifier1: ParamSpecifier<'Params1>, 
-                   paramSpecifier2: ParamSpecifier<'Params2>,
-                   paramSpecifier3: ParamSpecifier<'Params3>,
-                   paramSpecifier4: ParamSpecifier<'Params4>,
-                   paramSpecifier5: ParamSpecifier<'Params5>,
-                   resultSpecifier: ResultSpecifier<'Result>,
-                   [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
-                   [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                   : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> = 
-        fun (commandText: string) ->
-            try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter1 = paramSpecifier1(provider, ())
-                let paramSetter2 = paramSpecifier2(provider, ())
-                let paramSetter3 = paramSpecifier3(provider, ())
-                let paramSetter4 = paramSpecifier4(provider, ())
-                let paramSetter5 = paramSpecifier5(provider, ())
+    member __.Sql (
+            commandText: string,
+            paramSpecifier1: ParamSpecifier<'Params1>, 
+            paramSpecifier2: ParamSpecifier<'Params2>,
+            paramSpecifier3: ParamSpecifier<'Params3>,
+            paramSpecifier4: ParamSpecifier<'Params4>,
+            paramSpecifier5: ParamSpecifier<'Params5>,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> = 
+        try                        
+            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
+            let paramSetter1 = paramSpecifier1(provider, ())
+            let paramSetter2 = paramSpecifier2(provider, ())
+            let paramSetter3 = paramSpecifier3(provider, ())
+            let paramSetter4 = paramSpecifier4(provider, ())
+            let paramSetter5 = paramSpecifier5(provider, ())
 
-                let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
-                let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
+            let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
+            let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-                let setArtificial(command: IDbCommand) = 
-                    paramSetter1.SetArtificial(command)
-                    paramSetter2.SetArtificial(command)
-                    paramSetter3.SetArtificial(command)                    
-                    paramSetter4.SetArtificial(command)                    
-                    paramSetter5.SetArtificial(command)                    
+            let setArtificial(command: IDbCommand) = 
+                paramSetter1.SetArtificial(command)
+                paramSetter2.SetArtificial(command)
+                paramSetter3.SetArtificial(command)                    
+                paramSetter4.SetArtificial(command)                    
+                paramSetter5.SetArtificial(command)                    
 
-                let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
-                let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
-                    paramSetter1.SetValue(parameters1, command) 
-                    paramSetter2.SetValue(parameters2, command)
-                    paramSetter3.SetValue(parameters3, command)
-                    paramSetter4.SetValue(parameters4, command)
-                    paramSetter5.SetValue(parameters5, command)
+            let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
+                paramSetter1.SetValue(parameters1, command) 
+                paramSetter2.SetValue(parameters2, command)
+                paramSetter3.SetValue(parameters3, command)
+                paramSetter4.SetValue(parameters4, command)
+                paramSetter5.SetValue(parameters5, command)
 
-                fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
-                    executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
-            with ex ->
-                handleException(sourcePath, sourceLine, ex)
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
+                executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
+        with ex ->
+            handleException(sourcePath, sourceLine, ex)
 
     /// <summary>
     /// Builds a query function with five curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -775,16 +780,15 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
+            commandText: string,
             name1: string, name2: string, name3: string, name4: string, name5: string, 
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+        this.Sql(commandText, 
+                 Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                  Params.Auto<'Params5>(name5), 
                  resultSpecifier,
@@ -793,23 +797,23 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="argName1">
     /// The first parameter name.
     /// </param>
     /// <param name="argName2">
     /// The second parameter name.
     /// </param>
-    /// </summary>
     /// <param name="resultName">
     /// The result column name.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
-    /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
             commandText: string,
@@ -822,6 +826,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with three curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="argName1">
     /// The first parameter name.
     /// </param>
@@ -831,28 +838,29 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="argName3">
     /// The third parameter name.
     /// </param>
-    /// </summary>
     /// <param name="resultName">
     /// The result column name.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Result> (
+            commandText: string,
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+        this.Sql(commandText, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="argName1">
     /// The first parameter name.
     /// </param>
@@ -862,28 +870,27 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="argName3">
     /// The third parameter name.
     /// </param>
-    /// <param name="argName3">
+    /// <param name="argName4">
     /// The fourth parameter name.
     /// </param>
-    /// </summary>
     /// <param name="resultName">
     /// The result column name.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
+            commandText: string,
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] argName4: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+        this.Sql(commandText, 
+                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
                  Results.Auto<'Result>(resultName), 
                  sourcePath, sourceLine) 
@@ -891,6 +898,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
     /// </summary>
+    /// <param name="commandText">
+    /// The SQL command text.
+    /// </param>
     /// <param name="argName1">
     /// The first parameter name.
     /// </param>
@@ -900,39 +910,41 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="argName3">
     /// The third parameter name.
     /// </param>
-    /// <param name="argName3">
+    /// <param name="argName4">
     /// The fourth parameter name.
     /// </param>
-    /// </summary>
+    /// <param name="argName5">
+    /// The fifth parameter name.
+    /// </param>
     /// <param name="resultName">
     /// The result column name.
+    /// </param>
     /// <param name="sourcePath">
     /// The calling source path for diagnostic purposes.
     /// </param>
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
     /// </param>
-    /// <param name="commandText">
-    /// The SQL command text.
-    /// </param>
     member this.Sql<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
+            commandText: string,
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, argName4: string, [<Optional>] argName5: string, 
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : string -> 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
-        this.Sql(Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+        this.Sql(commandText, 
+                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
                  Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
                  Params.Auto<'Params5>(argName5), 
                  Results.Auto<'Result>(resultName), 
                  sourcePath, sourceLine) 
 
-    /// <param name="procName">
-    /// The stored procedure name.
-    /// </param>
     /// <summary>
     /// Builds a one arg query function invoking stored procedure.
     /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
     /// <param name="paramSpecifier">
     /// The parameter builder.
     /// </param>
@@ -1193,7 +1205,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="resultSpecifier">
     /// The result builder.
     /// </param>
-    member __.Proc (commandText: string,
+    member __.Proc (procName: string,
                     paramSpecifier1: ParamSpecifier<'Params1>,
                     paramSpecifier2: ParamSpecifier<'Params2>,
                     paramSpecifier3: ParamSpecifier<'Params3>,
@@ -1220,7 +1232,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, commandText, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, command)
@@ -1228,7 +1240,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter3.SetValue(parameters3, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
-                executeProcedure(provider, commandText, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3))
+                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -1279,6 +1291,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// The first parameter name.
     /// </param>
     /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
     /// The second parameter name.
     /// </param>
     /// <param name="sourcePath">

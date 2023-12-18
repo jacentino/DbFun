@@ -54,7 +54,7 @@ module GenericGetters =
         /// <param name="path">
         /// The property path of the overriden field.
         /// </param>
-        /// <param name="setter"></param>
+        /// <param name="builder"></param>
         new ([<ReflectedDefinition>] path: Expr<'Result>, builder: IGetterProvider<'Prototype, 'DbObject> * 'Prototype -> IGetter<'DbObject, 'Result>) = 
             Override(getPropChain(path), builder)
 
@@ -441,8 +441,10 @@ module GenericGetters =
     let getDefaultBuilders(): IBuilder<'Prototype, 'DbObject> list = 
         [
             UnitBuilder<'Prototype, 'DbObject>()
+#if !DOTNET_FRAMEWORK
             Converter<'Prototype, 'DbObject, DateTime, DateOnly>(fun (dateTime: DateTime) -> DateOnly.FromDateTime(dateTime))
             Converter<'Prototype, 'DbObject, TimeSpan, TimeOnly>(fun (timeSpan: TimeSpan) -> TimeOnly.FromTimeSpan(timeSpan))
+#endif
             UnionBuilder<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
             EnumConverter<'Prototype, 'DbObject, int>()
@@ -524,6 +526,7 @@ module GenericGetters =
         static member DateTime(name: string): GetterSpecifier<'Prototype, 'DbObject, DateTime> = 
             fun (provider, prototype) -> provider.Getter<DateTime>(name, prototype)
 
+#if !DOTNET_FRAMEWORK
         /// <summary>
         /// Creates a builder handling DateOnly values.
         /// </summary>
@@ -541,6 +544,7 @@ module GenericGetters =
         /// </param>
         static member TimeOnly(name: string): GetterSpecifier<'Prototype, 'DbObject, TimeOnly> = 
             fun (provider, prototype) -> provider.Getter<TimeOnly>(name, prototype)
+#endif
 
         /// <summary>
         /// Creates a builder handling Decimal values.

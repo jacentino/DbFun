@@ -75,8 +75,8 @@ type DbCall() =
     /// <summary>
     /// Wraps database computation in a transaction of a certain isolation level.
     /// </summary>
-    /// <param name="dbCall">
-    /// The source dbCall value.
+    /// <param name="isolationLevel">
+    /// The transaction isolation level.
     /// </param>
     static member InTransactionWith (isolationLevel: IsolationLevel): DbCall<'T> -> DbCall<'T> = 
         wrapInTransaction (Some isolationLevel)
