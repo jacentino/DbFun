@@ -23,9 +23,9 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MySql.IntegrationTest
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.Sqlite.IntegrationTests", "DbFun.Sqlite.IntegrationTests\DbFun.Sqlite.IntegrationTests.fsproj", "{7BDDF172-0C11-4F02-A7A3-3621621D03DF}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.MySqlConnector.IntegrationTests", "DbFun.MySqlConnector.IntegrationTests\DbFun.MySqlConnector.IntegrationTests.fsproj", "{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MySqlConnector.IntegrationTests", "DbFun.MySqlConnector.IntegrationTests\DbFun.MySqlConnector.IntegrationTests.fsproj", "{96CEDB98-83AA-4A34-B4B9-1DD661E9975D}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.MySqlConnector", "DbFun.MySqlConnector\DbFun.MySqlConnector.fsproj", "{98AD61A2-F003-454E-BE96-49DF22303002}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DbFun.MySqlConnector", "DbFun.MySqlConnector\DbFun.MySqlConnector.fsproj", "{98AD61A2-F003-454E-BE96-49DF22303002}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

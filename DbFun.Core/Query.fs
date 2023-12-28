@@ -176,9 +176,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 raise <| AggregateException("One or more exceptions occured when compiling queries.", 
                             errorLog.Value 
                             |> List.rev
-                            |> List.map (fun (line, source, ex) -> CompileTimeException($"Cannot compile query in {source}, line: {line}", ex) :> exn))
+                            |> List.map (fun (line, source, ex) -> CompileTimeException(sprintf "Cannot compile query in %s, line: %d" source line, ex) :> exn))
         | None ->
-            raise <| CompileTimeException($"Cannot compile query in {sourcePath}, line: {sourceLine}", ex)
+            raise <| CompileTimeException(sprintf "Cannot compile query in %s, line: %d" sourcePath sourceLine, ex)
 
     /// <summary>
     /// Creates query builder object with default configuration

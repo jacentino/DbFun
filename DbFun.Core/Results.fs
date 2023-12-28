@@ -16,6 +16,15 @@ type ResultSpecifier<'Result> = IRowGetterProvider * IDataReader -> IResultReade
 
 type Results() = 
 
+#if DOTNET_FRAMEWORK
+    static let readOnlyDict (l: ('k * 'v) seq) = 
+        let dict = System.Collections.Generic.Dictionary<'k, 'v>()
+        for k, v in l do
+            dict.[k] <- v
+        dict
+#endif
+  
+
     static let advance (resultTypes: Type seq) (reader: IDataReader) = 
         if reader <> null && not (reader.NextResult()) then
             failwithf "Not enough results when reading %A" resultTypes
@@ -514,6 +523,7 @@ type Results() =
                         return mapper(result)
                     }
             }
+
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
