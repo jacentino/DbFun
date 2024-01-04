@@ -102,8 +102,11 @@ type QueryConfig =
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
 
-        member this.HandleCollections() = 
-            { this with Common = this.Common.HandleCollections() }
+        /// <summary>
+        /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
+        /// </summary>
+        member this.HandleCollectionParams() = 
+            { this with Common = this.Common.HandleCollectionParams() }
 
 /// <summary>
 /// Provides methods creating various query functions.
@@ -146,3 +149,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     member this.DisablePrototypeCalls() = 
         QueryBuilder({ this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
+    /// <summary>
+    /// Allows to handle collections by generating parameters for each item with name modified by adding item index.
+    /// </summary>
+    member __.HandleCollectionParams() = 
+        QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)

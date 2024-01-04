@@ -136,31 +136,67 @@ module ParamsImpl =
 type Params() = 
     inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()
 
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The sequence item type specifier.
+    /// </param>
     static member Seq (itemSpecifier: ParamSpecifier<'Item>) = 
         fun (provider: IParamSetterProvider, prototype: unit) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The sequence item base name.
+    /// </param>
     static member Seq<'Item> (?name: string) = 
         fun (provider: IParamSetterProvider, _: unit) ->
             let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+    /// <summary>
+    /// Creates a builder handling list parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The list item type specifier.
+    /// </param>
     static member List (itemSpecifier: ParamSpecifier<'Item>) = 
         fun (provider: IParamSetterProvider, prototype: unit) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The list item name.
+    /// </param>
     static member List<'Item> (?name: string) = 
         fun (provider: IParamSetterProvider, _: unit) ->
             let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+    /// <summary>
+    /// Creates a builder handling array parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The array item type specifier.
+    /// </param>
     static member Array (itemSpecifier: ParamSpecifier<'Item>) = 
         fun (provider: IParamSetterProvider, prototype: unit) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+    /// <summary>
+    /// Creates a builder handling array parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The array item name.
+    /// </param>
     static member Array<'Item> (?name: string) = 
         fun (provider: IParamSetterProvider, _: unit) ->
             let itemSetter = provider.Setter<'Item>(defaultArg name "", ())

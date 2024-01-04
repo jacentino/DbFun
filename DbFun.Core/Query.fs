@@ -111,7 +111,10 @@ type QueryConfig =
                 RowBuilders = RowsImpl.NoPrototypeColumnBuilder() :: this.RowBuilders
             }
 
-        member this.HandleCollections() = 
+        /// <summary>
+        /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
+        /// </summary>
+        member this.HandleCollectionParams() = 
             { this with ParamBuilders = ParamsImpl.SequenceIndexingBuilder() :: this.ParamBuilders }
 
 /// <summary>
@@ -216,6 +219,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// </summary>
     member __.DisablePrototypeCalls() = 
         QueryBuilder(config.DisablePrototypeCalls(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Allows to handle collections by generating parameters for each item with name modified by adding item index.
+    /// </summary>
+    member __.HandleCollectionParams() = 
+        QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The list of compile time errors.

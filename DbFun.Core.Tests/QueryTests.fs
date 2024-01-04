@@ -547,7 +547,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollections())
+        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
                
         let query = 
             qb.TemplatedSql(
@@ -643,7 +643,7 @@ module QueryTests =
 
         let config = createConfig(createConnection)
                         .AddParamConverter(fun (UserId id) -> id)
-                        .HandleCollections()
+                        .HandleCollectionParams()
 
         let qb = QueryBuilder(config)
                
