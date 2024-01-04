@@ -24,11 +24,11 @@ module BulkImportParamsImpl =
 
             member this.Build(name: string, _: IParamSetterProvider, names: string list ref): IParamSetter<'Arg> = 
                 { new IParamSetter<'Arg> with
-                      member __.SetValue(value: 'Arg, importer: NpgsqlBinaryImporter): unit = 
+                      member __.SetValue(value: 'Arg, _: int option, importer: NpgsqlBinaryImporter): unit = 
                           importer.Write(value)
-                      member __.SetNull(importer: NpgsqlBinaryImporter): unit = 
+                      member __.SetNull(_: int option, importer: NpgsqlBinaryImporter): unit = 
                           importer.WriteNull()
-                      member __.SetArtificial(_: NpgsqlBinaryImporter): unit = 
+                      member __.SetArtificial(_: int option, _: NpgsqlBinaryImporter): unit = 
                           names.Value <- name :: names.Value
                 }
 
@@ -37,8 +37,6 @@ module BulkImportParamsImpl =
 
 
     type Converter<'Source, 'Target> = GenericSetters.Converter<string list ref, NpgsqlBinaryImporter, 'Source, 'Target>
-
-    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<string list ref, NpgsqlBinaryImporter, 'Source, 'Target>
 
     type Configurator<'Config> = GenericSetters.Configurator<string list ref, NpgsqlBinaryImporter, 'Config>
 
@@ -66,7 +64,6 @@ type BulkImportConfig =
             { this with 
                 ParamBuilders = 
                     BulkImportParamsImpl.Converter<'Source, 'Target>(convert) :: 
-                    BulkImportParamsImpl.SeqItemConverter<'Source, 'Target>(convert) :: 
                     this.ParamBuilders 
             }
 
@@ -104,7 +101,7 @@ type BulkImportBuilder(?config: BulkImportConfig) =
         let fieldNames = ref List.empty<string>
         let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders)
         let setter = specifier(provider, fieldNames)
-        setter.SetArtificial(null)
+        setter.SetArtificial(None, null)
         let copyCommand = 
             sprintf "COPY %s (%s) FROM STDIN (FORMAT BINARY)" 
                 (defaultArg tableName (typeof<'Record>.Name.ToLower()))
@@ -116,7 +113,7 @@ type BulkImportBuilder(?config: BulkImportConfig) =
                 use importer = npgcon.BeginBinaryImport(copyCommand)
                 for r in records do
                     do! importer.StartRowAsync(token) |> Async.AwaitTask
-                    setter.SetValue(r, importer)
+                    setter.SetValue(r, None, importer)
                 do! importer.CompleteAsync(token).AsTask() |> Async.AwaitTask |> Async.Ignore
             }
             

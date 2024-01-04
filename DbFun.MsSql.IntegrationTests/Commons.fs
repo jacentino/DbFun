@@ -18,4 +18,6 @@ module Commons =
 
     let query = QueryBuilder(defaultConfig)
 
+    let tmplQuery = QueryBuilder(defaultConfig.HandleCollections())
+
     let run dbCall = DbCall.Run(createConnection, dbCall)

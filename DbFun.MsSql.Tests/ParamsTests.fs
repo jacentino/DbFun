@@ -46,7 +46,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.TableValuedSeq<User>("users")(builderParams)).SetValue([user], command)
+        (Params.TableValuedSeq<User>("users")(builderParams)).SetValue([user], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -81,7 +81,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Auto<User seq>("users")(builderParams)).SetValue([user], command)
+        (Params.Auto<User seq>("users")(builderParams)).SetValue([user], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -116,7 +116,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.TableValuedList<User>("users")(builderParams)).SetValue([user], command)
+        (Params.TableValuedList<User>("users")(builderParams)).SetValue([user], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -151,7 +151,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Auto<User list>("users")(builderParams)).SetValue([user], command)
+        (Params.Auto<User list>("users")(builderParams)).SetValue([user], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -186,7 +186,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.TableValuedArray<User>("users")(builderParams)).SetValue([| user |], command)
+        (Params.TableValuedArray<User>("users")(builderParams)).SetValue([| user |], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -221,7 +221,7 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.Auto<User array>("users")(builderParams)).SetValue([| user |], command)
+        (Params.Auto<User array>("users")(builderParams)).SetValue([| user |], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -257,7 +257,7 @@ module ParamsTests =
                 created = DateTime(2023, 1, 1)
             }
         let tvp = TVParams.Record<User>()
-        (Params.TableValuedSeq(tvp, "users")(builderParams)).SetValue([user], command)
+        (Params.TableValuedSeq(tvp, "users")(builderParams)).SetValue([user], None, command)
 
         let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
         Assert.Equal(3, record.GetInt32(0))
@@ -294,6 +294,6 @@ module ParamsTests =
                 email = "jacentino@gmail.com" 
                 created = DateTime(2023, 1, 1)
             }
-        (Params.TableValuedSeq<User>("users", "USER_TVP")(builderParams)).SetValue([user], command)
+        (Params.TableValuedSeq<User>("users", "USER_TVP")(builderParams)).SetValue([user], None, command)
 
         Assert.Equal("USER_TVP", command.Parameters.["users"].TypeName)

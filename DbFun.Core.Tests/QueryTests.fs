@@ -547,7 +547,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createProtoConnection)
+        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollections())
                
         let query = 
             qb.TemplatedSql(
@@ -641,12 +641,13 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
+        let config = createConfig(createConnection)
+                        .AddParamConverter(fun (UserId id) -> id)
+                        .HandleCollections()
 
         let qb = QueryBuilder(config)
                
-        let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")
-                
+        let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")                
 
         let createConnection() = 
             createConnectionMock

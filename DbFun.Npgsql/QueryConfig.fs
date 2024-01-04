@@ -1,6 +1,8 @@
 ﻿namespace DbFun.Npgsql.Builders
 
+open System
 open DbFun.Core.Builders
+open ParamsImpl
 
 [<AutoOpen>]
 module Config = 
@@ -9,4 +11,14 @@ module Config =
         /// Adds Postgres array support.
         /// </summary>
         member this.UsePostgresArrays() = 
-            { this with ParamBuilders = ParamsImpl.PostgresArrayBuilder() :: this.ParamBuilders }
+            let dateOnlyToDateTime (dtOnly: DateOnly) = dtOnly.ToDateTime(TimeOnly.MinValue)
+            let timeOnlyToTimeSpan (tmOnly: TimeOnly) = tmOnly.ToTimeSpan()
+            { this with 
+                ParamBuilders =             
+                    SeqItemConverter<_, _>(dateOnlyToDateTime) ::
+                    SeqItemConverter<_, _>(timeOnlyToTimeSpan) ::
+                    UnionSeqBuilder() ::
+                    EnumSeqConverter<char>() ::
+                    EnumSeqConverter<int>() ::
+                    ParamsImpl.PostgresArrayBuilder() :: 
+                    this.ParamBuilders }

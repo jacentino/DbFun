@@ -61,10 +61,8 @@ type QueryConfig =
         /// </param>
         member this.AddParamConverter(converter: 'Source -> 'Target) = 
             let tvpBuilder = ParamsImpl.Converter<'Source, 'Target>(converter) 
-            let tvpSeqBuilder = ParamsImpl.SeqItemConverter<'Source, 'Target>(converter) 
             { this with Common = this.Common.AddParamConverter(converter) }
                 .AddTvpBuilder(tvpBuilder)
-                .AddTvpBuilder(tvpSeqBuilder)
 
         /// <summary>
         /// Adds a configurator for parameter builders of types determined by canBuild function.
@@ -103,6 +101,9 @@ type QueryConfig =
         member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
+
+        member this.HandleCollections() = 
+            { this with Common = this.Common.HandleCollections() }
 
 /// <summary>
 /// Provides methods creating various query functions.

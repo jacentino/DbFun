@@ -17,7 +17,7 @@ module TableValuedParamsTests =
         let metadata = [| SqlMetaData("id", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<int>("id") (tvpProvider, record)
-        setter.SetValue(5, record)
+        setter.SetValue(5, None, record)
         Assert.Equal(5, record.GetInt32(0))
 
 
@@ -27,7 +27,7 @@ module TableValuedParamsTests =
         let metadata = [| SqlMetaData("status", SqlDbType.Char, 1) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Status>("status") (tvpProvider, record)
-        setter.SetValue(Status.Blocked, record)
+        setter.SetValue(Status.Blocked, None, record)
         Assert.Equal("B", record.GetString(0))
 
 
@@ -37,7 +37,7 @@ module TableValuedParamsTests =
         let metadata = [| SqlMetaData("role", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Role>("role") (tvpProvider, record)
-        setter.SetValue(Role.Regular, record)
+        setter.SetValue(Role.Regular, None, record)
         Assert.Equal(2, record.GetInt32(0))
 
 
@@ -47,7 +47,7 @@ module TableValuedParamsTests =
         let metadata = [| SqlMetaData("access", SqlDbType.VarChar, 2) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Access>("access") (tvpProvider, record)
-        setter.SetValue(Access.ReadWrite, record)
+        setter.SetValue(Access.ReadWrite, None, record)
         Assert.Equal("RW", record.GetString(0))
 
 
@@ -70,7 +70,7 @@ module TableValuedParamsTests =
                 email = "jacentino@gmail.com"
                 created = DateTime(2023, 1, 1)
             }
-        setter.SetValue(user, record)
+        setter.SetValue(user, None, record)
         Assert.Equal(3, record.GetInt32(0))
         Assert.Equal("jacentino", record.GetString(1))
         Assert.Equal("jacentino@gmail.com", record.GetString(2))
@@ -97,7 +97,7 @@ module TableValuedParamsTests =
                 email = "jacentino@gmail.com"
                 created = DateTime(2023, 1, 1)
             }
-        setter.SetValue(user, record)
+        setter.SetValue(user, None, record)
         Assert.Equal(3, record.GetInt32(0))
         Assert.Equal("jacentino", record.GetString(1))
         Assert.Equal("jacentino@gmail.com", record.GetString(2))
@@ -116,7 +116,7 @@ module TableValuedParamsTests =
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Tuple<int, string, string>("userId", "name", "email") (tvpProvider, record)
         let user = 3, "jacentino", "jacentino@gmail.com"
-        setter.SetValue(user, record)
+        setter.SetValue(user, None, record)
         Assert.Equal(3, record.GetInt32(0))
         Assert.Equal("jacentino", record.GetString(1))
         Assert.Equal("jacentino@gmail.com", record.GetString(2))

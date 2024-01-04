@@ -47,7 +47,6 @@ type QueryConfig =
         member this.AddParamConverter(convert: 'Source -> 'Target) = 
             { this with ParamBuilders = 
                             ParamsImpl.Converter<'Source, 'Target>(convert) :: 
-                            ParamsImpl.SeqItemConverter<'Source, 'Target>(convert) :: 
                             this.ParamBuilders 
             }
 
@@ -111,6 +110,9 @@ type QueryConfig =
                 PrototypeCalls = false
                 RowBuilders = RowsImpl.NoPrototypeColumnBuilder() :: this.RowBuilders
             }
+
+        member this.HandleCollections() = 
+            { this with ParamBuilders = ParamsImpl.SequenceIndexingBuilder() :: this.ParamBuilders }
 
 /// <summary>
 /// Provides methods creating various query functions.
@@ -258,10 +260,10 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                        
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.Text, template(None), paramSetter.SetArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(CommandType.Text, template(None), (fun cmd -> paramSetter.SetArtificial(None, cmd)), resultSpecifier')
 
             fun (parameters: 'Params) (provider: IConnector) ->
-                executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
+                executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -436,14 +438,14 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
                 let setArtificial(command: IDbCommand) = 
-                    paramSetter1.SetArtificial(command)
-                    paramSetter2.SetArtificial(command)
+                    paramSetter1.SetArtificial(None, command)
+                    paramSetter2.SetArtificial(None, command)
 
                 let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
                 let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: IDbCommand) = 
-                    paramSetter1.SetValue(parameters1, command) 
-                    paramSetter2.SetValue(parameters2, command)
+                    paramSetter1.SetValue(parameters1, None, command) 
+                    paramSetter2.SetValue(parameters2, None, command)
 
                 fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector) ->
                     executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2))
@@ -523,16 +525,16 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)                    
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)                    
 
             let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command) 
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
+                paramSetter1.SetValue(parameters1, None, command) 
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
                 executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3))
@@ -620,18 +622,18 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)                    
-                paramSetter4.SetArtificial(command)                    
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)                    
+                paramSetter4.SetArtificial(None, command)                    
 
             let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command) 
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
-                paramSetter4.SetValue(parameters4, command)
+                paramSetter1.SetValue(parameters1, None, command) 
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
+                paramSetter4.SetValue(parameters4, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
                 executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
@@ -730,20 +732,20 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)                    
-                paramSetter4.SetArtificial(command)                    
-                paramSetter5.SetArtificial(command)                    
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)                    
+                paramSetter4.SetArtificial(None, command)                    
+                paramSetter5.SetArtificial(None, command)                    
 
             let resultReader = executePrototypeQuery(CommandType.Text, commandText, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command) 
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
-                paramSetter4.SetValue(parameters4, command)
-                paramSetter5.SetValue(parameters5, command)
+                paramSetter1.SetValue(parameters1, None, command) 
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
+                paramSetter4.SetValue(parameters4, None, command)
+                paramSetter5.SetValue(parameters5, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
                 executeQuery(provider, commandText, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
@@ -975,7 +977,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 let outParamGetter = outParamSpecifier(outParamProvider, ())
 
                 let setArtificial(command: IDbCommand) = 
-                    paramSetter.SetArtificial(command)
+                    paramSetter.SetArtificial(None, command)
                     outParamGetter.Create(command)
 
                 let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
@@ -983,7 +985,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
 
                 let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
                 fun (parameters: 'Params) (provider: IConnector) ->
-                    executeProcedure(provider, procName, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, cmd))
+                    executeProcedure(provider, procName, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
@@ -1091,8 +1093,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let outParamGetter = outParamSpecifier(outParamProvider, ())
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
                 outParamGetter.Create(command)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
@@ -1101,8 +1103,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command)
-                paramSetter2.SetValue(parameters2, command)
+                paramSetter1.SetValue(parameters1, None, command)
+                paramSetter2.SetValue(parameters2, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2))
@@ -1224,9 +1226,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let outParamGetter = outParamSpecifier(outParamProvider, ())
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)
                 outParamGetter.Create(command)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
@@ -1235,9 +1237,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command)
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
+                paramSetter1.SetValue(parameters1, None, command)
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3))
@@ -1372,10 +1374,10 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let outParamGetter = outParamSpecifier(outParamProvider, ())
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)
-                paramSetter4.SetArtificial(command)
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)
+                paramSetter4.SetArtificial(None, command)
                 outParamGetter.Create(command)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
@@ -1384,10 +1386,10 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command)
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
-                paramSetter4.SetValue(parameters4, command)
+                paramSetter1.SetValue(parameters1, None, command)
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
+                paramSetter4.SetValue(parameters4, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
@@ -1538,11 +1540,11 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let outParamGetter = outParamSpecifier(outParamProvider, ())
 
             let setArtificial(command: IDbCommand) = 
-                paramSetter1.SetArtificial(command)
-                paramSetter2.SetArtificial(command)
-                paramSetter3.SetArtificial(command)
-                paramSetter4.SetArtificial(command)
-                paramSetter5.SetArtificial(command)
+                paramSetter1.SetArtificial(None, command)
+                paramSetter2.SetArtificial(None, command)
+                paramSetter3.SetArtificial(None, command)
+                paramSetter4.SetArtificial(None, command)
+                paramSetter5.SetArtificial(None, command)
                 outParamGetter.Create(command)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
@@ -1551,11 +1553,11 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
-                paramSetter1.SetValue(parameters1, command)
-                paramSetter2.SetValue(parameters2, command)
-                paramSetter3.SetValue(parameters3, command)
-                paramSetter4.SetValue(parameters4, command)
-                paramSetter5.SetValue(parameters5, command)
+                paramSetter1.SetValue(parameters1, None, command)
+                paramSetter2.SetValue(parameters2, None, command)
+                paramSetter3.SetValue(parameters3, None, command)
+                paramSetter4.SetValue(parameters4, None, command)
+                paramSetter5.SetValue(parameters5, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))

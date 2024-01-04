@@ -26,11 +26,11 @@ module BulkCopyParamsImpl =
             member __.Build(name: string, _: IParamSetterProvider, table: DataTable): IParamSetter<'Arg> = 
                 let ordinal = ref 0
                 { new IParamSetter<'Arg> with
-                      member __.SetValue(value: 'Arg, row: DataRow): unit = 
+                      member __.SetValue(value: 'Arg, _: int option, row: DataRow): unit = 
                           row.SetField(ordinal.Value, value)
-                      member __.SetNull(row: DataRow): unit = 
+                      member __.SetNull(_: int option, row: DataRow): unit = 
                           row.[ordinal.Value] <- DBNull.Value
-                      member __.SetArtificial(_: DataRow): unit = 
+                      member __.SetArtificial(_: int option, _: DataRow): unit = 
                           let column = table.Columns.Add(name, typeof<'Arg>) 
                           ordinal.Value <- column.Ordinal
                 }
@@ -40,8 +40,6 @@ module BulkCopyParamsImpl =
 
 
     type Converter<'Source, 'Target> = GenericSetters.Converter<DataTable, DataRow, 'Source, 'Target>
-
-    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<DataTable, DataRow, 'Source, 'Target>
 
     type Configurator<'Config> = GenericSetters.Configurator<DataTable, DataRow, 'Config>
 
@@ -69,7 +67,6 @@ type BulkCopyConfig =
             { this with 
                 ParamBuilders = 
                     BulkCopyParamsImpl.Converter<'Source, 'Target>(convert) :: 
-                    BulkCopyParamsImpl.SeqItemConverter<'Source, 'Target>(convert) :: 
                     this.ParamBuilders 
             }
 
@@ -108,14 +105,14 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
         let dataTable = new DataTable()
         let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders)
         let setter = specifier(provider, dataTable)
-        setter.SetArtificial(null)
+        setter.SetArtificial(None, null)
         fun (records: 'Record seq) (connector: IConnector) ->
             let dataRow = dataTable.NewRow()
             async {
                 let rows = 
                     seq {                                
                         for r in records do
-                            setter.SetValue(r, dataRow)
+                            setter.SetValue(r, None, dataRow)
                             yield dataRow
                     }
                 let bulkCopy = new MySqlBulkCopy(connector.Connection :?> MySqlConnection, connector.Transaction :?> MySqlTransaction)

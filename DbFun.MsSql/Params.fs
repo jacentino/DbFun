@@ -30,7 +30,7 @@ module ParamsImpl =
             let record = SqlDataRecord(metadata)
             seq {
                 for item in data do
-                    setter.SetValue(item, record)
+                    setter.SetValue(item, None, record)
                     yield record
             }
 
@@ -54,22 +54,22 @@ module ParamsImpl =
 
         let convertToListSetter (seqSetter: IParamSetter<'ItemType seq>) : IParamSetter<'ItemType list> = 
             { new IParamSetter<'ItemType list> with
-                  member this.SetArtificial(command: IDbCommand): unit = 
-                      seqSetter.SetArtificial(command)
-                  member this.SetNull(command: IDbCommand): unit = 
-                      seqSetter.SetNull(command)
-                  member this.SetValue(value: 'ItemType list, command: IDbCommand): unit = 
-                      seqSetter.SetValue(value, command)
+                  member this.SetArtificial(index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetArtificial(index, command)
+                  member this.SetNull(index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetNull(index, command)
+                  member this.SetValue(value: 'ItemType list, index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetValue(value, index, command)
             }
 
         let convertToArraySetter (seqSetter: IParamSetter<'ItemType seq>) : IParamSetter<'ItemType array> = 
             { new IParamSetter<'ItemType array> with
-                  member this.SetArtificial(command: IDbCommand): unit = 
-                      seqSetter.SetArtificial(command)
-                  member this.SetNull(command: IDbCommand): unit = 
-                      seqSetter.SetNull(command)
-                  member this.SetValue(value: 'ItemType array, command: IDbCommand): unit = 
-                      seqSetter.SetValue(value, command)
+                  member this.SetArtificial(index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetArtificial(index, command)
+                  member this.SetNull(index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetNull(index, command)
+                  member this.SetValue(value: 'ItemType array, index: int option, command: IDbCommand): unit = 
+                      seqSetter.SetValue(value, index, command)
             }
 
         member this.CreateSeqSetter(name: string, tvpName: string option): IParamSetter<'ItemType seq> = 
@@ -92,23 +92,23 @@ module ParamsImpl =
             let record = SqlDataRecord(metadata)
             let artificialValues = 
                 seq {
-                    recordSetter.SetArtificial(record)
+                    recordSetter.SetArtificial(None, record)
                     yield record
                 }
             { new IParamSetter<'ItemType seq> with
-                member __.SetValue (value: 'ItemType seq, command: IDbCommand) = 
+                member __.SetValue (value: 'ItemType seq, index: int option, command: IDbCommand) = 
                     let param = command.CreateParameter() :?> SqlParameter
                     param.ParameterName <- name
                     param.SqlDbType <- SqlDbType.Structured
                     param.TypeName <- tvpName
                     param.Value <- toSqlDataRecords value
                     command.Parameters.Add param |> ignore
-                member __.SetNull(command: IDbCommand) = 
+                member __.SetNull(index: int option, command: IDbCommand) = 
                     let param = command.CreateParameter()
                     param.ParameterName <- name
                     param.Value <- DBNull.Value
                     command.Parameters.Add param |> ignore
-                member __.SetArtificial(command: IDbCommand) = 
+                member __.SetArtificial(index: int option, command: IDbCommand) = 
                     let param = command.CreateParameter() :?> SqlParameter
                     param.ParameterName <- name
                     param.SqlDbType <- SqlDbType.Structured
@@ -153,13 +153,7 @@ module ParamsImpl =
 
     type Converter<'Source, 'Target> = GenericSetters.Converter<SqlDataRecord, SqlDataRecord, 'Source, 'Target>
 
-    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<SqlDataRecord, SqlDataRecord, 'Source, 'Target>
-
     type EnumConverter<'Underlying> = GenericSetters.EnumConverter<SqlDataRecord, SqlDataRecord, 'Underlying>
-
-    type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<SqlDataRecord, SqlDataRecord, 'Underlying>
-
-    type UnionSeqBuilder = GenericSetters.UnionSeqBuilder<SqlDataRecord, SqlDataRecord>
 
     type UnionBuilder = GenericSetters.UnionBuilder<SqlDataRecord, SqlDataRecord>
 
@@ -173,7 +167,7 @@ module ParamsImpl =
 
     let getDefaultBuilders(createConnection: unit -> IDbConnection): ParamsImpl.IBuilder list = 
         let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
-        [ TVPCollectionBuilder(createConnection, tvpProvider) ] @ ParamsImpl.getDefaultBuilders()
+        TVPCollectionBuilder(createConnection, tvpProvider) :: ParamsImpl.getDefaultBuilders()
 
 open ParamsImpl
 
