@@ -5,6 +5,7 @@ open DbFun.Core.Diagnostics
 open DbFun.MsSql.Builders
 open System.Data
 open System
+open Microsoft.Data.SqlClient.Server
 
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
@@ -23,10 +24,15 @@ type QueryConfig =
         /// </param>
         static member Default(createConnection: unit -> IDbConnection) = 
             let common = DbFun.Core.Builders.QueryConfig.Default(createConnection)
-            {
-                Common      = { common with ParamBuilders = ParamsImpl.getDefaultBuilders(createConnection >> unbox) }
-                TvpBuilders = TableValuedParamsImpl.getDefaultBuilders()
-            }
+            { Common = common; TvpBuilders = TableValuedParamsImpl.getDefaultBuilders() }
+
+        /// <summary>
+        /// Handles collections of compound types (records, tuples) as table-valued parameters.
+        /// </summary>
+        member this.UseTvpParams() = 
+            let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+            let tvpBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) 
+            { this with Common = { this.Common with ParamBuilders = tvpBuilder :: this.Common.ParamBuilders } }
 
         /// <summary>
         /// Adds a converter mapping application values of a given type to ptoper database parameter values.
@@ -154,3 +160,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     /// </summary>
     member __.HandleCollectionParams() = 
         QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Handles collections of compound types (records, tuples) as table-valued parameters.
+    /// </summary>
+    member __.UseTvpParams() = 
+        QueryBuilder(config.UseTvpParams(), ?compileTimeErrorLog = compileTimeErrorLog)

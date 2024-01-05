@@ -60,7 +60,7 @@ module QueryTests =
                 ]
 
         let connector = new Connector(createConnection())
-        let qb = QueryBuilder(QueryConfig.Default(createConnection))
+        let qb = QueryBuilder(QueryConfig.Default(createConnection)).UseTvpParams()
         let query = qb.Timeout(30).Sql(
             "insert into User (userId, name, email, created) 
              select userId, name, email, created from @users",
@@ -128,7 +128,7 @@ module QueryTests =
                 ]
 
         let connector = new Connector(createConnection())
-        let config = QueryConfig.Default(createConnection).AddParamConverter(fun (UserId id) -> id)                        
+        let config = QueryConfig.Default(createConnection).UseTvpParams().AddParamConverter(fun (UserId id) -> id)                        
         let qb = QueryBuilder(config)
         let query = qb.Timeout(30).Sql(
             "insert into User (userId, name, email, created) 
