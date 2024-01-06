@@ -550,7 +550,7 @@ module QueryTests =
         let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
                
         let query = 
-            qb.TemplatedSql(
+            qb.Sql(
                 Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
                     (Templating.applyWhen (fun p -> p.name.IsSome)       
                         (Templating.where "name like '%' + @name + '%'")
