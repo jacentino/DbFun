@@ -301,7 +301,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params -> DbCall<'Result> =         
-        this.Sql(template, Params.Auto<'Params>(name), resultSpecifier)
+        this.Sql(template, Params.Auto<'Params>(name), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a one arg query function based on command template.
@@ -328,7 +328,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params -> DbCall<'Result> =         
-        this.Sql(template, Params.Auto<'Params>(name), Results.Auto(resultName))
+        this.Sql(template, Params.Auto<'Params>(name), Results.Auto(resultName), sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
