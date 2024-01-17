@@ -7,11 +7,39 @@ open System.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
 open DbFun.Core
+open System.Data.Common
 
 type IResultReader<'Result> = 
     abstract member Read: IDataReader -> Async<'Result>
 
 type ResultSpecifier<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
+
+module Helper = 
+
+    let nextResultAsync(reader: IDataReader): Async<bool> = 
+        async {
+            match reader with 
+            | :? DbDataReader as dbReader ->
+                let! token = Async.CancellationToken
+                let! result = dbReader.NextResultAsync(token) |> Async.AwaitTask
+                return result
+            | _ ->
+                let reader = reader.NextResult()
+                return reader
+        }
+
+    let advance (resultTypes: Type seq) (reader: IDataReader) = 
+        if reader <> null && not (reader.NextResult()) then
+            failwithf "Not enough results when reading %A" resultTypes
+
+    let advanceAsync (resultTypes: Type seq) (reader: IDataReader) = 
+        async {
+            let! exists = nextResultAsync(reader)
+            if not exists then
+                failwithf "Not enough results when reading %A" resultTypes
+        }
+
+open Helper
 
 
 type Results() = 
@@ -24,17 +52,6 @@ type Results() =
         dict
 #endif
   
-
-    static let advance (resultTypes: Type seq) (reader: IDataReader) = 
-        if reader <> null && not (reader.NextResult()) then
-            failwithf "Not enough results when reading %A" resultTypes
-
-    static let advanceAsync (resultTypes: Type seq) (reader: IDataReader) = 
-        async {
-            let! exists = Executor.nextResultAsync(reader)
-            if not exists then
-                failwithf "Not enough results when reading %A" resultTypes
-        }
 
     static member private EmptyReader<'Result>() =
         { new IResultReader<'Result> with
@@ -741,36 +758,29 @@ module MultipleResults =
     /// <param name="resultBuilder">
     /// The ordinary result builder to be appliied.
     /// </param>
+    /// <param name="provider">
+    /// The row getter provider
+    /// </param>
+    /// <param name="prototype">
+    /// The prototype data reader.
+    /// </param>
     let (<*>) (multiple: ResultSpecifier<'Result -> 'Next>) (resultBuilder: ResultSpecifier<'Result>): ResultSpecifier<'Next> =        
-        
-        let advance(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
-            (combiner :?> IAdvancer).Advance(reader)
-
-        let advanceAsync(combiner: IResultReader<'Result -> 'Next>, reader: IDataReader) = 
-            (combiner :?> IAdvancer).AdvanceAsync(reader)
 
         fun (provider: IRowGetterProvider, prototype: IDataReader) ->
             let combiner = multiple(provider, prototype)
-            advance(combiner, prototype)
+            (combiner :?> IAdvancer).Advance(prototype)
             let resultReader = resultBuilder(provider, prototype)
             { new IResultReader<'Next> with
                 member __.Read(reader: IDataReader) = 
                     async {
                         let! combine = combiner.Read(reader)
-                        do! advanceAsync(combiner, reader)
+                        do! (combiner :?> IAdvancer).AdvanceAsync(reader)
                         let! result = resultReader.Read(reader)
                         return combine(result)                    
                     }
               interface IAdvancer with
-                member __.Advance(reader: IDataReader) = 
-                    if reader <> null && not(reader.NextResult()) then
-                        failwith "Not enough results"                         
-                member __.AdvanceAsync(reader: IDataReader) = 
-                    async {
-                        let! exists = Executor.nextResultAsync(reader)
-                        if not exists then
-                            failwith "Not enough results"                         
-                    }
+                member __.Advance(reader: IDataReader) = advance [typeof<'Next>] reader
+                member __.AdvanceAsync(reader: IDataReader) = advanceAsync [typeof<'Next>] reader
             }
         
     type Results with  

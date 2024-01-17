@@ -6,6 +6,7 @@ open DbFun.Core.Diagnostics
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System
+open System.Data.Common
 
 /// <summary>
 /// The query builder configuration data.
@@ -128,6 +129,19 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
         else 
             None
 
+    let executeReaderAsync (command: IDbCommand, behavior: CommandBehavior): Async<IDataReader> = 
+        async {
+            match command with 
+            | :? DbCommand as dbCommand ->
+                let! token = Async.CancellationToken
+                let! reader = dbCommand.ExecuteReaderAsync(behavior, token) |> Async.AwaitTask
+                return reader
+            | _ ->
+                let reader = command.ExecuteReader(behavior) 
+                return reader
+        }
+
+
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         if config.PrototypeCalls then
             use connection = config.CreateConnection()
@@ -153,7 +167,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             | Some timeout -> command.CommandTimeout <- timeout
             | None -> ()
             setParams(command)
-            use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default)
+            use! dataReader = executeReaderAsync(command, CommandBehavior.Default)
             return! resultReader.Read(dataReader)
         }
 
@@ -168,7 +182,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             | None -> ()
             setParams(command)
             outParamGetter.Create(command)
-            use! dataReader = Executor.executeReaderAsync(command, CommandBehavior.Default) 
+            use! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
             let! result = resultReader.Read(dataReader)
             return result, outParamGetter.Get(command)
         }
@@ -412,8 +426,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with two curried args based on a command template.
     /// </summary>
-    /// <param name="commandText">
-    /// The SQL command text.
+    /// <param name="template">
+    /// The SQL command template.
     /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
@@ -509,8 +523,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="sourceLine">
     /// The calling source path for diagnostic purposes.
     /// </param>
-    /// <param name="resultSpecifier">
-    /// The result builder.
+    /// <param name="resultName">
+    /// The result column name or prefix.
     /// </param>
     member this.Sql<'Params1, 'Params2, 'Result> (
             template: ('Params1 * 'Params2) option -> string,
@@ -778,8 +792,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
     /// </summary>
-    /// <param name="commandText">
-    /// The SQL command text.
+    /// <param name="template">
+    /// The SQL command template.
     /// </param>
     /// <param name="paramSpecifier1">
     /// The first parameter builder.
