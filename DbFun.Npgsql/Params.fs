@@ -71,7 +71,7 @@ module ParamsImpl =
                     if typeof<'Arg>.IsArray then "CreateArraySetter"
                     elif typedefof<'Arg> = typedefof<list<_>> then "CreateListSetter"
                     else "CreateSeqSetter"
-                let createSetterMethod = this.GetType().GetMethod(setterName).MakeGenericMethod(itemType)
+                let createSetterMethod = this.GetType().GetMethod(setterName, [| typeof<string> |]).MakeGenericMethod(itemType)
                 createSetterMethod.Invoke(this, [| name |]) :?> IParamSetter<'Arg>
     
     type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, MultipleArrays>
