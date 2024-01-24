@@ -13,7 +13,7 @@ module TestQueries =
 
     let fnGetBlog = query.Sql<int, Blog>("select * from getblog(@id)", "id")
         
-    let getPosts= query.Sql<int array, Post list>(
+    let getPosts= query.Sql<int list, Post list>(
         "select p.postid, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status
             from post p join unnest(@ids) ids on p.postid = ids",
         "ids")
@@ -26,6 +26,10 @@ module TestQueries =
         "insert into blog (blogid, name, title, description, owner, createdAt, modifiedAt, modifiedBy) 
          values (2, @name, @title, @description, @owner, @createdAt, @modifiedAt, @modifiedBy);
          select 2")
+
+    let insertBlogs = query.Sql<Blog list, unit>(
+        "insert into blog (blogid, name, title, description, owner, createdAt, modifiedAt, modifiedBy) 
+         select * from  unnest(@blogId, @name, @title, @description, @owner, @createdAt, @modifiedAt, @modifiedBy)")
 
     let bulkInsertBlogs = bulkImport.WriteToServer<Blog>()
 

@@ -21,6 +21,11 @@ module Tests =
         Assert.Equal(1, b.blogId)
 
     [<Fact>]
+    let ``Queries using PostgreSQL arrays return valid results``() =
+        let posts = TestQueries.getPosts [ 1; 2 ] |> runSync
+        Assert.Equal<int list>([ 1; 2 ], posts |> List.map (fun p -> p.postId))
+
+    [<Fact>]
     let ``Function calls to PostgreSQL return valid results``() =
         let b = TestQueries.fnGetBlog 1 |> runSync
         Assert.Equal(1, b.blogId)
@@ -71,6 +76,38 @@ module Tests =
         let numOfBlogs = Tooling.getNumberOfBlogs() |> runSync
         Tooling.deleteAllButFirstBlog() |> runSync
         Assert.Equal(200, numOfBlogs)
+
+
+    [<Fact>]
+    let ``PostgreSQL array can be used to insert records``() = 
+
+        Tooling.deleteAllButFirstBlog() |> runSync
+
+        let blogsToAdd = 
+            [  for i in 2..200 do
+                {
+                    blogId = i
+                    name = sprintf "blog-%d" i
+                    title = sprintf "Blog no %d" i
+                    description = sprintf "Just another blog, added for test - %d" i
+                    owner = "jacenty"
+                    createdAt = System.DateTime.Now
+                    modifiedAt = Some System.DateTime.Now
+                    modifiedBy = Some "jacenty"
+                    posts = []          
+                }
+            ]
+
+        let sw = Stopwatch()
+        sw.Start()
+        TestQueries.insertBlogs blogsToAdd |> runSync
+        sw.Stop()
+        printfn "Elapsed time %O" sw.Elapsed
+        
+        let numOfBlogs = Tooling.getNumberOfBlogs() |> runSync
+        Tooling.deleteAllButFirstBlog() |> runSync
+        Assert.Equal(200, numOfBlogs)
+
 
     [<Fact>]
     let ``BulkImport handles byte array fields properly``() = 

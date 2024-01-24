@@ -1,175 +1,87 @@
 ﻿namespace DbFun.Npgsql.Builders
 
 open System
+open System.Collections.Generic
 open System.Data
 open DbFun.Core
 open DbFun.Core.Builders
 open Npgsql
 open NpgsqlTypes
-open System.Linq.Expressions
-open Microsoft.FSharp.Reflection
 
 module ParamsImpl =
 
-    type PostgresArrayBuilder() = 
-        
-        let getNpgSqlDbType t = 
-            if t = typeof<int> then NpgsqlDbType.Integer
-            elif t = typeof<Int64> then NpgsqlDbType.Bigint
-            elif t = typeof<Int16> then NpgsqlDbType.Smallint
-            elif t = typeof<bool> then NpgsqlDbType.Boolean
-            elif t = typeof<decimal> then NpgsqlDbType.Numeric
-            elif t = typeof<DateTime> then NpgsqlDbType.Timestamp
-            elif t = typeof<TimeSpan> then NpgsqlDbType.Interval
-            elif t = typeof<DateOnly> then NpgsqlDbType.Timestamp
-            elif t = typeof<TimeOnly> then NpgsqlDbType.Timestamp
-            elif t = typeof<Guid> then NpgsqlDbType.Uuid
-            elif t = typeof<string> then NpgsqlDbType.Varchar
-            elif t = typeof<double> then NpgsqlDbType.Double
-            elif t = typeof<byte[]> then NpgsqlDbType.Bytea
-            else failwith <| sprintf "Unmappable type: %O" t
+    type PgArrayBuilder(arrayProvider: IArrayParamSetterProvider) =
 
-        let setValue(command: IDbCommand, name: string, elemNpgType: NpgsqlDbType, value: obj) = 
-            let param = new NpgsqlParameter()
-            param.ParameterName <- name
-            param.Value <- value
-            param.NpgsqlDbType <- NpgsqlDbType.Array ||| elemNpgType
-            command.Parameters.Add(param) |> ignore
+        static let setParameters(arrays: MultipleArrays, command: IDbCommand) = 
+            for kv in arrays.Data do
+                let dbType, value = kv.Value
+                let param = new NpgsqlParameter()
+                param.ParameterName <- kv.Key
+                param.Value <- value
+                param.NpgsqlDbType <- NpgsqlDbType.Array ||| dbType
+                command.Parameters.Add(param) |> ignore
 
-        member __.GetArtificialValue<'Type>(): obj = 
-            if typeof<'Type> = typeof<string> then box [| "" |]
-            elif typeof<'Type> = typeof<DateTime> then box [| DateTime.Now |]
-            elif typeof<'Type> = typeof<byte[]> then box [||]
-            elif typeof<'Type>.IsClass then null
-            else box [| Unchecked.defaultof<'Type> |]
+        static member CreateParamSetter(itemSetter: IArrayParamSetter<'Item>, getLength: 'Collection -> int, populate: MultipleArrays -> 'Collection -> unit) = 
+            { new IParamSetter<'Collection> with
+                member __.SetValue (items: 'Collection, _: int option, command: IDbCommand) = 
+                    let arrays = { ArraySize = getLength items; Data = Dictionary<string, NpgsqlDbType * obj>() }
+                    populate arrays items
+                    setParameters(arrays, command)
+                member __.SetNull(_: int option, command: IDbCommand) = 
+                    let arrays = { ArraySize = 1; Data = Dictionary<string, NpgsqlDbType * obj>() }
+                    itemSetter.SetNull(None, arrays)
+                    setParameters(arrays, command)
+                member __.SetArtificial(_: int option, command: IDbCommand) = 
+                    let arrays = { ArraySize = 1; Data = Dictionary<string, NpgsqlDbType * obj>() }
+                    itemSetter.SetArtificial(Some 0, arrays)
+                    setParameters(arrays, command)
+            }
 
-        interface ParamsImpl.IBuilder with
+        member __.CreateSeqSetter<'Item>(name: string) = 
+            let itemSetter = arrayProvider.Setter<'Item>(name, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, Seq.length, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-            member __.CanBuild(argType: Type): bool = 
-                Types.isCollectionType argType && Types.isSimpleType (Types.getElementType argType)
+        member __.CreateListSetter<'Item>(name: string) = 
+            let itemSetter = arrayProvider.Setter<'Item>(name, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, List.length, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-            member this.Build(name: string, _: IParamSetterProvider, _: unit): IParamSetter<'Arg> = 
-                let elemType = Types.getElementType typeof<'Arg>
-                let elemNpgType = getNpgSqlDbType elemType
-                let getArtificialMethod = this.GetType().GetMethod("GetArtificialValue").MakeGenericMethod(elemType)
-                let artificialValue = getArtificialMethod.Invoke(this, [||])
-                { new IParamSetter<'Arg> with
-                    member __.SetValue(value: 'Arg, _: int option, command: IDbCommand): unit = 
-                        setValue(command, name, elemNpgType, value)
-                    member __.SetNull(_: int option, command: IDbCommand): unit = 
-                        setValue(command, name, elemNpgType, DBNull.Value)
-                    member __.SetArtificial(_: int option, command: IDbCommand): unit = 
-                        setValue(command, name, elemNpgType, artificialValue)
-                }
-
-
-    type SeqItemConverter<'Source, 'Target>(convert: 'Source -> 'Target) =
-
-        member __.MapSeq(source: 'Source seq) = source |> Seq.map convert
+        member __.CreateArraySetter<'Item>(name: string) = 
+            let itemSetter = arrayProvider.Setter<'Item>(name, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, Array.length, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
         interface ParamsImpl.IBuilder with
 
-            member __.CanBuild (argType: Type) = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType                        
-                    typeof<'Source>.IsAssignableFrom(elemType)
+            member __.CanBuild (argType: Type) = Types.isCollectionType argType 
 
-            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, prototype: unit) = 
-                let setter = provider.Setter<'Target seq>(name, prototype)                
-                let sourceParam = Expression.Parameter(typeof<'Arg>)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq")
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, sourceParam)
-                let convert' = Expression.Lambda<Func<'Arg, 'Target seq>>(conversion, sourceParam).Compile()
-                { new IParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, index: int option, command: IDbCommand) = 
-                        setter.SetValue(convert'.Invoke(value), index, command)
-                    member __.SetNull(index: int option, command: IDbCommand) = 
-                        setter.SetNull(index, command)
-                    member __.SetArtificial(index: int option, command: IDbCommand) = 
-                        setter.SetArtificial(index, command)
-                }
+            member this.Build<'Arg> (name: string, _: IParamSetterProvider, _: unit) = 
+                let itemType = Types.getElementType typeof<'Arg>
+                let setterName = 
+                    if typeof<'Arg>.IsArray then "CreateArraySetter"
+                    elif typedefof<'Arg> = typedefof<list<_>> then "CreateListSetter"
+                    else "CreateSeqSetter"
+                let createSetterMethod = this.GetType().GetMethod(setterName).MakeGenericMethod(itemType)
+                createSetterMethod.Invoke(this, [| name |]) :?> IParamSetter<'Arg>
+    
+    type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, MultipleArrays>
 
+    type InitialDerivedSetterProvider<'Config> = GenericSetters.InitialDerivedSetterProvider<unit, MultipleArrays, 'Config>
 
-    type EnumSeqConverter<'Underlying>() = 
+    type DerivedSetterProvider<'Config> = GenericSetters.DerivedSetterProvider<unit, MultipleArrays, 'Config>
 
-        member __.MapSeq<'Enum, 'Underlying>(mapper: Func<'Enum, 'Underlying>, sequence: 'Enum seq) = 
-            sequence |> Seq.map mapper.Invoke
+    type UnitBuilder = GenericSetters.UnitBuilder<unit, MultipleArrays>
 
-        interface ParamsImpl.IBuilder with
+    type SequenceBuilder = GenericSetters.SequenceBuilder<unit, MultipleArrays>
 
-            member __.CanBuild(argType: Type): bool = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType
-                    elemType.IsEnum && elemType.GetEnumUnderlyingType() = typeof<'Underlying>
+    type Converter<'Source, 'Target> = GenericSetters.Converter<unit, MultipleArrays, 'Source, 'Target>
 
-            member this.Build(name: string, provider: IParamSetterProvider, prototype: unit): IParamSetter<'Arg> = 
-                let setter = provider.Setter<'Underlying seq>(name, prototype)   
-                let enumType = Types.getElementType typeof<'Arg>
-                let enumParam = Expression.Parameter(enumType)
-                let itemConvert = Expression.Lambda(Expression.Convert(enumParam, typeof<'Underlying>), enumParam)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType, typeof<'Underlying>)
-                let seqParam = Expression.Parameter(typeof<'Arg>)
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, itemConvert, seqParam)
-                let seqConvert = Expression.Lambda<Func<'Arg, 'Underlying seq>>(conversion, seqParam).Compile()
-                { new IParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, index: int option, command: IDbCommand) = 
-                        setter.SetValue(seqConvert.Invoke(value), index, command)
-                    member __.SetNull(index: int option, command: IDbCommand) = 
-                        setter.SetNull(index, command)
-                    member __.SetArtificial(index: int option, command: IDbCommand) = 
-                        setter.SetArtificial(index, command)
-                }
-        
+    type EnumConverter<'Underlying> = GenericSetters.EnumConverter<unit, MultipleArrays, 'Underlying>
 
-    type UnionSeqBuilder() = 
+    type UnionBuilder = GenericSetters.UnionBuilder<unit, MultipleArrays>
 
-        member __.GetUnderlyingValues<'Enum>() = 
-            let properties = typeof<'Enum>.GetProperties()
-            let underlyingValues = 
-                [ for uc in FSharpType.GetUnionCases typeof<'Enum> do
-                    (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Enum, 
-                    (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
-                ] 
-            underlyingValues
+    type OptionBuilder = GenericSetters.OptionBuilder<unit, MultipleArrays>
 
-        member __.MapSeq<'Enum>(eq: Func<'Enum, 'Enum, bool>, underlyingValues: ('Enum * string) list, sequence: 'Enum seq) = 
-            let convert (x: 'Enum): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
-            sequence |> Seq.map convert
+    type RecordBuilder = GenericSetters.RecordBuilder<unit, MultipleArrays>
 
-        interface ParamsImpl.IBuilder with
+    type TupleBuilder = GenericSetters.TupleBuilder<unit, MultipleArrays>
 
-            member __.CanBuild(argType: Type): bool = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType
-                    FSharpType.IsUnion elemType
-                        && 
-                    elemType
-                    |> FSharpType.GetUnionCases
-                    |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
-
-            member this.Build(name: string, provider: IParamSetterProvider, prototype: unit): IParamSetter<'Arg> = 
-                let setter = provider.Setter<string seq>(name, prototype)   
-                let enumType = Types.getElementType typeof<'Arg>
-                let op1 = Expression.Parameter(enumType)
-                let op2 = Expression.Parameter(enumType)
-                let eq = Expression.Lambda(Expression.Equal(op1, op2), op1, op2)
-                let seqParam = Expression.Parameter(typeof<'Arg>)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType)
-                let underlyingValsMethod = this.GetType().GetMethod("GetUnderlyingValues").MakeGenericMethod(enumType)
-                let underlyingValues = underlyingValsMethod.Invoke(this, [||])
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, eq, Expression.Constant(underlyingValues), seqParam)
-                let convert = Expression.Lambda<Func<'Arg, string seq>>(conversion, seqParam).Compile()
-                { new IParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, index: int option, command: IDbCommand) = 
-                        setter.SetValue(convert.Invoke(value), index, command)
-                    member __.SetNull(index: int option, command: IDbCommand) = 
-                        setter.SetNull(index, command)
-                    member __.SetArtificial(index: int option, command: IDbCommand) = 
-                        setter.SetArtificial(index, command)
-                }
+    type Configurator<'Config> = GenericSetters.Configurator<unit, MultipleArrays, 'Config>
