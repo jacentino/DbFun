@@ -49,6 +49,18 @@ module ParamsImpl =
             let itemSetter = arrayProvider.Setter<'Item>(name, ())
             PgArrayBuilder.CreateParamSetter(itemSetter, Array.length, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
+        member __.CreateSeqSetter<'Item>(itemSpecifier: ArrayParamSpecifier<'Item>) = 
+            let itemSetter = itemSpecifier(arrayProvider, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, Seq.length, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+        member __.CreateListSetter<'Item>(itemSpecifier: ArrayParamSpecifier<'Item>) = 
+            let itemSetter = itemSpecifier(arrayProvider, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, List.length, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+        member __.CreateArraySetter<'Item>(itemSpecifier: ArrayParamSpecifier<'Item>) = 
+            let itemSetter = itemSpecifier(arrayProvider, ())
+            PgArrayBuilder.CreateParamSetter(itemSetter, Array.length, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
         interface ParamsImpl.IBuilder with
 
             member __.CanBuild (argType: Type) = Types.isCollectionType argType 
@@ -85,3 +97,75 @@ module ParamsImpl =
     type TupleBuilder = GenericSetters.TupleBuilder<unit, MultipleArrays>
 
     type Configurator<'Config> = GenericSetters.Configurator<unit, MultipleArrays, 'Config>
+
+
+open ParamsImpl
+
+/// <summary>
+/// Provides methods creating various query parameter builders.
+/// </summary>
+type Params() = 
+    inherit Builders.Params()
+        
+    static member GetPgArrayBuilder<'Arg>(provider: IParamSetterProvider) = 
+        match provider.Builder(typeof<'Arg>) with
+        | Some builder -> 
+            try
+                builder :?> PgArrayBuilder
+            with ex ->
+                reraise()
+        | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
+
+    /// <summary>
+    /// Creates an array builder for a sequence of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgSeq<'Record>(?name: string): ParamSpecifier<'Record seq> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record seq>(provider).CreateSeqSetter(defaultArg name "")
+
+    /// <summary>
+    /// Creates a array builder builder for a list of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgList<'Record>(?name: string): ParamSpecifier<'Record list> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record list>(provider).CreateListSetter(defaultArg name "")
+
+    /// <summary>
+    /// Creates a array builder for an array of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgArray<'Record>(?name: string): ParamSpecifier<'Record array> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record array>(provider).CreateArraySetter(defaultArg name "")
+
+    /// <summary>
+    /// Creates a array builder for a sequence of values.
+    /// </summary>
+    /// <param name="arraySpecifier">
+    /// The array parameter builder.
+    /// </param>
+    static member PgSeq<'Record>(arraySpecifier: ArrayParamSpecifier<'Record>): ParamSpecifier<'Record seq> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record seq>(provider).CreateSeqSetter(arraySpecifier)
+
+    /// <summary>
+    /// Creates a array builder for a list of values.
+    /// </summary>
+    /// <param name="arraySpecifier">
+    /// The array parameter builder.
+    /// </param>
+    static member PgList<'Record>(arraySpecifier: ArrayParamSpecifier<'Record>): ParamSpecifier<'Record list> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record list>(provider).CreateListSetter(arraySpecifier)
+
+    /// <summary>
+    /// Creates a array builder for an array of values.
+    /// </summary>
+    /// <param name="arraySpecifier">
+    /// The array parameter builder.
+    /// </param>
+    static member PgArray<'Record>(arraySpecifier: ArrayParamSpecifier<'Record>, ?name: string): ParamSpecifier<'Record array> =
+        fun (provider, _) -> Params.GetPgArrayBuilder<'Record array>(provider).CreateArraySetter(arraySpecifier)
