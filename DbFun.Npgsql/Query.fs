@@ -23,19 +23,49 @@ type QueryConfig =
         /// <summary>
         /// Adds Postgres array support.
         /// </summary>
-        member this.UsePostgresArrays() = 
+        member this.UsePostgresArrayParams() = 
             let pgArrayProvider = ParamsImpl.BaseSetterProvider(PgArrayParamsImpl.getDefaultBuilders())
             let pgArrayBuilder = ParamsImpl.PgArrayBuilder(pgArrayProvider) 
             { this with Common = { this.Common with ParamBuilders = pgArrayBuilder :: this.Common.ParamBuilders } }
 
-                /// <summary>
+        /// <summary>
+        /// Adds Postgres array support.
+        /// </summary>
+        member this.UsePostgresArrayResults() = 
+            { this with 
+                Common = 
+                    { this.Common with 
+                        RowBuilders = 
+                            RowsImpl.ArrayColumnBuilder() ::
+                            RowsImpl.ArrayCollectionConverter() :: 
+                            RowsImpl.EnumArrayConverter<int>() ::
+                            RowsImpl.EnumArrayConverter<char>() ::
+                            RowsImpl.UnionArrayConverter() ::
+                            this.Common.RowBuilders 
+                    } 
+            }
+
+        /// <summary>
+        /// Adds Postgres array support.
+        /// </summary>
+        member this.UsePostgresArrays() = 
+            this.UsePostgresArrayParams().UsePostgresArrayResults()
+
+        /// <summary>
         /// Adds a converter mapping application values of a given type to ptoper database parameter values.
         /// </summary>
         /// <param name="convert">
         /// Function converting application values to database parameter values.
         /// </param>
         member this.AddRowConverter(converter: 'Source -> 'Target) = 
-            { this with Common = this.Common.AddRowConverter(converter) }
+            { this with 
+                Common = 
+                    { this.Common with 
+                        RowBuilders = RowsImpl.ArrayItemConverter(converter) :: this.Common.RowBuilders 
+                    }.AddRowConverter(converter)
+            }
+
+            //.AddRowConverter(converter)
 
         /// <summary>
         /// Adds builder for table-valued parameters.
@@ -157,6 +187,18 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
 
     /// <summary>
     /// Handles collections as array parameters.
+    /// </summary>
+    member __.UsePostgresArrayParamss() = 
+        QueryBuilder(config.UsePostgresArrayParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Handles collections as array results.
+    /// </summary>
+    member __.UsePostgresArrayResults() = 
+        QueryBuilder(config.UsePostgresArrayResults(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Provides full support for Postgress arrays.
     /// </summary>
     member __.UsePostgresArrays() = 
         QueryBuilder(config.UsePostgresArrays(), ?compileTimeErrorLog = compileTimeErrorLog)

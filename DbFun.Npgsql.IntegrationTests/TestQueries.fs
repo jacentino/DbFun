@@ -4,6 +4,7 @@ open DbFun.Core
 open DbFun.Npgsql.Builders
 open Commons
 open Models
+open DbFun.TestTools.Models
 
 module TestQueries = 
 
@@ -34,3 +35,19 @@ module TestQueries =
     let bulkInsertBlogs = bulkImport.WriteToServer<Blog>()
 
     let bulkInsertUsers = bulkImport.WriteToServer(BulkImportParams.Tuple<string, string, string, byte array>("id", "name", "email", "avatar"), "userprofile")
+
+    let getIntArray = query.Sql<unit, int array list>("select array[1, 2, 3]")
+
+    let getCharArray = query.Sql<unit, char array list>("select array['A', 'B', 'C']")
+
+    let getStringArray = query.Sql<unit, string array list>("select array['A', 'B', 'C']")
+
+    let getDecimalArray = query.Sql<unit, decimal array list>("select array[1, 2, 3]")
+
+    let getIntList = query.Sql<unit, int list list>("select array[1, 2, 3]")
+
+    let getIntSeq = query.Sql<unit, int seq list>("select array[1, 2, 3]")
+
+    let getCharEnumList = query.Sql<unit, PostStatus list list>("select array['N', 'P', 'A']")
+
+    let getUnionEnumList = query.Sql<unit, Access list list>("select array['RD', 'WR']")
