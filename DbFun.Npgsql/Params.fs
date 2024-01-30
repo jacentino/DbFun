@@ -117,7 +117,7 @@ type Params() =
         | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
 
     /// <summary>
-    /// Creates an array builder for a sequence of values.
+    /// Creates a builder for a sequence of values.
     /// </summary>
     /// <param name="name">
     /// The parameter name.
@@ -126,7 +126,7 @@ type Params() =
         fun (provider, _) -> Params.GetPgArrayBuilder<'Record seq>(provider).CreateSeqSetter(defaultArg name "")
 
     /// <summary>
-    /// Creates a array builder builder for a list of values.
+    /// Creates a builder builder for a list of values.
     /// </summary>
     /// <param name="name">
     /// The parameter name.
@@ -135,7 +135,7 @@ type Params() =
         fun (provider, _) -> Params.GetPgArrayBuilder<'Record list>(provider).CreateListSetter(defaultArg name "")
 
     /// <summary>
-    /// Creates a array builder for an array of values.
+    /// Creates a builder for an array of values.
     /// </summary>
     /// <param name="name">
     /// The parameter name.
@@ -144,7 +144,7 @@ type Params() =
         fun (provider, _) -> Params.GetPgArrayBuilder<'Record array>(provider).CreateArraySetter(defaultArg name "")
 
     /// <summary>
-    /// Creates a array builder for a sequence of values.
+    /// Creates a builder for a sequence of values.
     /// </summary>
     /// <param name="arraySpecifier">
     /// The array parameter builder.
@@ -153,7 +153,7 @@ type Params() =
         fun (provider, _) -> Params.GetPgArrayBuilder<'Record seq>(provider).CreateSeqSetter(arraySpecifier)
 
     /// <summary>
-    /// Creates a array builder for a list of values.
+    /// Creates a builder for a list of values.
     /// </summary>
     /// <param name="arraySpecifier">
     /// The array parameter builder.
@@ -162,7 +162,7 @@ type Params() =
         fun (provider, _) -> Params.GetPgArrayBuilder<'Record list>(provider).CreateListSetter(arraySpecifier)
 
     /// <summary>
-    /// Creates a array builder for an array of values.
+    /// Creates a builder for an array of values.
     /// </summary>
     /// <param name="arraySpecifier">
     /// The array parameter builder.

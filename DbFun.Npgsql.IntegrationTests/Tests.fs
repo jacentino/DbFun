@@ -170,6 +170,27 @@ module Tests =
         Assert.Equal<DateOnly seq>([seq { DateOnly(2004, 10, 19) }], value)
 
     [<Fact>]
+    let ``Int array explicit``() = 
+        let value = TestQueries.getIntArrayExplicit() |> runSync
+        Assert.Equal<int array>([| 1; 2; 3 |], value)
+
+    [<Fact>]
+    let ``Int list explicit``() = 
+        let value = TestQueries.getIntListExplicit() |> runSync
+        Assert.Equal<int list>([ 1; 2; 3 ], value)
+
+    [<Fact>]
+    let ``Int array half-explicit``() = 
+        let value = TestQueries.getIntArrayHalfExplicit() |> runSync
+        Assert.Equal<int array>([| 1; 2; 3 |], value)
+
+    [<Fact>]
+    let ``Int list half-explicit``() = 
+        let value = TestQueries.getIntListHalfExplicit() |> runSync
+        Assert.Equal<int list>([ 1; 2; 3 ], value)
+
+
+    [<Fact>]
     let ``Array column type``() = 
         use connection = createConnection()
         connection.Open()

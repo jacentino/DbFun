@@ -207,5 +207,54 @@ module RowsImpl =
                 method.Invoke(this, [| name; provider; prototype |]) :?> IRowGetter<'Result>
 
 
+/// <summary>
+/// Provides methods creating various row/column mapping builders.
+/// </summary>
+type Rows() = 
+    inherit Builders.Rows()
 
+    /// <summary>
+    /// Creates a builder for an array of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgArray<'Item>(name: string) = 
+        fun (provider: IRowGetterProvider, prototype: IDataRecord) ->
+            provider.Getter<'Item array>(name, prototype)
 
+    /// <summary>
+    /// Creates a builder builder for a list of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgList<'Item>(name: string) = 
+        fun (provider: IRowGetterProvider, prototype: IDataRecord) ->
+            let arrayGetter = provider.Getter<'Item array>(name, prototype)
+            { new IRowGetter<'Item list> with
+                  member __.Get(record: IDataRecord): 'Item list = 
+                      arrayGetter.Get(record) |> Array.toList
+                  member __.IsNull(record: IDataRecord): bool = 
+                      arrayGetter.IsNull(record)
+                  member __.Create(record: IDataRecord): unit = 
+                      arrayGetter.Create(record)
+            }
+
+    /// <summary>
+    /// Creates a builder for a sequence of values.
+    /// </summary>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    static member PgSeq<'Item>(name: string) = 
+        fun (provider: IRowGetterProvider, prototype: IDataRecord) ->
+            let arrayGetter = provider.Getter<'Item array>(name, prototype)
+            { new IRowGetter<'Item seq> with
+                  member __.Get(record: IDataRecord): 'Item seq = 
+                      arrayGetter.Get(record) |> Array.toSeq
+                  member __.IsNull(record: IDataRecord): bool = 
+                      arrayGetter.IsNull(record)
+                  member __.Create(record: IDataRecord): unit = 
+                      arrayGetter.Create(record)
+            }

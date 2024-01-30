@@ -6,6 +6,7 @@ open DbFun.Npgsql.Builders
 open Commons
 open Models
 open DbFun.TestTools.Models
+open DbFun.Core.Builders
 
 module TestQueries = 
 
@@ -54,3 +55,11 @@ module TestQueries =
     let getUnionEnumList = query.Sql<unit, Access list list>("select array['RD', 'WR']")
 
     let getDateOnlySeq = query.Sql<unit, DateOnly seq list>("select array[TIMESTAMP '2004-10-19 00:00:00+02']")
+
+    let getIntArrayExplicit = query.Sql("select array[1, 2, 3]", Params.Unit, Results.Single(Rows.PgArray<int>("")))
+
+    let getIntListExplicit = query.Sql("select array[1, 2, 3]", Params.Unit, Results.Single(Rows.PgList<int>("")))
+
+    let getIntArrayHalfExplicit = query.Sql("select array[1, 2, 3]", Params.Unit, Results.Single<int array>(""))
+
+    let getIntListHalfExplicit = query.Sql("select array[1, 2, 3]", Params.Unit, Results.Single<int list>(""))
