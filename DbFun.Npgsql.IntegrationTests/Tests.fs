@@ -165,11 +165,16 @@ module Tests =
         Assert.Equal<Access list>([[ Access.Read; Access.Write ]], value)
 
     [<Fact>]
+    let ``DateOnly seq``() = 
+        let value = TestQueries.getDateOnlySeq() |> runSync
+        Assert.Equal<DateOnly seq>([seq { DateOnly(2004, 10, 19) }], value)
+
+    [<Fact>]
     let ``Array column type``() = 
         use connection = createConnection()
         connection.Open()
         use command = connection.CreateCommand()
-        command.CommandText <- "select array[@item]"
+        command.CommandText <- "select array[TIMESTAMP '2004-10-19 10:23:54+02']"
         let param = command.CreateParameter()
         param.ParameterName <- "item"
         param.Value <- TimeSpan.FromHours(1.0)

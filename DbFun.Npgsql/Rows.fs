@@ -104,9 +104,7 @@ module RowsImpl =
         interface RowsImpl.IBuilder with
 
             member __.CanBuild(argType: Type): bool = 
-                let iscoll = Types.isCollectionType argType 
-                let isarray  = argType.IsArray
-                iscoll && not isarray
+                Types.isCollectionType argType && not argType.IsArray
 
             member this.Build(name: string, provider: IRowGetterProvider, prototype: IDataRecord): IRowGetter<'Result> = 
                 let itemType = Types.getElementType typeof<'Result>
@@ -131,7 +129,11 @@ module RowsImpl =
         interface RowsImpl.IBuilder with
 
             member __.CanBuild(argType: Type): bool = 
-                argType.IsArray && typeof<'SourceItem>.IsAssignableFrom(argType.GetElementType())
+                if argType.IsArray then  
+                    typeof<'DestItem>.IsAssignableFrom(argType.GetElementType())
+                else 
+                    false
+
 
             member this.Build(name: string, provider: IRowGetterProvider, prototype: IDataRecord): IRowGetter<'Result> = 
                 let method = this.GetType().GetMethod("CreateGetter")

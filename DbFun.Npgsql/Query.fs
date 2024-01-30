@@ -36,6 +36,8 @@ type QueryConfig =
                 Common = 
                     { this.Common with 
                         RowBuilders = 
+                            RowsImpl.ArrayItemConverter<DateTime, DateOnly>(DateOnly.FromDateTime) ::
+                            RowsImpl.ArrayItemConverter<TimeSpan, TimeOnly>(TimeOnly.FromTimeSpan) ::
                             RowsImpl.ArrayColumnBuilder() ::
                             RowsImpl.ArrayCollectionConverter() :: 
                             RowsImpl.EnumArrayConverter<int>() ::

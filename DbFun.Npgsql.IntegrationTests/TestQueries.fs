@@ -1,5 +1,6 @@
 ﻿namespace DbFun.Npgsql.IntegrationTests
 
+open System
 open DbFun.Core
 open DbFun.Npgsql.Builders
 open Commons
@@ -51,3 +52,5 @@ module TestQueries =
     let getCharEnumList = query.Sql<unit, PostStatus list list>("select array['N', 'P', 'A']")
 
     let getUnionEnumList = query.Sql<unit, Access list list>("select array['RD', 'WR']")
+
+    let getDateOnlySeq = query.Sql<unit, DateOnly seq list>("select array[TIMESTAMP '2004-10-19 00:00:00+02']")
