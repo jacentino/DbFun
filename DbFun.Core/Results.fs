@@ -391,8 +391,20 @@ type Results() =
                         let! result2 = reader2.Read(reader)
                         return result1, result2
                     }
-            }
-            
+            }            
+
+    /// <summary>
+    /// Merges two result builders into one builder creating tuple of source results.
+    /// </summary>
+    /// <param name="name1">
+    /// First result name.
+    /// </param>
+    /// <param name="name2">
+    /// Second result name.
+    /// </param>
+    static member Multiple<'Result1, 'Result2>(?name1: string, ?name2: string): ResultSpecifier<'Result1 * 'Result2> = 
+        Results.Multiple(Results.Auto<'Result1>(defaultArg name1 ""), Results.Auto<'Result2>(defaultArg name2 ""))
+
     /// <summary>
     /// Merges three result builders into one builder creating tuple of source results.
     /// </summary>
@@ -426,6 +438,21 @@ type Results() =
                         return result1, result2, result3
                     }
             }
+
+    /// <summary>
+    /// Merges three result builders into one builder creating tuple of source results.
+    /// </summary>
+    /// <param name="name1">
+    /// First result name.
+    /// </param>
+    /// <param name="name2">
+    /// Second result name.
+    /// </param>
+    /// <param name="name3">
+    /// Third result name.
+    /// </param>
+    static member Multiple<'Result1, 'Result2, 'Result3>(?name1: string, ?name2: string, ?name3: string): ResultSpecifier<'Result1 * 'Result2 * 'Result3> = 
+        Results.Multiple(Results.Auto<'Result1>(defaultArg name1 ""), Results.Auto<'Result2>(defaultArg name2 ""), Results.Auto<'Result3>(defaultArg name3 ""))
             
     /// <summary>
     /// Merges four result builders into one builder creating tuple of source results.
@@ -467,6 +494,29 @@ type Results() =
                         return result1, result2, result3, result4
                     }
             }
+
+    /// <summary>
+    /// Merges four result builders into one builder creating tuple of source results.
+    /// </summary>
+    /// <param name="name1">
+    /// First result name.
+    /// </param>
+    /// <param name="name2">
+    /// Second result name.
+    /// </param>
+    /// <param name="name3">
+    /// Third result name.
+    /// </param>
+    /// <param name="name4">
+    /// Fourth result name.
+    /// </param>
+    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4>(?name1: string, ?name2: string, ?name3: string, ?name4: string)
+            : ResultSpecifier<'Result1 * 'Result2 * 'Result3 * 'Result4> = 
+        Results.Multiple(
+            Results.Auto<'Result1>(defaultArg name1 ""), 
+            Results.Auto<'Result2>(defaultArg name2 ""), 
+            Results.Auto<'Result3>(defaultArg name3 ""), 
+            Results.Auto<'Result4>(defaultArg name4 ""))
             
     /// <summary>
     /// Merges five result builders into one builder creating tuple of source results.
@@ -520,6 +570,33 @@ type Results() =
                         return result1, result2, result3, result4, result5
                     }
             }
+
+    /// <summary>
+    /// Merges five result builders into one builder creating tuple of source results.
+    /// </summary>
+    /// <param name="name1">
+    /// First result name.
+    /// </param>
+    /// <param name="name2">
+    /// Second result name.
+    /// </param>
+    /// <param name="name3">
+    /// Third result name.
+    /// </param>
+    /// <param name="name4">
+    /// Fourth result name.
+    /// </param>
+    /// <param name="name5">
+    /// Fifth result name.
+    /// </param>
+    static member Multiple<'Result1, 'Result2, 'Result3, 'Result4, 'Result5>(?name1: string, ?name2: string, ?name3: string, ?name4: string, ?name5: string)
+            : ResultSpecifier<'Result1 * 'Result2 * 'Result3 * 'Result4 * 'Result5> = 
+        Results.Multiple(
+            Results.Auto<'Result1>(defaultArg name1 ""), 
+            Results.Auto<'Result2>(defaultArg name2 ""), 
+            Results.Auto<'Result3>(defaultArg name3 ""), 
+            Results.Auto<'Result4>(defaultArg name4 ""),
+            Results.Auto<'Result5>(defaultArg name5 ""))
             
     /// <summary>
     /// Aplies on a builder function transforming source result to a target type.

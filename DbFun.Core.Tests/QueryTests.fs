@@ -147,7 +147,7 @@ module QueryTests =
             "select * from User where userId = @id;
              select * from Role where userId = @id",
             Params.Auto<int>("id"), 
-            Results.Multiple(Results.Single<User>(""), Results.Seq<string>("name")))            
+            Results.Multiple<User, string seq>("", "name"))
 
         let connector = new Connector(createConnection())
 
