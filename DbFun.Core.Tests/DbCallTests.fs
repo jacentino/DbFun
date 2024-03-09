@@ -9,11 +9,11 @@ module DbCallTests =
 
     let run (f: DbCall<'T>) = 
         let connection = Mock<IDbConnection>()
-        let connector = Connector(connection.Object)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection.Object, null)
         f(connector)
 
     let runWithMocks (connection: IDbConnection, transaction: IDbTransaction) (f: DbCall<'T>) = 
-        let connector = Connector(connection, transaction)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection, transaction)
         f(connector)
 
     let toDbCall x = dbsession { return x }

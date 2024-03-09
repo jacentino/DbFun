@@ -44,7 +44,7 @@ module QueryTests =
                
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 
-        let connector = new Connector(createConnection())        
+        let connector = new Connector(createConnection)        
 
         let user = query  1 connector |> Async.RunSynchronously
 
@@ -76,7 +76,7 @@ module QueryTests =
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id", Results.Auto()) 
 
-        let connector = new Connector(createConnection())        
+        let connector = new Connector(createConnection)        
 
         let user = query  1 connector |> Async.RunSynchronously
 
@@ -108,7 +108,7 @@ module QueryTests =
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id") 
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query  1 connector |> Async.RunSynchronously
 
@@ -149,7 +149,7 @@ module QueryTests =
             Params.Auto<int>("id"), 
             Results.Multiple<User, string seq>("", "name"))
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user, roles = query  1 connector |> Async.RunSynchronously
 
@@ -193,7 +193,7 @@ module QueryTests =
                 <*> Results.Single<User>("") 
                 <*> Results.Seq<string>("name"))                
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user, roles = query 1 connector |> Async.RunSynchronously
 
@@ -238,7 +238,7 @@ module QueryTests =
             |> Results.Map (Seq.map snd))
                 
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously |> Seq.toList
 
@@ -285,7 +285,7 @@ module QueryTests =
                 |> Results.Unkeyed)
                 
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously |> Seq.toList
 
@@ -324,7 +324,7 @@ module QueryTests =
             Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
             |> Results.Group (fun (u: UserWithRoles) rs -> { u with roles = rs }))
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously 
 
@@ -363,7 +363,7 @@ module QueryTests =
             Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
             |> Results.Group any<UserWithRoles>.roles)
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously 
 
@@ -394,7 +394,7 @@ module QueryTests =
                
         let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.Record<User>(), Results.Unit) 
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let _, user = query 1 connector |> Async.RunSynchronously
 
@@ -424,7 +424,7 @@ module QueryTests =
                
         let query = qb.Proc<int, User, unit>("getUser", "id") 
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let _, user = query 1 connector |> Async.RunSynchronously
 
@@ -504,7 +504,7 @@ module QueryTests =
         let line = Diag.GetLine()
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")                   
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
@@ -571,7 +571,7 @@ module QueryTests =
                     ]                            
                 ]
         let command = connection.CreateCommand()
-        let connector = new Connector(connection)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection, null)
 
         let criteria = 
             {
@@ -669,7 +669,7 @@ module QueryTests =
         let query = qb.Sql ("select * from User where userId = @Id", Params.Auto<UserId> "id", Results.Single<User> "")
                     
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query (UserId 1) connector |> Async.RunSynchronously
 
@@ -713,7 +713,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query [UserId 1] connector |> Async.RunSynchronously
 
@@ -750,7 +750,7 @@ module QueryTests =
             Params.Auto<int> "id", 
             Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))                
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously
 
@@ -783,7 +783,7 @@ module QueryTests =
             Params.Auto<UserId> "id", 
             Results.Single(Rows.Tuple<UserId, string, string, DateTime>("userId", "name", "email", "created")))                
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query (UserId 1) connector |> Async.RunSynchronously
 
@@ -825,7 +825,7 @@ module QueryTests =
             |> Results.Join uwr.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
             |> Results.Map (Seq.map snd))
 
-        let connector = new Connector(createConnection())
+        let connector = new Connector(createConnection)
 
         let user = query 1 connector |> Async.RunSynchronously |> Seq.toList
 
@@ -858,7 +858,7 @@ module QueryTests =
                
         let query = qb.DisablePrototypeCalls().Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 
-        let connector = new Connector(createConnection())        
+        let connector = new Connector(createConnection)        
 
         let user = query  1 connector |> Async.RunSynchronously
 

@@ -92,11 +92,27 @@ type DbCall() =
     /// </param>
     static member Run (createConnection: unit-> IDbConnection, dbCall: DbCall<'Result>): Async<'Result> = 
         async {
-            use connection = createConnection()
-            connection.Open()
-            let connector = Connector(connection)
+            use connector = new Connector(createConnection)
             return! dbCall(connector)
         }
+
+    /// <summary>
+    /// Executes many database computations on in parallel.
+    /// </summary>
+    /// <param name="createConnection">
+    /// Creates a connection.
+    /// </param>
+    /// <param name="dbCalls">
+    /// Database computations to be executed in parallel.
+    /// </param>
+    static member Parallel (dbCalls: DbCall<'Result> seq) (connector: IConnector): Async<'Result array> = 
+        Async.Parallel
+            [ for call in dbCalls do 
+                async {
+                    use clone = connector.Clone()
+                    return! call(clone)                
+                }
+            ]
 
 
 module List =
