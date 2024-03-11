@@ -135,8 +135,8 @@ type BatchCommandBuilder(?config: BatchCommandConfig) =
         fun (records: 'Record seq) (connector: IConnector) ->
             async {
                 use command = new FbBatchCommand(commandText)
-                command.Connection <- connector.Connection :?> FbConnection
-                command.Transaction <- connector.Transaction :?> FbTransaction
+                command.Connection <- connector.GetConnection() :?> FbConnection
+                command.Transaction <- connector.GetTransaction() :?> FbTransaction
                 for r in records do
                     let batchParams = command.AddBatchParameters()
                     setter.SetValue(r, None, batchParams)

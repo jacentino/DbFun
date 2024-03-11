@@ -5,7 +5,7 @@ open DbFun.Core.Builders
 
 module Sqlite = 
 
-    type QueryConfig with
+    type QueryConfig<'DbKey> with
         /// <summary>
         /// Adds converters between DateTime and String.
         /// </summary>

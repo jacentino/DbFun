@@ -4,16 +4,17 @@ open Xunit
 open DbFun.Core
 open Moq
 open System.Data
+open System.Collections.Generic
 
 module DbCallTests = 
 
     let run (f: DbCall<'T>) = 
-        let connection = Mock<IDbConnection>()
-        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection.Object, null)
+        let connection = Mock<IDbConnection>() 
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), ref [ (), connection.Object ], [])
         f(connector)
 
     let runWithMocks (connection: IDbConnection, transaction: IDbTransaction) (f: DbCall<'T>) = 
-        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection, transaction)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), ref [ (), connection ], [ (), transaction ])
         f(connector)
 
     let toDbCall x = dbsession { return x }
@@ -26,7 +27,7 @@ module DbCallTests =
         
         let result = listOfDbCalls |> List.toDbCall |> run |> Async.RunSynchronously
 
-        Assert.Equal<List<int>>([ 1; 3; 12; 4; 7 ], result)
+        Assert.Equal<IEnumerable<int>>([ 1; 3; 12; 4; 7 ], result)
         
 
     [<Fact>]
@@ -65,7 +66,7 @@ module DbCallTests =
         connection.Setup(fun x -> x.BeginTransaction()).Returns(transaction.Object) |> ignore
         let txnExists = ref false
 
-        let f (con: IConnector) = async { txnExists.Value <- con.Transaction <> null }
+        let f (con: IConnector) = async { txnExists.Value <- con.GetTransaction() <> null }
 
         dbsession {
             do! f
@@ -84,7 +85,7 @@ module DbCallTests =
         connection.Setup(fun x -> x.BeginTransaction()).Returns(transaction.Object) |> ignore
         let txnExists = ref false
 
-        let f (con: IConnector) = async { txnExists.Value <- con.Transaction <> null }
+        let f (con: IConnector) = async { txnExists.Value <- con.GetTransaction() <> null }
 
         dbsession {
             do! f
@@ -103,7 +104,7 @@ module DbCallTests =
         connection.Setup(fun x -> x.BeginTransaction(IsolationLevel.RepeatableRead)).Returns(transaction.Object) |> ignore
         let txnExists = ref false
 
-        let f (con: IConnector) = async { txnExists.Value <- con.Transaction <> null }
+        let f (con: IConnector) = async { txnExists.Value <- con.GetTransaction() <> null }
 
         dbsession {
             do! f
@@ -122,7 +123,7 @@ module DbCallTests =
         connection.Setup(fun x -> x.BeginTransaction(IsolationLevel.RepeatableRead)).Returns(transaction.Object) |> ignore
         let txnExists = ref false
 
-        let f (con: IConnector) = async { txnExists.Value <- con.Transaction <> null }
+        let f (con: IConnector) = async { txnExists.Value <- con.GetTransaction() <> null }
 
         dbsession {
             do! f

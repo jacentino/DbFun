@@ -83,7 +83,7 @@ type QueryConfig =
 /// Provides methods creating various query functions.
 /// </summary>
 type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) =
-    inherit DbFun.Core.Builders.QueryBuilder(config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
+    inherit DbFun.Core.Builders.QueryBuilder((), config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The configuration of the query builder.

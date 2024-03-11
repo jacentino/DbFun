@@ -84,7 +84,7 @@ type BulkImportConfig =
 /// <summary>
 /// Provides methods creating bulk import functions.
 /// </summary>
-type BulkImportBuilder(?config: BulkImportConfig) = 
+type BulkImportBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkImportConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (getDefaultBuilders())
 
@@ -97,7 +97,7 @@ type BulkImportBuilder(?config: BulkImportConfig) =
     /// <param name="setterBuilder">
     /// The parameter builder.
     /// </param>
-    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         let fieldNames = ref List.empty<string>
         let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders)
         let setter = specifier(provider, fieldNames)
@@ -106,8 +106,8 @@ type BulkImportBuilder(?config: BulkImportConfig) =
             sprintf "COPY %s (%s) FROM STDIN (FORMAT BINARY)" 
                 (defaultArg tableName (typeof<'Record>.Name.ToLower()))
                 (fieldNames.Value |> List.rev |> String.concat ", ")
-        fun (records: 'Record seq) (connector: IConnector) ->
-            let npgcon = connector.Connection :?> NpgsqlConnection
+        fun (records: 'Record seq) (connector: IConnector<'DbKey>) ->
+            let npgcon = connector.GetConnection(dbKey) :?> NpgsqlConnection
             async {
                 let! token = Async.CancellationToken
                 use importer = npgcon.BeginBinaryImport(copyCommand)
@@ -126,6 +126,8 @@ type BulkImportBuilder(?config: BulkImportConfig) =
     /// <param name="name">
     /// The builder name argument.
     /// </param>
-    member this.WriteToServer<'Record>(?name: string, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member this.WriteToServer<'Record>(?name: string, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         this.WriteToServer(BulkImportParams.Auto<'Record>(?name = name), ?tableName = tableName)
 
+
+type BulkImportBuilder = BulkImportBuilder<unit>

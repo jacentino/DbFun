@@ -18,6 +18,6 @@ module Commons =
 
     let query = QueryBuilder(config)
 
-    let bulkImport = BulkImportBuilder()
+    let bulkImport = BulkImportBuilder(())
 
     let run dbCall = DbCall.Run(createConnection, dbCall)

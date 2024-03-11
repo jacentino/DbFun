@@ -11,9 +11,9 @@ open System.Data.Common
 /// <summary>
 /// The query builder configuration data.
 /// </summary>
-type QueryConfig = 
+type QueryConfig<'DbKey> = 
     {
-        CreateConnection    : unit -> IDbConnection
+        CreateConnection    : 'DbKey -> IDbConnection
         ParamBuilders       : ParamsImpl.IBuilder list
         OutParamBuilders    : OutParamsImpl.IBuilder list
         RowBuilders         : RowsImpl.IBuilder list
@@ -28,7 +28,7 @@ type QueryConfig =
         /// <param name="createConnection">
         /// The function creating database connection (with proper connection string, but not open).
         /// </param>
-        static member Default(createConnection): QueryConfig = 
+        static member Default(createConnection): QueryConfig<'DbKey> = 
             {
                 CreateConnection    = createConnection
                 ParamBuilders       = ParamsImpl.getDefaultBuilders()
@@ -129,7 +129,7 @@ type CommandExecutor() =
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) as this =
+type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) as this =
     inherit CommandExecutor()
 
     let compileTimeErrorLog = 
@@ -153,7 +153,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
 
     let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         if config.PrototypeCalls then
-            use connection = config.CreateConnection()
+            use connection = config.CreateConnection(dbKey)
             connection.Open()
             use transaction = connection.BeginTransaction()
             use command = this.CreateCommand(connection)
@@ -166,12 +166,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
         else
             resultReaderBuilder(null)
 
-    let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
+    let executeQuery (provider: IConnector<'DbKey>, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
-            use command = this.CreateCommand(provider.Connection)
+            use command = this.CreateCommand(provider.GetConnection(dbKey))
             command.CommandType <- CommandType.Text
             command.CommandText <- commandText
-            command.Transaction <- provider.Transaction
+            command.Transaction <- provider.GetTransaction(dbKey)
             match config.Timeout with
             | Some timeout -> command.CommandTimeout <- timeout
             | None -> ()
@@ -180,12 +180,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             return! resultReader.Read(dataReader)
         }
 
-    let executeProcedure (provider: IConnector, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
+    let executeProcedure (provider: IConnector<'DbKey>, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
-            use command = this.CreateCommand(provider.Connection)
+            use command = this.CreateCommand(provider.GetConnection(dbKey))
             command.CommandType <- CommandType.StoredProcedure
             command.CommandText <- commandText
-            command.Transaction <- provider.Transaction
+            command.Transaction <- provider.GetTransaction(dbKey)
             match config.Timeout with
             | Some timeout -> command.CommandTimeout <- timeout
             | None -> ()
@@ -217,8 +217,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// <param name="createConnection">
     /// Function creating connection, assigned with a proper connection string, but not open.
     /// </param>
-    new(createConnection: unit -> IDbConnection) = 
-        QueryBuilder(QueryConfig.Default(createConnection))
+    new(dbKey: 'DbKey, createConnection: 'DbKey -> IDbConnection) = 
+        QueryBuilder<'DbKey>(dbKey, QueryConfig<'DbKey>.Default(createConnection))
 
     /// <summary>
     /// The configuration of the query builder.
@@ -232,25 +232,25 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
     /// The timeout value in seconds.
     /// </param>
     member __.Timeout(timeout: int) = 
-        QueryBuilder({ config with Timeout = Some timeout }, ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, { config with Timeout = Some timeout }, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder with compile-time error logging and deferred exceptions.
     /// </summary>
     member __.LogCompileTimeErrors() = 
-        QueryBuilder({ config with LogCompileTimeErrors = true }, ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, { config with LogCompileTimeErrors = true }, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder generating query functions without discovering resultset structure using SchemaOnly calls.
     /// </summary>
     member __.DisablePrototypeCalls() = 
-        QueryBuilder(config.DisablePrototypeCalls(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.DisablePrototypeCalls(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Allows to handle collections by generating parameters for each item with name modified by adding item index.
     /// </summary>
     member __.HandleCollectionParams() = 
-        QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The list of compile time errors.
@@ -286,7 +286,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
         try
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter = paramSpecifier(provider, ())
@@ -297,7 +297,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
 
             let resultReader = executePrototypeQuery(CommandType.Text, template(None), (fun cmd -> paramSetter.SetArtificial(None, cmd)), resultSpecifier')
 
-            fun (parameters: 'Params) (provider: IConnector) ->
+            fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
                 executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -326,7 +326,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params>(name), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -353,7 +353,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params>(name), Results.Auto(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -380,7 +380,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
             this.Sql((fun _ -> commandText), paramSpecifier, resultSpecifier, sourcePath, sourceLine) 
 
     /// <summary>
@@ -406,7 +406,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             name: string, resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params>(name), resultSpecifier, sourcePath, sourceLine) 
 
     /// <summary>
@@ -432,7 +432,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] argName: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result> =         
+            : 'Params -> DbCall<'DbKey, 'Result> =         
         this.Sql<'Params, 'Result>(commandText, argName, Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -463,7 +463,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
         resultSpecifier: ResultSpecifier<'Result>,
         [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
         [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-        : 'Params1 -> 'Params2 -> DbCall<'Result> = 
+        : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> = 
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter1 = paramSpecifier1(provider, ())
@@ -482,7 +482,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     paramSetter1.SetValue(parameters1, None, command) 
                     paramSetter2.SetValue(parameters2, None, command)
 
-                fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector) ->
+                fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector<'DbKey>) ->
                     executeQuery(provider, template(Some (parameters1, parameters2)), resultReader, setParams(parameters1, parameters2))
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
@@ -514,7 +514,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -543,7 +543,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] name1: string, [<Optional>] name2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -574,7 +574,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
         resultSpecifier: ResultSpecifier<'Result>,
         [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
         [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-        : 'Params1 -> 'Params2 -> DbCall<'Result> = 
+        : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> = 
             this.Sql((fun _ -> commandText), paramSpecifier1, paramSpecifier2, resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -604,7 +604,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -639,7 +639,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -661,7 +661,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter2.SetValue(parameters2, None, command)
                 paramSetter3.SetValue(parameters3, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector<'DbKey>) ->
                 executeQuery(provider, template(Some (parameters1, parameters2, parameters3)), resultReader, setParams(parameters1, parameters2, parameters3))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -696,7 +696,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -728,7 +728,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
 
@@ -764,7 +764,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> = 
         this.Sql((fun _ -> commandText), paramSpecifier1, paramSpecifier2, paramSpecifier3, resultSpecifier, sourcePath, sourceLine)
 
 
@@ -798,7 +798,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -837,7 +837,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -862,7 +862,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter3.SetValue(parameters3, None, command)
                 paramSetter4.SetValue(parameters4, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector<'DbKey>) ->
                 executeQuery(provider, template(Some (parameters1, parameters2, parameters3, parameters4)), resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -901,11 +901,11 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                 Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                 resultSpecifier,
-                 sourcePath, sourceLine)
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    resultSpecifier,
+                    sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with four curried args based on a command template.
@@ -940,12 +940,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, 
-                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
-                 Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
-                 Results.Auto<'Result>(resultName), 
-                 sourcePath, sourceLine) 
+                    Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+                    Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
@@ -983,7 +983,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> = 
         this.Sql((fun _ -> commandText), paramSpecifier1, paramSpecifier2, paramSpecifier3, paramSpecifier4, resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -1019,11 +1019,11 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                 Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                 resultSpecifier,
-                 sourcePath, sourceLine)
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    resultSpecifier,
+                    sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with five curried args based on a command template.
@@ -1065,7 +1065,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -1093,7 +1093,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter4.SetValue(parameters4, None, command)
                 paramSetter5.SetValue(parameters5, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector<'DbKey>) ->
                 executeQuery(
                     provider, 
                     template(Some (parameters1, parameters2, parameters3, parameters4, parameters5)), 
@@ -1138,13 +1138,13 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, 
-                 Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                 Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                 Params.Auto<'Params5>(name5), 
-                 resultSpecifier,
-                 sourcePath, sourceLine)
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    Params.Auto<'Params5>(name5), 
+                    resultSpecifier,
+                    sourcePath, sourceLine)
 
 
     /// <summary>
@@ -1183,13 +1183,13 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> =         
         this.Sql(template, 
-                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
-                 Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
-                 Params.Auto<'Params5>(argName5), 
-                 Results.Auto<'Result>(resultName), 
-                 sourcePath, sourceLine) 
+                    Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+                    Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
+                    Params.Auto<'Params5>(argName5), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with five curried args based on raw SQL text.
@@ -1231,7 +1231,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> = 
         this.Sql((fun _ -> commandText), paramSpecifier1, paramSpecifier2, paramSpecifier3, paramSpecifier4, paramSpecifier5, resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -1270,13 +1270,13 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, 
-                 Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                 Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                 Params.Auto<'Params5>(name5), 
-                 resultSpecifier,
-                 sourcePath, sourceLine)
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    Params.Auto<'Params5>(name5), 
+                    resultSpecifier,
+                    sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with two curried args based on raw SQL text.
@@ -1304,7 +1304,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -1336,7 +1336,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] argName1: string, [<Optional>] argName2: string, [<Optional>] argName3: string, [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), Params.Auto<'Params3>(argName3), Results.Auto<'Result>(resultName), sourcePath, sourceLine) 
 
     /// <summary>
@@ -1372,12 +1372,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, 
-                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
-                 Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
-                 Results.Auto<'Result>(resultName), 
-                 sourcePath, sourceLine) 
+                    Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+                    Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a query function with four curried args based on raw SQL text.
@@ -1415,13 +1415,13 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result> =         
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> =         
         this.Sql(commandText, 
-                 Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
-                 Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
-                 Params.Auto<'Params5>(argName5), 
-                 Results.Auto<'Result>(resultName), 
-                 sourcePath, sourceLine) 
+                    Params.Auto<'Params1>(argName1), Params.Auto<'Params2>(argName2), 
+                    Params.Auto<'Params3>(argName3), Params.Auto<'Params4>(argName4), 
+                    Params.Auto<'Params5>(argName5), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a one arg query function invoking stored procedure.
@@ -1450,7 +1450,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     resultSpecifier: ResultSpecifier<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params -> DbCall<'Result * 'OutParams> = 
+                    : 'Params -> DbCall<'DbKey, 'Result * 'OutParams> = 
             try                        
                 let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
                 let paramSetter = paramSpecifier(provider, ())
@@ -1466,7 +1466,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
                 let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
-                fun (parameters: 'Params) (provider: IConnector) ->
+                fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
                     executeProcedure(provider, procName, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
@@ -1499,7 +1499,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result * 'OutParams> = 
+            : 'Params -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params>(name), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
 
 
@@ -1531,7 +1531,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params -> DbCall<'Result * 'OutParams> = 
+            : 'Params -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params>(name), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -1565,7 +1565,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     resultSpecifier: ResultSpecifier<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -1588,7 +1588,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter1.SetValue(parameters1, None, command)
                 paramSetter2.SetValue(parameters2, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector<'DbKey>) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -1624,7 +1624,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), sourcePath, sourceLine)
 
     /// <summary>
@@ -1658,7 +1658,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
 
 
@@ -1697,7 +1697,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     resultSpecifier: ResultSpecifier<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -1723,7 +1723,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter2.SetValue(parameters2, None, command)
                 paramSetter3.SetValue(parameters3, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector<'DbKey>) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -1762,7 +1762,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
 
     /// <summary>
@@ -1799,11 +1799,11 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 [<Optional>] resultName: string,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'Result * 'OutParams> = 
+                : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, 
-                  Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), 
-                  OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), 
-                  sourcePath, sourceLine)                
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), 
+                    OutParams.Auto<'OutParams>(outParamName), Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine)                
 
     /// <summary>
     /// Builds a query function with four curried args invoking stored procedure.
@@ -1844,7 +1844,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     resultSpecifier: ResultSpecifier<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -1873,7 +1873,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter3.SetValue(parameters3, None, command)
                 paramSetter4.SetValue(parameters4, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector<'DbKey>) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -1915,12 +1915,12 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 resultSpecifier: ResultSpecifier<'Result>,
                 [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                 [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
+                : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, 
-                  Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                  outParamSpecifier, resultSpecifier,
-                  sourcePath, sourceLine)
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    outParamSpecifier, resultSpecifier,
+                    sourcePath, sourceLine)
     /// <summary>
     /// Builds a query function with four curried args invoking stored procedure.
     /// </summary>
@@ -1958,13 +1958,13 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName,
-                  Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                  OutParams.Auto<'OutParams>(outParamName), 
-                  Results.Auto<'Result>(resultName), 
-                  sourcePath, sourceLine)
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    OutParams.Auto<'OutParams>(outParamName), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine)
                 
     /// <summary>
     /// Builds a query function with five curried args invoking stored procedure.
@@ -2009,7 +2009,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                     resultSpecifier: ResultSpecifier<'Result>,
                     [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
             let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
             let paramSetter1 = paramSpecifier1(provider, ())
@@ -2041,7 +2041,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                 paramSetter4.SetValue(parameters4, None, command)
                 paramSetter5.SetValue(parameters5, None, command)
 
-            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector) ->
+            fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector<'DbKey>) ->
                 executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
         with ex ->
             handleException(sourcePath, sourceLine, ex)
@@ -2086,14 +2086,14 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             resultSpecifier: ResultSpecifier<'Result>,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName,
-                  Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                  Params.Auto<'Params5>(name5),
-                  outParamSpecifier,
-                  resultSpecifier,
-                  sourcePath, sourceLine)
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    Params.Auto<'Params5>(name5),
+                    outParamSpecifier,
+                    resultSpecifier,
+                    sourcePath, sourceLine)
 
     /// <summary>
     /// Builds a query function with five curried args invoking stored procedure.
@@ -2135,11 +2135,16 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             [<Optional>] resultName: string,
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
-            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'Result * 'OutParams> = 
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, 
-                  Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
-                  Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
-                  Params.Auto<'Params5>(name5),
-                  OutParams.Auto<'OutParams>(outParamName), 
-                  Results.Auto<'Result>(resultName), 
-                  sourcePath, sourceLine)                
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    Params.Auto<'Params5>(name5),
+                    OutParams.Auto<'OutParams>(outParamName), 
+                    Results.Auto<'Result>(resultName), 
+                    sourcePath, sourceLine)                
+
+
+
+type QueryConfig = QueryConfig<unit>
+type QueryBuilder = QueryBuilder<unit>

@@ -12,6 +12,7 @@ open DbFun.Core.Diagnostics
 open System.Data
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
+open System.Collections.Generic
 
 type Diag() = 
     static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line
@@ -40,7 +41,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
                
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 
@@ -72,7 +73,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id", Results.Auto()) 
 
@@ -104,7 +105,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id") 
 
@@ -141,7 +142,7 @@ module QueryTests =
                     ]                           
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql(
             "select * from User where userId = @id;
@@ -183,7 +184,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql(
                 "select * from User where userId = @id;
@@ -227,7 +228,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql (
             "select * from User where userId = @id;
@@ -272,7 +273,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
         let uwr = any<UserWithRoles>
 
         let query = 
@@ -315,7 +316,7 @@ module QueryTests =
                     ]
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql (
             "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
@@ -354,7 +355,7 @@ module QueryTests =
                     ]
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
 
         let query = qb.Sql (
             "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
@@ -390,7 +391,7 @@ module QueryTests =
                     "created", box (DateTime(2023, 1, 1))
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
                
         let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.Record<User>(), Results.Unit) 
 
@@ -420,7 +421,7 @@ module QueryTests =
                     "created", box (DateTime(2023, 1, 1))
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
                
         let query = qb.Proc<int, User, unit>("getUser", "id") 
 
@@ -452,7 +453,7 @@ module QueryTests =
                             
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
                
         let line = Diag.GetLine()
         let ex = Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
@@ -474,7 +475,7 @@ module QueryTests =
                             
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder((), createConfig createConnection).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
@@ -499,7 +500,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder((), createConfig createConnection).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")                   
@@ -524,7 +525,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder((), createConfig createConnection).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         qb.Timeout(30).Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
@@ -547,7 +548,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
+        let qb = QueryBuilder ((), (createConfig createProtoConnection).HandleCollectionParams())
                
         let query = 
             qb.Sql(
@@ -571,7 +572,7 @@ module QueryTests =
                     ]                            
                 ]
         let command = connection.CreateCommand()
-        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection, null)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), ref[ (), connection ], [])
 
         let criteria = 
             {
@@ -607,7 +608,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
+        let qb = QueryBuilder ((), (createConfig createProtoConnection).HandleCollectionParams())
 
         let query = qb.Sql<User list, unit>(
             Templating.define "insert into User (userId, name, email, created) values {{VALUES}}"
@@ -664,7 +665,7 @@ module QueryTests =
 
         let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
 
-        let qb = QueryBuilder(config)
+        let qb = QueryBuilder((), config)
                
         let query = qb.Sql ("select * from User where userId = @Id", Params.Auto<UserId> "id", Results.Single<User> "")
                     
@@ -699,7 +700,7 @@ module QueryTests =
                         .AddParamConverter(fun (UserId id) -> id)
                         .HandleCollectionParams()
 
-        let qb = QueryBuilder(config)
+        let qb = QueryBuilder((), config)
                
         let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")                
 
@@ -743,7 +744,7 @@ module QueryTests =
 
         let config = createConfig(createConnection).AddRowConverter(UserId)
 
-        let qb = QueryBuilder(config)
+        let qb = QueryBuilder((), config)
                
         let query = qb.Sql(
             "select * from User where userId = @Id", 
@@ -776,7 +777,7 @@ module QueryTests =
                         .AddParamConverter(fun (UserId id) -> id)
                         .AddRowConverter(UserId)
 
-        let qb = QueryBuilder(config)
+        let qb = QueryBuilder((), config)
                
         let query = qb.Sql(
             "select * from User where userId = @Id", 
@@ -814,7 +815,7 @@ module QueryTests =
         let config = (createConfig createConnection)
                         .AddConfigurator((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<UserWithRoles>)
 
-        let qb = QueryBuilder (config)
+        let qb = QueryBuilder ((), config)
         let uwr = any<UserWithRoles>
 
         let query = qb.Sql<int, UserWithRoles seq> (
@@ -854,7 +855,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder ((), createConfig createConnection)
                
         let query = qb.DisablePrototypeCalls().Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 

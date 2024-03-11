@@ -7,13 +7,18 @@ open System.Data
 open System
 open Microsoft.Data.SqlClient.Server
 
+module MultipleConnections = 
+
+    ()
+
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
 /// </summary>
-type QueryConfig = 
+type QueryConfig<'DbKey> = 
     {
-        Common      : DbFun.Core.Builders.QueryConfig
+        Common      : DbFun.Core.Builders.QueryConfig<'DbKey>
         TvpBuilders : TableValuedParamsImpl.IBuilder list
+        DbKey       : 'DbKey
     }
     with 
         /// <summary>
@@ -22,16 +27,23 @@ type QueryConfig =
         /// <param name="createConnection">
         /// The function creating database connection (with proper connection string, but not open).
         /// </param>
-        static member Default(createConnection: unit -> IDbConnection) = 
-            let common = DbFun.Core.Builders.QueryConfig.Default(createConnection)
-            { Common = common; TvpBuilders = TableValuedParamsImpl.getDefaultBuilders() }
+        static member Default(dbKey: 'DbKey, createConnection: 'DbKey -> IDbConnection) = 
+            let common = DbFun.Core.Builders.QueryConfig<'DbKey>.Default(createConnection)
+            {
+                Common      = { common with ParamBuilders = ParamsImpl.getDefaultBuilders(dbKey, createConnection >> unbox) }
+                TvpBuilders = TableValuedParamsImpl.getDefaultBuilders()
+                DbKey       = dbKey
+            }
+        //static member Default(createConnection: unit -> IDbConnection) = 
+        //    let common = DbFun.Core.Builders.QueryConfig.Default(createConnection)
+        //    { Common = common; TvpBuilders = TableValuedParamsImpl.getDefaultBuilders() }
 
         /// <summary>
         /// Handles collections of compound types (records, tuples) as table-valued parameters.
         /// </summary>
         member this.UseTvpParams() = 
             let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
-            let tvpBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) 
+            let tvpBuilder = ParamsImpl.TVPCollectionBuilder(this.DbKey, this.Common.CreateConnection, tvpProvider) 
             { this with Common = { this.Common with ParamBuilders = tvpBuilder :: this.Common.ParamBuilders } }
 
         /// <summary>
@@ -52,8 +64,8 @@ type QueryConfig =
         member this.AddTvpBuilder(builder: TableValuedParamsImpl.IBuilder) = 
             let tvpBuilders = builder :: this.TvpBuilders
             let tvpProvider = ParamsImpl.BaseSetterProvider(tvpBuilders)
-            let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) :> ParamsImpl.IBuilder
-            let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.TVPCollectionBuilder -> tvpCollBuilder | b -> b)
+            let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder<'DbKey>(this.DbKey, this.Common.CreateConnection, tvpProvider) :> ParamsImpl.IBuilder
+            let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.TVPCollectionBuilder<'DbKey> -> tvpCollBuilder | b -> b)
             { this with
                 Common      = { this.Common with ParamBuilders = paramBuilders }
                 TvpBuilders = tvpBuilders
@@ -117,8 +129,8 @@ type QueryConfig =
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
-    inherit DbFun.Core.Builders.QueryBuilder(config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
+type QueryBuilder<'DbKey>(config: QueryConfig<'DbKey>, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
+    inherit DbFun.Core.Builders.QueryBuilder<'DbKey>(config.DbKey, config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The configuration of the query builder.
@@ -131,8 +143,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     /// <param name="createConnection">
     /// Function creating connection, assigned with a proper connection string, but not open.
     /// </param>
-    new(createConnection: unit -> IDbConnection) = 
-        QueryBuilder(QueryConfig.Default(createConnection))
+    new(dbKey: 'DbKey, createConnection: 'DbKey -> IDbConnection) = 
+        QueryBuilder<'DbKey>(QueryConfig<'DbKey>.Default(dbKey, createConnection))
 
     /// <summary>
     /// Creates new builder with the specified command timeout.
@@ -141,28 +153,33 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     /// The timeout value in seconds.
     /// </param>
     member this.Timeout(timeout: int) = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with Timeout = Some timeout } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>({ this.Config with Common = { this.Config.Common with Timeout = Some timeout } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder with compile-time error logging and deferred exceptions.
     /// </summary>
     member this.LogCompileTimeErrors() = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder generating query functions without discovering resultset structure using SchemaOnly calls.
     /// </summary>
     member this.DisablePrototypeCalls() = 
-        QueryBuilder({ this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>({ this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Allows to handle collections by generating parameters for each item with name modified by adding item index.
     /// </summary>
     member __.HandleCollectionParams() = 
-        QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Handles collections of compound types (records, tuples) as table-valued parameters.
     /// </summary>
     member __.UseTvpParams() = 
-        QueryBuilder(config.UseTvpParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(config.UseTvpParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+
+type QueryConfig = QueryConfig<unit>
+
+type QueryBuilder = QueryBuilder<unit>

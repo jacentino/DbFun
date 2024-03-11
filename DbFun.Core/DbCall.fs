@@ -8,18 +8,20 @@ open System.Data
 /// <remarks>
 /// DbCall can be considered as a combination of Async and Reader monads and is used such a way by dbsession computation expressions.
 /// </remarks>
-type DbCall<'Result> = IConnector -> Async<'Result>
+type DbCall<'DbKey, 'Result> = IConnector<'DbKey> -> Async<'Result>
+
+type DbCall<'Result> = DbCall<unit, 'Result>
 
 type DbCall() = 
 
-    static let wrapInTransaction (isolationLevel: IsolationLevel option) (f: IConnector -> Async<'T>) (con: IConnector) =
+    static let wrapInTransaction (dbKey: 'DbKey, isolationLevel: IsolationLevel option) (f: IConnector<'DbKey> -> Async<'T>) (con: IConnector<'DbKey>) =
         async {
-            if con.Transaction = null then
+            if con.GetTransaction(dbKey) = null then
                 use transaction = 
                     isolationLevel 
-                    |> Option.map con.Connection.BeginTransaction 
-                    |> Option.defaultWith con.Connection.BeginTransaction
-                let! value = f(con.With transaction)
+                    |> Option.map (con.GetConnection(dbKey).BeginTransaction)
+                    |> Option.defaultWith (con.GetConnection(dbKey).BeginTransaction)
+                let! value = f(con.With(dbKey, transaction))
                 transaction.Commit()
                 return value
             else
@@ -35,8 +37,8 @@ type DbCall() =
     /// <param name="dbCall">
     /// The source dbCall value.
     /// </param>
-    static member Map (f: 'T -> 'U) (dbCall: DbCall<'T>): DbCall<'U> = 
-        fun con ->
+    static member Map (f: 'T -> 'U) (dbCall: DbCall<'DbKey, 'T>): DbCall<'DbKey, 'U> = 
+        fun (con : IConnector<'DbKey>) ->
             async {
                 let! value = dbCall(con)
                 return f(value)
@@ -49,8 +51,8 @@ type DbCall() =
     /// <param name="dbCall">
     /// The source dbCall value.
     /// </param>
-    static member Catch (dbCall: DbCall<'T>): DbCall<Choice<'T, exn>> = 
-        fun (con: IConnector) ->
+    static member Catch (dbCall: DbCall<'DbKey, 'T>): DbCall<'DbKey, Choice<'T, exn>> = 
+        fun (con: IConnector<'DbKey>) ->
             async { 
                 return! dbCall(con)
             } |> Async.Catch
@@ -69,8 +71,8 @@ type DbCall() =
     /// <param name="dbCall">
     /// The source dbCall value.
     /// </param>
-    static member InTransaction (dbCall: DbCall<'T>): DbCall<'T> = 
-        wrapInTransaction None dbCall
+    static member InTransaction (dbCall: DbCall<unit, 'T>): DbCall<unit, 'T> = 
+        wrapInTransaction ((), None) dbCall
 
     /// <summary>
     /// Wraps database computation in a transaction of a certain isolation level.
@@ -78,8 +80,18 @@ type DbCall() =
     /// <param name="isolationLevel">
     /// The transaction isolation level.
     /// </param>
-    static member InTransactionWith (isolationLevel: IsolationLevel): DbCall<'T> -> DbCall<'T> = 
-        wrapInTransaction (Some isolationLevel)
+    static member InTransactionWith (isolationLevel: IsolationLevel): DbCall<unit, 'T> -> DbCall<unit, 'T> = 
+        wrapInTransaction ((), Some isolationLevel)
+
+
+    /// <summary>
+    /// Wraps database computation in a transaction of a certain isolation level.
+    /// </summary>
+    /// <param name="isolationLevel">
+    /// The transaction isolation level.
+    /// </param>
+    static member InTransactionWith (dbKey: 'DbKey, ?isolationLevel: IsolationLevel): DbCall<'DbKey, 'T> -> DbCall<'DbKey, 'T> = 
+        wrapInTransaction (dbKey, isolationLevel)
 
     /// <summary>
     /// Creates a connection and executes a database computations on it. Disposes the connection when done.
@@ -90,9 +102,9 @@ type DbCall() =
     /// <param name="dbCall">
     /// Database computations to be executed.
     /// </param>
-    static member Run (createConnection: unit-> IDbConnection, dbCall: DbCall<'Result>): Async<'Result> = 
+    static member Run (createConnection: 'DbKey-> IDbConnection, dbCall: DbCall<'DbKey, 'Result>): Async<'Result> = 
         async {
-            use connector = new Connector(createConnection)
+            use connector = new Connector<'DbKey>(createConnection)
             return! dbCall(connector)
         }
 
@@ -105,7 +117,7 @@ type DbCall() =
     /// <param name="dbCalls">
     /// Database computations to be executed in parallel.
     /// </param>
-    static member Parallel (dbCalls: DbCall<'Result> seq) (connector: IConnector): Async<'Result array> = 
+    static member Parallel (dbCalls: DbCall<'DbKey, 'Result> seq) (connector: IConnector<'DbKey>): Async<'Result array> = 
         Async.Parallel
             [ for call in dbCalls do 
                 async {
@@ -126,7 +138,7 @@ module List =
     /// <param name="con">
     /// The connector.
     /// </param>
-    let toDbCall (items: DbCall<'t> list) (con: IConnector): 't list Async = async {
+    let toDbCall (items: DbCall<'DbKey, 't> list) (con: IConnector<'DbKey>): 't list Async = async {
         let mutable result = []
         for dbCall in items do
             let! item = dbCall con
@@ -145,7 +157,7 @@ module Array =
     /// <param name="con">
     /// The connector.
     /// </param>
-    let toDbCall (items: DbCall<'t> array) (con: IConnector): 't array Async = async {
+    let toDbCall (items: DbCall<'DbKey, 't> array) (con: IConnector<'DbKey>): 't array Async = async {
         let result = Array.zeroCreate items.Length
         for i in 0..items.Length - 1 do
             let! item = (items[i]) con
@@ -164,7 +176,7 @@ module Option =
     /// <param name="con">
     /// The connector.
     /// </param>
-    let toDbCall (value: DbCall<'t> option) (con: IConnector): 't option Async = async {
+    let toDbCall (value: DbCall<'DbKey, 't> option) (con: IConnector<'DbKey>): 't option Async = async {
         match value with
         | Some dbCall ->
             let! value = dbCall con

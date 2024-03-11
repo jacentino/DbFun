@@ -6,50 +6,56 @@ open System
 /// <summary>
 /// Provides access to current database connection and transaction.
 /// </summary>
-type IConnector = 
+type IConnector<'Key> = 
     inherit IDisposable
 
     /// <summary>
     /// The database connection.
     /// </summary>
-    abstract member Connection: IDbConnection
+    abstract member GetConnection: 'Key -> IDbConnection
 
     /// <summary>
     /// The current transaction (null if there is no active transaction).
     /// </summary>
-    abstract member Transaction: IDbTransaction
+    abstract member GetTransaction: 'Key -> IDbTransaction
 
     /// <summary>
     /// Creates new connector instance with the specified transaction.
     /// </summary>
-    abstract member With: IDbTransaction -> IConnector
+    abstract member With: 'Key * IDbTransaction -> IConnector<'Key>
 
-    abstract member Clone: unit -> IConnector
+    abstract member Clone: unit -> IConnector<'Key>
 
 /// <summary>
 /// The minimal IConnector implementation.
 /// </summary>
-type Connector(createConnection: unit -> IDbConnection, connection: IDbConnection, transaction: IDbTransaction) = 
+type Connector<'Key when 'Key: comparison>(
+        createConnection: 'Key -> IDbConnection, 
+        connections: ref<list<'Key * IDbConnection>>, 
+        transactions: list<'Key * IDbTransaction>) = 
 
-    new (createConnection: unit -> IDbConnection) = 
-        let connection = createConnection()
-        connection.Open()
-        new Connector(createConnection, connection, null)
+    new (createConnection: 'Key -> IDbConnection) = 
+        new Connector<'Key>(createConnection, ref [], [])
 
-    // TODO: refactor it out
-    //new (connection: IDbConnection) = 
-    //    new Connector((fun () -> failwith "Cloning is not supported"), connection, null)
-
-    // TODO: refactor it out
-    //new (connection: IDbConnection, transaction: IDbTransaction) = 
-    //    new Connector((fun () -> failwith "Cloning is not supported"), connection, transaction)
-
-    interface IConnector with
-        member __.Connection: IDbConnection = connection
-        member __.Transaction: IDbTransaction = transaction
-        member __.With(transaction: IDbTransaction) = new Connector(createConnection, connection, transaction)
-        member __.Clone() = new Connector(createConnection)
+    interface IConnector<'Key> with
+        member __.GetConnection(key: 'Key) = 
+            match connections.Value |> List.tryFind (fst >> (=) key) with
+            | Some (_, connection) -> connection
+            | None -> 
+                let connection = createConnection key
+                connections.Value <- (key, connection) :: connections.Value
+                connection.Open()
+                connection
+                
+        member __.GetTransaction(key: 'Key) = transactions |> List.tryFind (fst >> (=) key) |> Option.map snd |> Option.defaultValue null
+        member __.With(key: 'Key, transaction: IDbTransaction) = new Connector<'Key>(createConnection, connections, (key, transaction) :: transactions)
+        member __.Clone() = new Connector<'Key>(createConnection)
 
     interface IDisposable with
-        member this.Dispose(): unit = 
-            connection.Dispose()
+        member __.Dispose(): unit = 
+            for _, con in connections.Value do
+                con.Dispose()
+
+type IConnector = IConnector<unit>
+
+type Connector = Connector<unit>

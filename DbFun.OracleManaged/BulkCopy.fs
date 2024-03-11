@@ -115,7 +115,7 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
                             setter.SetValue(r, None, dataRow)
                             yield dataRow
                     } |> Seq.toArray
-                let bulkCopy = new OracleBulkCopy(connector.Connection :?> OracleConnection)
+                let bulkCopy = new OracleBulkCopy(connector.GetConnection() :?> OracleConnection)
                 bulkCopy.DestinationTableName <- defaultArg tableName typeof<'Record>.Name
                 bulkCopy.WriteToServer(rows)
             }

@@ -5,12 +5,13 @@ open DbFun.Core
 open Moq
 open System.Data
 open System
+open System.Collections.Generic
 
 module DbSessionTests = 
 
     let run (f: DbCall<'T>) = 
         let connection = Mock<IDbConnection>()
-        let connector = new Connector((fun () -> failwith "Cloning is not supported"), connection.Object, null)
+        let connector = new Connector((fun () -> failwith "Cloning is not supported"), ref [ (), connection.Object ], [])
         f(connector)
 
     [<Fact>]
