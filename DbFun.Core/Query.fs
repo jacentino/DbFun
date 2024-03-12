@@ -151,10 +151,8 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
         }
 
 
-    let executePrototypeQuery(commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
+    let executePrototypeQuery(connection: IDbConnection, commandType: CommandType, commandText: string, setParams: IDbCommand -> unit, resultReaderBuilder: IDataReader -> IResultReader<'Result>) =
         if config.PrototypeCalls then
-            use connection = config.CreateConnection(dbKey)
-            connection.Open()
             use transaction = connection.BeginTransaction()
             use command = this.CreateCommand(connection)
             command.CommandType <- commandType
@@ -288,14 +286,18 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params -> DbCall<'DbKey, 'Result> =         
         try
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter = paramSpecifier(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter = paramSpecifier(provider, connection)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                        
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.Text, template(None), (fun cmd -> paramSetter.SetArtificial(None, cmd)), resultSpecifier')
+            let setArtificial cmd = paramSetter.SetArtificial(None, cmd)
+
+            let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
             fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
                 executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
@@ -465,9 +467,11 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
         [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
         : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> = 
             try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter1 = paramSpecifier1(provider, ())
-                let paramSetter2 = paramSpecifier2(provider, ())
+                let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+                use connection = config.CreateConnection(dbKey)
+                connection.Open()
+                let paramSetter1 = paramSpecifier1(provider, connection)
+                let paramSetter2 = paramSpecifier2(provider, connection)
 
                 let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
@@ -476,7 +480,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     paramSetter1.SetArtificial(None, command)
                     paramSetter2.SetArtificial(None, command)
 
-                let resultReader = executePrototypeQuery(CommandType.Text, template(None), setArtificial, resultSpecifier')
+                let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
                 let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: IDbCommand) = 
                     paramSetter1.SetValue(parameters1, None, command) 
@@ -641,10 +645,12 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
@@ -654,7 +660,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter2.SetArtificial(None, command)
                 paramSetter3.SetArtificial(None, command)                    
 
-            let resultReader = executePrototypeQuery(CommandType.Text, template(None), setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command) 
@@ -839,11 +845,13 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
-            let paramSetter4 = paramSpecifier4(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
+            let paramSetter4 = paramSpecifier4(provider, connection)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
@@ -854,7 +862,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter3.SetArtificial(None, command)                    
                 paramSetter4.SetArtificial(None, command)                    
 
-            let resultReader = executePrototypeQuery(CommandType.Text, template(None), setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command) 
@@ -1067,12 +1075,14 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
-            let paramSetter4 = paramSpecifier4(provider, ())
-            let paramSetter5 = paramSpecifier5(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
+            let paramSetter4 = paramSpecifier4(provider, connection)
+            let paramSetter5 = paramSpecifier5(provider, connection)
 
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
@@ -1084,7 +1094,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter4.SetArtificial(None, command)                    
                 paramSetter5.SetArtificial(None, command)                    
 
-            let resultReader = executePrototypeQuery(CommandType.Text, template(None), setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command) 
@@ -1452,8 +1462,10 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                     : 'Params -> DbCall<'DbKey, 'Result * 'OutParams> = 
             try                        
-                let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-                let paramSetter = paramSpecifier(provider, ())
+                let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+                use connection = config.CreateConnection(dbKey)
+                connection.Open()
+                let paramSetter = paramSpecifier(provider, connection)
                         
                 let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
                 let outParamGetter = outParamSpecifier(outParamProvider, ())
@@ -1465,7 +1477,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
                 let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-                let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
+                let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
                 fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
                     executeProcedure(provider, procName, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
             with ex ->
@@ -1567,9 +1579,11 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                     : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
                         
             let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
             let outParamGetter = outParamSpecifier(outParamProvider, ())
@@ -1582,7 +1596,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command)
@@ -1699,10 +1713,12 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                     : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
                         
             let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
             let outParamGetter = outParamSpecifier(outParamProvider, ())
@@ -1716,7 +1732,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command)
@@ -1846,11 +1862,13 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                     : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
-            let paramSetter4 = paramSpecifier4(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
+            let paramSetter4 = paramSpecifier4(provider, connection)
                         
             let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
             let outParamGetter = outParamSpecifier(outParamProvider, ())
@@ -1865,7 +1883,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command)
@@ -2011,12 +2029,14 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
                     : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         try                        
-            let provider = GenericSetters.BaseSetterProvider<unit, IDbCommand>(config.ParamBuilders)
-            let paramSetter1 = paramSpecifier1(provider, ())
-            let paramSetter2 = paramSpecifier2(provider, ())
-            let paramSetter3 = paramSpecifier3(provider, ())
-            let paramSetter4 = paramSpecifier4(provider, ())
-            let paramSetter5 = paramSpecifier5(provider, ())
+            let provider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>(config.ParamBuilders)
+            use connection = config.CreateConnection(dbKey)
+            connection.Open()
+            let paramSetter1 = paramSpecifier1(provider, connection)
+            let paramSetter2 = paramSpecifier2(provider, connection)
+            let paramSetter3 = paramSpecifier3(provider, connection)
+            let paramSetter4 = paramSpecifier4(provider, connection)
+            let paramSetter5 = paramSpecifier5(provider, connection)
                         
             let outParamProvider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(config.OutParamBuilders)
             let outParamGetter = outParamSpecifier(outParamProvider, ())
@@ -2032,7 +2052,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             let rowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(config.RowBuilders)
             let resultSpecifier' prototype = resultSpecifier(rowGetterProvider, prototype)
 
-            let resultReader = executePrototypeQuery(CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
+            let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
 
             let setParams (parameters1: 'Params1, parameters2: 'Params2, parameters3: 'Params3, parameters4: 'Params4, parameters5: 'Params5) (command: IDbCommand) = 
                 paramSetter1.SetValue(parameters1, None, command)
@@ -2144,7 +2164,19 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     Results.Auto<'Result>(resultName), 
                     sourcePath, sourceLine)                
 
-
-
 type QueryConfig = QueryConfig<unit>
-type QueryBuilder = QueryBuilder<unit>
+
+/// <summary>
+/// Provides methods creating various query functions.
+/// </summary>
+type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) =
+    inherit QueryBuilder<unit>((), config, ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Creates query builder object with default configuration
+    /// </summary>
+    /// <param name="createConnection">
+    /// Function creating connection, assigned with a proper connection string, but not open.
+    /// </param>
+    new(createConnection: unit -> IDbConnection) = 
+        QueryBuilder(QueryConfig.Default(createConnection))

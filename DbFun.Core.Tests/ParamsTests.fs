@@ -22,8 +22,8 @@ type TestUnion =
 module ParamsTests = 
 
     let connection = new SqlConnection()
-    let provider: IParamSetterProvider = BaseSetterProvider<unit, IDbCommand>(ParamsImpl.SequenceIndexingBuilder() :: ParamsImpl.getDefaultBuilders()) 
-    let builderParams = provider, ()
+    let provider: IParamSetterProvider = BaseSetterProvider<IDbConnection, IDbCommand>(ParamsImpl.SequenceIndexingBuilder() :: ParamsImpl.getDefaultBuilders()) 
+    let builderParams = provider, connection :> IDbConnection
 
     open FSharp.Reflection
 
@@ -345,7 +345,7 @@ module ParamsTests =
             ParamsImpl.BaseSetterProvider(
                 ParamsImpl.Configurator<string * RecordNaming>((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<User>) ::  
                 ParamsImpl.getDefaultBuilders())
-        let builderParams = provider, ()
+        let builderParams = provider, connection :> IDbConnection
 
         (Params.Record<User>("user_")(builderParams)).SetValue({ userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime.Today }, None, command)
 
@@ -813,7 +813,7 @@ module ParamsTests =
             ParamsImpl.BaseSetterProvider(
                 ParamsImpl.Configurator<string * UnionNaming>((fun prefix -> prefix, UnionNaming.Prefix), fun t -> t = typeof<PaymentType>) ::  
                 ParamsImpl.getDefaultBuilders())
-        let builderParams = provider, ()
+        let builderParams = provider, connection :> IDbConnection
         (Params.Union<PaymentType>("payment")(builderParams)).SetValue(PaymentType.CreditCard ("1234567890", "222"), None, command)
 
         Assert.Equal(box "CC", command.Parameters["payment"].Value)

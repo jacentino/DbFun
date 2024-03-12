@@ -130,4 +130,8 @@ type BulkImportBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkImportConfig) =
         this.WriteToServer(BulkImportParams.Auto<'Record>(?name = name), ?tableName = tableName)
 
 
-type BulkImportBuilder = BulkImportBuilder<unit>
+/// <summary>
+/// Provides methods creating bulk import functions.
+/// </summary>
+type BulkImportBuilder(?config: BulkImportConfig) = 
+    inherit BulkImportBuilder<unit>((), ?config = config)

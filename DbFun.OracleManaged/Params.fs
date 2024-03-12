@@ -66,7 +66,7 @@ module ParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isCollectionType argType 
 
-            member this.Build<'Arg> (name: string, _: IParamSetterProvider, _: unit) = 
+            member this.Build<'Arg> (name: string, _: IParamSetterProvider, _: IDbConnection) = 
                 let itemType = Types.getElementType typeof<'Arg>
                 let setterName = 
                     if typeof<'Arg>.IsArray then "CreateArraySetter"

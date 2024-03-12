@@ -25,7 +25,7 @@ module QueryTests =
 
         let connector = new Connector(createConnection)
 
-        let qb = QueryBuilder(QueryConfig.Default((), createConnection))
+        let qb = QueryBuilder(QueryConfig.Default(createConnection))
                
         let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.ReturnAnd<User>("ret_val", "user"), Results.Unit) 
 
@@ -60,11 +60,11 @@ module QueryTests =
                 ]
 
         let connector = new Connector(createConnection)
-        let qb = QueryBuilder(QueryConfig.Default((), createConnection)).UseTvpParams()
+        let qb = QueryBuilder(QueryConfig.Default(createConnection)).UseTvpParams()
         let query = qb.Timeout(30).Sql(
             "insert into User (userId, name, email, created) 
              select userId, name, email, created from @users",
-            Params<unit>.TableValuedSeq<User>("users"), 
+            Params.TableValuedSeq<User>("users"), 
             Results.Unit)
                         
 
@@ -93,7 +93,7 @@ module QueryTests =
 
         let connector = new Connector(createConnection)
 
-        let config = QueryConfig.Default((), createConnection).AddRowConverter(UserId)
+        let config = QueryConfig.Default(createConnection).AddRowConverter(UserId)
         let qb = QueryBuilder(config)
                
         let query = qb.Proc(
@@ -128,12 +128,12 @@ module QueryTests =
                 ]
 
         let connector = new Connector(createConnection)
-        let config = QueryConfig.Default((), createConnection).UseTvpParams().AddParamConverter(fun (UserId id) -> id)                        
+        let config = QueryConfig.Default(createConnection).UseTvpParams().AddParamConverter(fun (UserId id) -> id)                        
         let qb = QueryBuilder(config)
         let query = qb.Timeout(30).Sql(
             "insert into User (userId, name, email, created) 
              select userId, name, email, created from @users",
-            Params<unit>.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User"), 
+            Params.TableValuedSeq(TVParams.Tuple<int, string, string, DateTime>("userId", "name", "email", "created"), "users", "User"), 
             Results.Unit)                        
 
         let user = (3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))

@@ -17,6 +17,6 @@ module Commons =
 
     let config = QueryConfig.Default(createConnection)
 
-    let query = QueryBuilder((), config)
+    let query = QueryBuilder(config)
 
     let run dbCall = DbCall.Run(createConnection, dbCall)

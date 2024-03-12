@@ -132,4 +132,9 @@ type BulkCopyBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkCopyConfig) =
     member this.WriteToServer<'Record>(?name: string, ?tableName: string): 'Record seq -> DbCall<'DbKey, MySqlBulkCopyResult> = 
         this.WriteToServer(BulkCopyParams.Auto<'Record>(?name = name), ?tableName = tableName)
 
-type BulkCopyBuilder = BulkCopyBuilder<unit>
+
+/// <summary>
+/// Provides methods creating bulk import functions.
+/// </summary>
+type BulkCopyBuilder(?config: BulkCopyConfig) = 
+    inherit BulkCopyBuilder<unit>((), ?config = config)

@@ -6,13 +6,13 @@ open DbFun.Core
 
 type IParamSetter<'Arg> = GenericSetters.ISetter<IDbCommand, 'Arg>
 
-type IParamSetterProvider = GenericSetters.ISetterProvider<unit, IDbCommand>
+type IParamSetterProvider = GenericSetters.ISetterProvider<IDbConnection, IDbCommand>
 
-type ParamSpecifier<'Arg> = GenericSetters.SetterSpecifier<unit, IDbCommand, 'Arg>
+type ParamSpecifier<'Arg> = GenericSetters.SetterSpecifier<IDbConnection, IDbCommand, 'Arg>
 
 module ParamsImpl = 
 
-    type IBuilder = GenericSetters.IBuilder<unit, IDbCommand>
+    type IBuilder = GenericSetters.IBuilder<IDbConnection, IDbCommand>
 
     type SimpleBuilder() =
 
@@ -44,7 +44,7 @@ module ParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (name: string, _, ()) = 
+            member this.Build<'Arg> (name: string, _, _) = 
                 { new IParamSetter<'Arg> with
                     member __.SetValue (value: 'Arg, index: int option, command: IDbCommand) = 
                         let param = this.FindOrCreateParam(command, name, index)
@@ -77,55 +77,55 @@ module ParamsImpl =
                     itemSetter.SetArtificial(index, command)
             }
 
-        member __.CreateSeqSetter<'Item>(name: string, provider: IParamSetterProvider) = 
-            let itemSetter = provider.Setter<'Item>(name, ())
+        member __.CreateSeqSetter<'Item>(name: string, provider: IParamSetterProvider, connection: IDbConnection) = 
+            let itemSetter = provider.Setter<'Item>(name, connection)
             SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-        member __.CreateListSetter<'Item>(name: string, provider: IParamSetterProvider) = 
-            let itemSetter = provider.Setter<'Item>(name, ())
+        member __.CreateListSetter<'Item>(name: string, provider: IParamSetterProvider, connection: IDbConnection) = 
+            let itemSetter = provider.Setter<'Item>(name, connection)
             SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-        member __.CreateArraySetter<'Item>(name: string, provider: IParamSetterProvider) = 
-            let itemSetter = provider.Setter<'Item>(name, ())
+        member __.CreateArraySetter<'Item>(name: string, provider: IParamSetterProvider, connection: IDbConnection) = 
+            let itemSetter = provider.Setter<'Item>(name, connection)
             SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
         interface IBuilder with
 
             member __.CanBuild (argType: Type) = Types.isCollectionType argType 
 
-            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, _: unit) = 
+            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, connection: IDbConnection) = 
                 let itemType = Types.getElementType typeof<'Arg>
                 let setterName = 
                     if typeof<'Arg>.IsArray then "CreateArraySetter"
                     elif typedefof<'Arg> = typedefof<list<_>> then "CreateListSetter"
                     else "CreateSeqSetter"
                 let createSetterMethod = this.GetType().GetMethod(setterName).MakeGenericMethod(itemType)
-                createSetterMethod.Invoke(this, [| name; provider |]) :?> IParamSetter<'Arg>
+                createSetterMethod.Invoke(this, [| name; provider; connection |]) :?> IParamSetter<'Arg>
     
 
-    type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, IDbCommand>
+    type BaseSetterProvider = GenericSetters.BaseSetterProvider<IDbConnection, IDbCommand>
 
-    type InitialDerivedSetterProvider<'Config> = GenericSetters.InitialDerivedSetterProvider<unit, IDbCommand, 'Config>
+    type InitialDerivedSetterProvider<'Config> = GenericSetters.InitialDerivedSetterProvider<IDbConnection, IDbCommand, 'Config>
 
-    type DerivedSetterProvider<'Config> = GenericSetters.DerivedSetterProvider<unit, IDbCommand, 'Config>
+    type DerivedSetterProvider<'Config> = GenericSetters.DerivedSetterProvider<IDbConnection, IDbCommand, 'Config>
 
-    type UnitBuilder = GenericSetters.UnitBuilder<unit, IDbCommand>
+    type UnitBuilder = GenericSetters.UnitBuilder<IDbConnection, IDbCommand>
 
-    type SequenceBuilder = GenericSetters.SequenceBuilder<unit, IDbCommand>
+    type SequenceBuilder = GenericSetters.SequenceBuilder<IDbConnection, IDbCommand>
 
-    type Converter<'Source, 'Target> = GenericSetters.Converter<unit, IDbCommand, 'Source, 'Target>
+    type Converter<'Source, 'Target> = GenericSetters.Converter<IDbConnection, IDbCommand, 'Source, 'Target>
 
-    type EnumConverter<'Underlying> = GenericSetters.EnumConverter<unit, IDbCommand, 'Underlying>
+    type EnumConverter<'Underlying> = GenericSetters.EnumConverter<IDbConnection, IDbCommand, 'Underlying>
 
     type UnionBuilder = GenericSetters.UnionBuilder<unit, IDbCommand>
 
-    type OptionBuilder = GenericSetters.OptionBuilder<unit, IDbCommand>
+    type OptionBuilder = GenericSetters.OptionBuilder<IDbConnection, IDbCommand>
 
-    type RecordBuilder = GenericSetters.RecordBuilder<unit, IDbCommand>
+    type RecordBuilder = GenericSetters.RecordBuilder<IDbConnection, IDbCommand>
 
-    type TupleBuilder = GenericSetters.TupleBuilder<unit, IDbCommand>
+    type TupleBuilder = GenericSetters.TupleBuilder<IDbConnection, IDbCommand>
 
-    type Configurator<'Config> = GenericSetters.Configurator<unit, IDbCommand, 'Config>
+    type Configurator<'Config> = GenericSetters.Configurator<IDbConnection, IDbCommand, 'Config>
 
     let getDefaultBuilders(): IBuilder list = SimpleBuilder() :: GenericSetters.getDefaultBuilders()
 
@@ -134,7 +134,7 @@ module ParamsImpl =
 /// Provides methods creating various query parameter builders.
 /// </summary>
 type Params() = 
-    inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()
+    inherit GenericSetters.GenericSetterBuilder<IDbConnection, IDbCommand>()
 
     /// <summary>
     /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
@@ -143,7 +143,7 @@ type Params() =
     /// The sequence item type specifier.
     /// </param>
     static member Seq (itemSpecifier: ParamSpecifier<'Item>) = 
-        fun (provider: IParamSetterProvider, prototype: unit) ->
+        fun (provider: IParamSetterProvider, prototype: IDbConnection) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
@@ -154,8 +154,8 @@ type Params() =
     /// The sequence item base name.
     /// </param>
     static member Seq<'Item> (?name: string) = 
-        fun (provider: IParamSetterProvider, _: unit) ->
-            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+        fun (provider: IParamSetterProvider, connection: IDbConnection) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", connection)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
     /// <summary>
@@ -165,7 +165,7 @@ type Params() =
     /// The list item type specifier.
     /// </param>
     static member List (itemSpecifier: ParamSpecifier<'Item>) = 
-        fun (provider: IParamSetterProvider, prototype: unit) ->
+        fun (provider: IParamSetterProvider, prototype: IDbConnection) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
@@ -176,8 +176,8 @@ type Params() =
     /// The list item name.
     /// </param>
     static member List<'Item> (?name: string) = 
-        fun (provider: IParamSetterProvider, _: unit) ->
-            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+        fun (provider: IParamSetterProvider, prototype: IDbConnection) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
     /// <summary>
@@ -187,7 +187,7 @@ type Params() =
     /// The array item type specifier.
     /// </param>
     static member Array (itemSpecifier: ParamSpecifier<'Item>) = 
-        fun (provider: IParamSetterProvider, prototype: unit) ->
+        fun (provider: IParamSetterProvider, prototype: IDbConnection) ->
             let itemSetter = itemSpecifier(provider, prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
@@ -198,11 +198,11 @@ type Params() =
     /// The array item name.
     /// </param>
     static member Array<'Item> (?name: string) = 
-        fun (provider: IParamSetterProvider, _: unit) ->
-            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+        fun (provider: IParamSetterProvider, prototype: IDbConnection) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", prototype)
             ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
 /// <summary>
 /// The field-to-parameter mapping override.
 /// </summary>
-type ParamOverride<'Arg> = GenericSetters.Override<unit, IDbCommand, 'Arg>
+type ParamOverride<'Arg> = GenericSetters.Override<IDbConnection, IDbCommand, 'Arg>

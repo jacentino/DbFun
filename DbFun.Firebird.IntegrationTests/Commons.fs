@@ -17,7 +17,7 @@ module Commons =
     let createConnection(): IDbConnection = new FbConnection(connectionString)
 
     let config = QueryConfig.Default(createConnection)
-    let query = QueryBuilder((), config)
+    let query = QueryBuilder(config)
 
     let batch = BatchCommandBuilder()
 

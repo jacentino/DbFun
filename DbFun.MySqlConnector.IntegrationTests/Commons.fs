@@ -18,8 +18,8 @@ module Commons =
 
     let config = QueryConfig.Default(createConnection)
 
-    let query = QueryBuilder((), config)
+    let query = QueryBuilder(config)
 
-    let bulkCopy = BulkCopyBuilder(())
+    let bulkCopy = BulkCopyBuilder()
 
     let run dbCall = DbCall.Run(createConnection, dbCall)

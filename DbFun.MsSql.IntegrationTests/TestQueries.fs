@@ -131,7 +131,7 @@ module TestQueries =
     let updateTags = query.Sql(    
         "delete from tag where postId = @id;
         insert into tag (postId, name) select @id, name from @tags",
-        Params.Int("id"), Params<unit>.TableValuedList(TVParams.Tuple<int, string>("postId", "name"), "tags", "Tag"),
+        Params.Int("id"), Params.TableValuedList(TVParams.Tuple<int, string>("postId", "name"), "tags", "Tag"),
         Results.Unit)
 
     let invalidLine = Diag.GetLine() + 1
