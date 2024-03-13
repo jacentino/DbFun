@@ -80,7 +80,7 @@ type DbCall() =
     /// <param name="isolationLevel">
     /// The transaction isolation level.
     /// </param>
-    static member InTransactionWith (isolationLevel: IsolationLevel): DbCall<unit, 'T> -> DbCall<unit, 'T> = 
+    static member InTransaction (isolationLevel: IsolationLevel): DbCall<unit, 'T> -> DbCall<unit, 'T> = 
         wrapInTransaction ((), Some isolationLevel)
 
 
@@ -90,7 +90,7 @@ type DbCall() =
     /// <param name="isolationLevel">
     /// The transaction isolation level.
     /// </param>
-    static member InTransactionWith (dbKey: 'DbKey, ?isolationLevel: IsolationLevel): DbCall<'DbKey, 'T> -> DbCall<'DbKey, 'T> = 
+    static member InTransaction (dbKey: 'DbKey, ?isolationLevel: IsolationLevel): DbCall<'DbKey, 'T> -> DbCall<'DbKey, 'T> = 
         wrapInTransaction (dbKey, isolationLevel)
 
     /// <summary>

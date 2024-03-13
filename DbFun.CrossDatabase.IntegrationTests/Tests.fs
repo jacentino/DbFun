@@ -9,7 +9,7 @@ open DbFun.Core
 module Tests = 
 
     let runSync f = run f |> Async.RunSynchronously
-    
+
     [<Fact>]
     let ``Inserts to different databases work as expected``() =    
 
@@ -69,3 +69,56 @@ module Tests =
         Assert.Equal(3, result.Length)
         Assert.Equal(4, msSqlNumOfBlogs)
 
+    
+    [<Fact>]
+    let ``Insert to certain database in transaction is committed``() =
+
+        MsSqlQueries.deleteAllButFirstBlog() |> runSync
+
+        let blog = {
+            id = 4
+            name = "test-blog-4"
+            title = "Testing simple insert 4"
+            description = "Added to check if inserts work properly."
+            owner = "jacentino"
+            createdAt = DateTime.Now
+            modifiedAt = None
+            modifiedBy = None
+        }
+
+        dbsession {
+            do! MsSqlQueries.insertBlog blog 
+        } |> DbCall.InTransaction MsSqlServer |> runSync
+
+        let msSqlNumOfBlogs = MsSqlQueries.getNumberOfBlogs() |> runSync
+
+        Assert.Equal(2, msSqlNumOfBlogs)
+
+
+    [<Fact>]
+    let ``Insert to certain database in transaction is rolled back in case of exception``() =
+
+        MsSqlQueries.deleteAllButFirstBlog() |> runSync
+
+        let blog = {
+            id = 4
+            name = "test-blog-4"
+            title = "Testing simple insert 4"
+            description = "Added to check if inserts work properly."
+            owner = "jacentino"
+            createdAt = DateTime.Now
+            modifiedAt = None
+            modifiedBy = None
+        }
+
+        try
+            dbsession {
+                do! MsSqlQueries.insertBlog blog 
+                failwith "Rollback"
+            } |> DbCall.InTransaction MsSqlServer |> runSync
+        with _ ->
+            () // ignored intentionally
+
+        let msSqlNumOfBlogs = MsSqlQueries.getNumberOfBlogs() |> runSync
+
+        Assert.Equal(1, msSqlNumOfBlogs)

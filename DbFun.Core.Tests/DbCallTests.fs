@@ -108,7 +108,7 @@ module DbCallTests =
 
         dbsession {
             do! f
-        } |> DbCall.InTransactionWith IsolationLevel.RepeatableRead |> runWithMocks(connection.Object, null) |> Async.RunSynchronously
+        } |> DbCall.InTransaction IsolationLevel.RepeatableRead |> runWithMocks(connection.Object, null) |> Async.RunSynchronously
         
         Assert.True(txnExists.Value)
         connection.Verify((fun x -> x.BeginTransaction(IsolationLevel.RepeatableRead)), Times.Once)
@@ -127,7 +127,7 @@ module DbCallTests =
 
         dbsession {
             do! f
-        } |> DbCall.InTransactionWith IsolationLevel.RepeatableRead |> runWithMocks(connection.Object, transaction.Object) |> Async.RunSynchronously
+        } |> DbCall.InTransaction IsolationLevel.RepeatableRead |> runWithMocks(connection.Object, transaction.Object) |> Async.RunSynchronously
         
         Assert.True(txnExists.Value)
         connection.Verify((fun x -> x.BeginTransaction()), Times.Never)
