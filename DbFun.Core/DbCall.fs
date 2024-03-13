@@ -87,6 +87,9 @@ type DbCall() =
     /// <summary>
     /// Wraps database computation in a transaction of a certain isolation level.
     /// </summary>
+    /// <param name="dbKey">
+    /// Value determining a database.
+    /// </param>
     /// <param name="isolationLevel">
     /// The transaction isolation level.
     /// </param>
@@ -111,11 +114,11 @@ type DbCall() =
     /// <summary>
     /// Executes many database computations on in parallel.
     /// </summary>
-    /// <param name="createConnection">
-    /// Creates a connection.
-    /// </param>
     /// <param name="dbCalls">
     /// Database computations to be executed in parallel.
+    /// </param>
+    /// <param name="connector">
+    /// The database connector.
     /// </param>
     static member Parallel (dbCalls: DbCall<'DbKey, 'Result> seq) (connector: IConnector<'DbKey>): Async<'Result array> = 
         Async.Parallel

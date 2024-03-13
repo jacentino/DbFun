@@ -212,6 +212,9 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
     /// <summary>
     /// Creates query builder object with default configuration
     /// </summary>
+    /// <param name="dbKey">
+    /// Value determining a database.
+    /// </param>
     /// <param name="createConnection">
     /// Function creating connection, assigned with a proper connection string, but not open.
     /// </param>
