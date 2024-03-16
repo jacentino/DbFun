@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TableValuedParams.fs" />
     <Compile Include="Params.fs" />
     <Compile Include="OutParams.fs" />

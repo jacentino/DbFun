@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Params.fs" />
     <Compile Include="QueryConfig.fs" />
     <Compile Include="BulkImport.fs" />

@@ -1,4 +1,4 @@
-﻿namespace DbFun.Core.AssemblyInfo
+﻿namespace DbFun.MsSql.AssemblyInfo
 
 open System.Reflection
 open System.Runtime.InteropServices
@@ -6,11 +6,11 @@ open System.Runtime.InteropServices
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[<assembly: AssemblyTitle("DbFun.Core")>]
+[<assembly: AssemblyTitle("DbFun.MsSql")>]
 [<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyProduct("DbFun.Core")>]
+[<assembly: AssemblyProduct("DbFun.MsSql")>]
 [<assembly: AssemblyCopyright("Copyright © 2024")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
@@ -21,7 +21,7 @@ open System.Runtime.InteropServices
 [<assembly: ComVisible(false)>]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[<assembly: Guid("6404251D-70A7-4AA3-809F-166451CD897F")>]
+[<assembly: Guid("EF3B7326-8E81-4806-8E95-878369D2D806")>]
 
 // Version information for an assembly consists of the following four values:
 // 
