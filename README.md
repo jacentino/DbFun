@@ -6,7 +6,7 @@ This project is successor of [SqlFun](https://github.com/jacentino/SqlFun).
 The differences are explained in the project [wiki](https://github.com/jacentino/DbFun/wiki/Differences-between-DbFun-and-SqlFun).
 
 It's available as a [Nuget package](https://www.nuget.org/packages/DbFun.Core/)
-There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql) and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlCOnnector) databases.
+There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql) and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlConnector) databases.
 
 ## What's this tool?
 DbFun is a tool for writing data access code in F# functional way. 
