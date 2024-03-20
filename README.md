@@ -192,24 +192,6 @@ let getOnePostWithTagsAndComments = query.Sql<int, Post>(
 ```
 or for collections of master and details records, matched by key:
 ```fsharp
-let getManyPostsWithTagsAndComments = query.Sql<int, Post seq>(
-    "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status
-     from post
-     where blogId = @blogId;
-     select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt
-     from comment c join post p on c.postId = p.id
-     where p.blogId = @blogId
-     select t.postId, t.name
-     from tag t join post p on t.postId = p.id
-     where p.blogId = @blogId",
-    "blogId", 
-    Results.PKeyed<int, Post> "id"
-    |> Results.Join (fun (post, comments) -> { post with comments = comments }) (Results.FKeyed "postId")
-    |> Results.Join (fun (post, tags) -> { post with tags = tags }) (Results.FKeyed("postId", "name"))
-    |> Results.Unkeyed)
-```
-The code updating master record with detail values can be simplified thanks to quoting and ReflectedDefinition attribute:
-```fsharp
 let p = any<Post>
 let getManyPostsWithTagsAndComments = query.Sql<int, Post seq>(
     "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status
