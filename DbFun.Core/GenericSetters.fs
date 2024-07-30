@@ -12,9 +12,9 @@ open System.Text.RegularExpressions
 module GenericSetters =
 
     type ISetter<'DbObject, 'Arg> = 
-        abstract member SetValue: 'Arg * 'DbObject -> unit
-        abstract member SetNull: 'DbObject -> unit
-        abstract member SetArtificial: 'DbObject -> unit
+        abstract member SetValue: 'Arg * int option * 'DbObject -> unit
+        abstract member SetNull: int option * 'DbObject -> unit
+        abstract member SetArtificial: int option * 'DbObject -> unit
 
     type ISetterProvider<'Prototype, 'DbObject> = 
         abstract member Setter: Type * string * 'Prototype -> obj
@@ -157,11 +157,11 @@ module GenericSetters =
 
             member __.Build<'Arg> (_: string, _: ISetterProvider<'Prototype, 'DbObject>, _: 'Prototype) = 
                 { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (_: 'Arg, _: 'DbObject) = 
+                    member __.SetValue (_: 'Arg, _: int option, _: 'DbObject) = 
                         ()
-                    member __.SetNull(_: 'DbObject) = 
+                    member __.SetNull(_: int option, _: 'DbObject) = 
                         ()
-                    member __.SetArtificial(_: 'DbObject) = 
+                    member __.SetArtificial(_: int option, _: 'DbObject) = 
                         ()
                 }
 
@@ -174,15 +174,15 @@ module GenericSetters =
 
             member __.Build<'Arg> (_: string, _: ISetterProvider<'Prototype, 'DbObject>, _: 'Prototype) = 
                 { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (_: 'Arg, _: 'DbObject) = 
+                    member __.SetValue (_: 'Arg, _: int option, _: 'DbObject) = 
                         ()
-                    member __.SetNull(_: 'DbObject) = 
+                    member __.SetNull(_: int option, _: 'DbObject) = 
                         ()
-                    member __.SetArtificial(_: 'DbObject) = 
+                    member __.SetArtificial(_: int option, _: 'DbObject) = 
                         ()
                 }
 
-
+                
     type Converter<'Prototype, 'DbObject, 'Source, 'Target>(convert: 'Source -> 'Target) =
 
         interface IBuilder<'Prototype, 'DbObject> with
@@ -193,42 +193,13 @@ module GenericSetters =
                 let setter = provider.Setter<'Target>(name, prototype) 
                 let convert' = box convert :?> 'Arg -> 'Target
                 { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(convert'(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
+                    member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
+                        setter.SetValue(convert'(value), index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        setter.SetArtificial(index, command)
                 }
-
-    type SeqItemConverter<'Prototype, 'DbObject, 'Source, 'Target>(convert: 'Source -> 'Target) =
-
-        member __.MapSeq(source: 'Source seq) = source |> Seq.map convert
-
-        interface IBuilder<'Prototype, 'DbObject> with
-
-            member __.CanBuild (argType: Type) = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType                        
-                    typeof<'Source>.IsAssignableFrom(elemType)
-
-            member this.Build<'Arg> (name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
-                let setter = provider.Setter<'Target seq>(name, prototype)                
-                let sourceParam = Expression.Parameter(typeof<'Arg>)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq")
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, sourceParam)
-                let convert' = Expression.Lambda<Func<'Arg, 'Target seq>>(conversion, sourceParam).Compile()
-                { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(convert'.Invoke(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
-                }
-
                 
     type EnumConverter<'Prototype, 'DbObject, 'Underlying>() = 
 
@@ -241,111 +212,28 @@ module GenericSetters =
                 let enumParam = Expression.Parameter(typeof<'Arg>)
                 let convert = Expression.Lambda<Func<'Arg, 'Underlying>>(Expression.Convert(enumParam, typeof<'Underlying>), enumParam).Compile()                    
                 { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(convert.Invoke(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
+                    member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
+                        setter.SetValue(convert.Invoke(value), index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        setter.SetArtificial(index, command)
                 }
 
-                
-    type EnumSeqConverter<'Prototype, 'DbObject, 'Underlying>() = 
-
-        member __.MapSeq<'Enum, 'Underlying>(mapper: Func<'Enum, 'Underlying>, sequence: 'Enum seq) = 
-            sequence |> Seq.map mapper.Invoke
-
-        interface IBuilder<'Prototype, 'DbObject> with
-
-            member __.CanBuild(argType: Type): bool = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType
-                    elemType.IsEnum && elemType.GetEnumUnderlyingType() = typeof<'Underlying>
-
-            member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
-                let setter = provider.Setter<'Underlying seq>(name, prototype)   
-                let enumType = Types.getElementType typeof<'Arg>
-                let enumParam = Expression.Parameter(enumType)
-                let itemConvert = Expression.Lambda(Expression.Convert(enumParam, typeof<'Underlying>), enumParam)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType, typeof<'Underlying>)
-                let seqParam = Expression.Parameter(typeof<'Arg>)
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, itemConvert, seqParam)
-                let seqConvert = Expression.Lambda<Func<'Arg, 'Underlying seq>>(conversion, seqParam).Compile()
-                { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(seqConvert.Invoke(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
-                }
-        
-
-    type UnionSeqBuilder<'Prototype, 'DbObject>() = 
-
-        member __.GetUnderlyingValues<'Enum>() = 
-            let properties = typeof<'Enum>.GetProperties()
-            let underlyingValues = 
-                [ for uc in FSharpType.GetUnionCases typeof<'Enum> do
-                    (properties |> Array.find(fun p -> p.Name = uc.Name)).GetValue(null) :?> 'Enum, 
-                    (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>)[0] :?> Models.UnionCaseTagAttribute).Value
-                ] 
-            underlyingValues
-
-        member __.MapSeq<'Enum>(eq: Func<'Enum, 'Enum, bool>, underlyingValues: ('Enum * string) list, sequence: 'Enum seq) = 
-            let convert (x: 'Enum): string = underlyingValues |> List.find (fun (k, _) -> eq.Invoke(x, k)) |> snd
-            sequence |> Seq.map convert
-
-        interface IBuilder<'Prototype, 'DbObject> with
-
-            member __.CanBuild(argType: Type): bool = 
-                if not (Types.isCollectionType argType) then
-                    false
-                else
-                    let elemType = Types.getElementType argType
-                    FSharpType.IsUnion elemType
-                        && 
-                    elemType
-                    |> FSharpType.GetUnionCases
-                    |> Seq.forall (fun uc -> not (Seq.isEmpty (uc.GetCustomAttributes(typeof<Models.UnionCaseTagAttribute>))))
-
-            member this.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
-                let setter = provider.Setter<string seq>(name, prototype)   
-                let enumType = Types.getElementType typeof<'Arg>
-                let op1 = Expression.Parameter(enumType)
-                let op2 = Expression.Parameter(enumType)
-                let eq = Expression.Lambda(Expression.Equal(op1, op2), op1, op2)
-                let seqParam = Expression.Parameter(typeof<'Arg>)
-                let seqMapMethod = this.GetType().GetMethod("MapSeq").MakeGenericMethod(enumType)
-                let underlyingValsMethod = this.GetType().GetMethod("GetUnderlyingValues").MakeGenericMethod(enumType)
-                let underlyingValues = underlyingValsMethod.Invoke(this, [||])
-                let conversion = Expression.Call(Expression.Constant(this), seqMapMethod, eq, Expression.Constant(underlyingValues), seqParam)
-                let convert = Expression.Lambda<Func<'Arg, string seq>>(conversion, seqParam).Compile()
-                { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setter.SetValue(convert.Invoke(value), command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setter.SetArtificial(command)
-                }
-
-        
+                       
     type OptionBuilder<'Prototype, 'DbObject>() =
 
         member __.GetSetter(provider: ISetterProvider<'Prototype, 'DbObject>, name: string) (prototype: 'Prototype): ISetter<'DbObject, 'Underlying option> = 
             let underlying = provider.Setter<'Underlying>(name, prototype)
             { new ISetter<'DbObject, 'Underlying option> with
-                member __.SetValue (value: 'Underlying option, command: 'DbObject) = 
+                member __.SetValue (value: 'Underlying option, index: int option, command: 'DbObject) = 
                     match value with
-                    | Some value -> underlying.SetValue(value, command)
-                    | None -> underlying.SetNull(command)
-                member __.SetNull(command: 'DbObject) = 
-                    underlying.SetNull(command)
-                member __.SetArtificial(command: 'DbObject) = 
-                    underlying.SetArtificial(command)
+                    | Some value -> underlying.SetValue(value, index, command)
+                    | None -> underlying.SetNull(index, command)
+                member __.SetNull(index: int option, command: 'DbObject) = 
+                    underlying.SetNull(index, command)
+                member __.SetArtificial(index: int option, command: 'DbObject) = 
+                    underlying.SetArtificial(index, command)
             }
 
         interface IBuilder<'Prototype, 'DbObject> with
@@ -359,45 +247,46 @@ module GenericSetters =
                 assigner :?> ISetter<'DbObject, 'Arg>
 
 
-    module FieldListAssigner = 
+    module FieldListBuilder = 
             
-        let private callSetValue(assigner: Expression, value: Expression, command: Expression) = 
-            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetValue"), value, command) :> Expression
+        let private callSetValue(assigner: Expression, value: Expression, index: Expression, command: Expression) = 
+            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetValue"), value, index, command) :> Expression
 
-        let private callSetNull(assigner: Expression, command: Expression) = 
-            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetNull"), command) :> Expression
+        let private callSetNull(assigner: Expression, index: Expression, command: Expression) = 
+            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetNull"), index, command) :> Expression
 
-        let private callSetArtificial(assigner: Expression, command: Expression) = 
-            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetArtificial"), command) :> Expression
+        let private callSetArtificial(assigner: Expression, index: Expression, command: Expression) = 
+            Expression.Call(assigner, assigner.Type.GetInterface("ISetter`2").GetMethod("SetArtificial"), index, command) :> Expression
 
         let build(provider: ISetterProvider<'Prototype, 'DbObject>, fields: (PropertyInfo * string) seq, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                     
                 let valueParam = Expression.Parameter(typeof<'Arg>)
+                let indexParam = Expression.Parameter(typeof<int option>)
                 let commandParam = Expression.Parameter(typeof<'DbObject>)
 
                 let assignments = 
                     [ for field, name in fields do
                         let fieldValue = Expression.Property(valueParam, field)
                         let assigner = Expression.Constant(provider.Setter(field.PropertyType, name, prototype))
-                        callSetValue(assigner, fieldValue, commandParam), callSetNull(assigner, commandParam), callSetArtificial(assigner, commandParam)
+                        callSetValue(assigner, fieldValue, indexParam, commandParam), callSetNull(assigner, indexParam, commandParam), callSetArtificial(assigner, indexParam, commandParam)
                     ]
 
                 let valueAssignments = assignments |> Seq.map (fun (setVal, _, _) -> setVal) |> Expression.Block
-                let setValueFunction = Expression.Lambda<Action<'Arg, 'DbObject>>(valueAssignments, valueParam, commandParam).Compile()
+                let setValueFunction = Expression.Lambda<Action<'Arg, int option, 'DbObject>>(valueAssignments, valueParam, indexParam, commandParam).Compile()
 
                 let nullAssignments = assignments |> Seq.map (fun (_, setNull, _) -> setNull) |> Expression.Block
-                let setNullFunction = Expression.Lambda<Action<'DbObject>>(nullAssignments, commandParam).Compile()
+                let setNullFunction = Expression.Lambda<Action<int option, 'DbObject>>(nullAssignments, indexParam, commandParam).Compile()
 
                 let artifAssignments = assignments |> Seq.map (fun (_, _, setArtif) -> setArtif) |> Expression.Block
-                let setArtifFunction = Expression.Lambda<Action<'DbObject>>(artifAssignments, commandParam).Compile()
+                let setArtifFunction = Expression.Lambda<Action<int option, 'DbObject>>(artifAssignments, indexParam, commandParam).Compile()
 
                 { new ISetter<'DbObject, 'Arg> with
-                    member __.SetValue (value: 'Arg, command: 'DbObject) = 
-                        setValueFunction.Invoke(value, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        setNullFunction.Invoke(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        setArtifFunction.Invoke(command)
+                    member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
+                        setValueFunction.Invoke(value, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        setNullFunction.Invoke(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        setArtifFunction.Invoke(index, command)
                 }
 
 
@@ -409,7 +298,7 @@ module GenericSetters =
 
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let fields = FSharpType.GetRecordFields typeof<'Arg> |> Array.map (fun f -> f, f.Name)
-                FieldListAssigner.build(provider, fields, prototype)
+                FieldListBuilder.build(provider, fields, prototype)
 
         interface IConfigurableBuilder<'Prototype, 'DbObject, string * RecordNaming> with
 
@@ -421,7 +310,7 @@ module GenericSetters =
                         | RecordNaming.Prefix -> f, sprintf "%s%s" prefix f.Name
                         | RecordNaming.Path   -> f, sprintf "%s%s" name f.Name
                     ]
-                FieldListAssigner.build(provider, fields, prototype)
+                FieldListBuilder.build(provider, fields, prototype)
 
 
     type TupleBuilder<'Prototype, 'DbObject>() = 
@@ -432,7 +321,7 @@ module GenericSetters =
 
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> =                     
                 let fields = typeof<'Arg>.GetProperties() |> Array.mapi (fun i f -> f, sprintf "%s%d" name (i + 1))
-                FieldListAssigner.build(provider, fields, prototype)  
+                FieldListBuilder.build(provider, fields, prototype)  
 
 
     type UnionBuilder<'Prototype, 'DbObject>() = 
@@ -447,14 +336,14 @@ module GenericSetters =
                     let fieldName4 = if naming &&& UnionNaming.Path <> UnionNaming.Fields then name + fieldName3 else fieldName3
                     f, fieldName4
                 ]
-            let unionCaseBuilder: ISetter<'DbObject, 'UnionCase> = FieldListAssigner.build(provider, named, prototype)  
+            let unionCaseBuilder: ISetter<'DbObject, 'UnionCase> = FieldListBuilder.build(provider, named, prototype)  
             { new ISetter<'DbObject, 'Union> with
-                member __.SetValue (value: 'Union, command: 'DbObject) = 
-                    unionCaseBuilder.SetValue(value |> box :?> 'UnionCase, command)
-                member __.SetNull(command: 'DbObject) = 
-                    unionCaseBuilder.SetNull(command)
-                member __.SetArtificial(command: 'DbObject) = 
-                    unionCaseBuilder.SetArtificial(command)
+                member __.SetValue (value: 'Union, index: int option, command: 'DbObject) = 
+                    unionCaseBuilder.SetValue(value |> box :?> 'UnionCase, index, command)
+                member __.SetNull(index: int option, command: 'DbObject) = 
+                    unionCaseBuilder.SetNull(index, command)
+                member __.SetArtificial(index: int option, command: 'DbObject) = 
+                    unionCaseBuilder.SetArtificial(index, command)
             }
 
         member this.Build(name: string, prefix: string, naming: UnionNaming, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
@@ -478,21 +367,21 @@ module GenericSetters =
                         gmethod.Invoke(this, [| provider; name; prefix; uc.Name; naming; fields; prototype |]) :?> ISetter<'DbObject, 'Arg>
                 ] 
             { new ISetter<'DbObject, 'Arg> with
-                member __.SetValue (value: 'Arg, command: 'DbObject) = 
+                member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
                     let dbTag = dbTags |> List.find (fst >> (=) (getTag.Invoke value)) |> snd
-                    tagSetter.SetValue(dbTag, command)
+                    tagSetter.SetValue(dbTag, index, command)
                     for (_, setter) in caseSetters do
-                        setter.SetNull(command)
+                        setter.SetNull(index, command)
                     let setter = caseSetters |> List.find (fst >> (=) (getTag.Invoke value)) |> snd
-                    setter.SetValue(value, command)
-                member __.SetNull(command: 'DbObject) = 
-                    tagSetter.SetNull(command)
+                    setter.SetValue(value, index, command)
+                member __.SetNull(index: int option, command: 'DbObject) = 
+                    tagSetter.SetNull(index, command)
                     for (_, setter) in caseSetters do
-                        setter.SetNull(command)
-                member __.SetArtificial(command: 'DbObject) = 
-                    tagSetter.SetArtificial(command)
+                        setter.SetNull(index, command)
+                member __.SetArtificial(index: int option, command: 'DbObject) = 
+                    tagSetter.SetArtificial(index, command)
                     for (_, setter) in caseSetters do
-                        setter.SetArtificial(command)
+                        setter.SetArtificial(index, command)
             }
 
         interface IBuilder<'Prototype, 'DbObject> with
@@ -543,22 +432,16 @@ module GenericSetters =
 #if !DOTNET_FRAMEWORK
             Converter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
             Converter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
-            SeqItemConverter<'Prototype, 'DbObject, _, _>(dateOnlyToDateTime)
-            SeqItemConverter<'Prototype, 'DbObject, _, _>(timeOnlyToTimeSpan)
 #endif
             UnionBuilder<'Prototype, 'DbObject>()
-            UnionSeqBuilder<'Prototype, 'DbObject>()
             EnumConverter<'Prototype, 'DbObject, char>()
             EnumConverter<'Prototype, 'DbObject, int>()
-            EnumSeqConverter<'Prototype, 'DbObject, char>()
-            EnumSeqConverter<'Prototype, 'DbObject, int>()
             UnitBuilder<'Prototype, 'DbObject>()
             RecordBuilder<'Prototype, 'DbObject>()
             TupleBuilder<'Prototype, 'DbObject>()
             OptionBuilder<'Prototype, 'DbObject>()
             SequenceBuilder<'Prototype, 'DbObject>()
         ]
-
 
     type GenericSetterBuilder<'Prototype, 'DbObject>() = 
 
@@ -715,14 +598,14 @@ module GenericSetters =
             fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
                 let underlyingSetter = createUnderlyingSetter(provider, prototype)
                 { new ISetter<'DbObject, 'Arg option> with
-                    member __.SetValue (value: 'Arg option, command: 'DbObject) = 
+                    member __.SetValue (value: 'Arg option, index: int option, command: 'DbObject) = 
                         match value with
-                        | Some value -> underlyingSetter.SetValue(value, command)
-                        | None -> underlyingSetter.SetNull(command)
-                    member __.SetNull(command: 'DbObject) = 
-                        underlyingSetter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        underlyingSetter.SetArtificial(command)
+                        | Some value -> underlyingSetter.SetValue(value, index, command)
+                        | None -> underlyingSetter.SetNull(index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        underlyingSetter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        underlyingSetter.SetArtificial(index, command)
                 }
 
         /// <summary>
@@ -741,15 +624,15 @@ module GenericSetters =
                 let item1Setter = specifier1(provider, prototype)
                 let item2Setter = specifier2(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
                 }
         
         /// <summary>
@@ -766,15 +649,15 @@ module GenericSetters =
                 let item1Setter = provider.Setter<'Arg1>(name1, prototype) 
                 let item2Setter = provider.Setter<'Arg2>(name2, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
                 }
 
         /// <summary>
@@ -798,18 +681,18 @@ module GenericSetters =
                 let item2Setter = specifier2(provider, prototype)
                 let item3Setter = specifier3(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
                 }
         
         /// <summary>
@@ -830,18 +713,18 @@ module GenericSetters =
                 let item2Setter = provider.Setter<'Arg2>(name2, prototype)
                 let item3Setter = provider.Setter<'Arg3>(name3, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
                 }
 
         /// <summary>
@@ -870,21 +753,21 @@ module GenericSetters =
                 let item3Setter = specifier3(provider, prototype)
                 let item4Setter = specifier4(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                        item4Setter.SetValue(val4, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                        item4Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
-                        item4Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                        item4Setter.SetValue(val4, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                        item4Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
+                        item4Setter.SetArtificial(index, command)
                 }
         
         /// <summary>
@@ -909,21 +792,21 @@ module GenericSetters =
                 let item3Setter = provider.Setter<'Arg3>(name3, prototype)
                 let item4Setter = provider.Setter<'Arg4>(name4, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                        item4Setter.SetValue(val4, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                        item4Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
-                        item4Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                        item4Setter.SetValue(val4, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                        item4Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
+                        item4Setter.SetArtificial(index, command)
                 }
 
 
@@ -958,24 +841,24 @@ module GenericSetters =
                 let item4Setter = specifier4(provider, prototype)
                 let item5Setter = specifier5(provider, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                        item4Setter.SetValue(val4, command)
-                        item5Setter.SetValue(val5, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                        item4Setter.SetNull(command)
-                        item5Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
-                        item4Setter.SetArtificial(command)
-                        item5Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                        item4Setter.SetValue(val4, index, command)
+                        item5Setter.SetValue(val5, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                        item4Setter.SetNull(index, command)
+                        item5Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
+                        item4Setter.SetArtificial(index, command)
+                        item5Setter.SetArtificial(index, command)
                 }
         
         /// <summary>
@@ -1004,24 +887,24 @@ module GenericSetters =
                 let item4Setter = provider.Setter<'Arg4>(name4, prototype)
                 let item5Setter = provider.Setter<'Arg5>(name4, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
-                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), command: 'DbObject) =
-                        item1Setter.SetValue(val1, command)
-                        item2Setter.SetValue(val2, command)
-                        item3Setter.SetValue(val3, command)
-                        item4Setter.SetValue(val4, command)
-                        item5Setter.SetValue(val5, command)
-                    member __.SetNull(command: 'DbObject) = 
-                        item1Setter.SetNull(command)
-                        item2Setter.SetNull(command)
-                        item3Setter.SetNull(command)
-                        item4Setter.SetNull(command)
-                        item5Setter.SetNull(command)
-                    member __.SetArtificial(command: 'DbObject) = 
-                        item1Setter.SetArtificial(command)
-                        item2Setter.SetArtificial(command)
-                        item3Setter.SetArtificial(command)
-                        item4Setter.SetArtificial(command)
-                        item5Setter.SetArtificial(command)
+                    member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), index: int option, command: 'DbObject) =
+                        item1Setter.SetValue(val1, index, command)
+                        item2Setter.SetValue(val2, index, command)
+                        item3Setter.SetValue(val3, index, command)
+                        item4Setter.SetValue(val4, index, command)
+                        item5Setter.SetValue(val5, index, command)
+                    member __.SetNull(index: int option, command: 'DbObject) = 
+                        item1Setter.SetNull(index, command)
+                        item2Setter.SetNull(index, command)
+                        item3Setter.SetNull(index, command)
+                        item4Setter.SetNull(index, command)
+                        item5Setter.SetNull(index, command)
+                    member __.SetArtificial(index: int option, command: 'DbObject) = 
+                        item1Setter.SetArtificial(index, command)
+                        item2Setter.SetArtificial(index, command)
+                        item3Setter.SetArtificial(index, command)
+                        item4Setter.SetArtificial(index, command)
+                        item5Setter.SetArtificial(index, command)
                 }
 
         /// <summary>

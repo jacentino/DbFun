@@ -147,7 +147,7 @@ module QueryTests =
             "select * from User where userId = @id;
              select * from Role where userId = @id",
             Params.Auto<int>("id"), 
-            Results.Multiple(Results.Single<User>(""), Results.Seq<string>("name")))            
+            Results.Multiple<User, string seq>("", "name"))
 
         let connector = new Connector(createConnection())
 
@@ -547,10 +547,10 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createProtoConnection)
+        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
                
         let query = 
-            qb.TemplatedSql(
+            qb.Sql(
                 Templating.define "select * from User u {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
                     (Templating.applyWhen (fun p -> p.name.IsSome)       
                         (Templating.where "name like '%' + @name + '%'")
@@ -641,12 +641,13 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
+        let config = createConfig(createConnection)
+                        .AddParamConverter(fun (UserId id) -> id)
+                        .HandleCollectionParams()
 
         let qb = QueryBuilder(config)
                
-        let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")
-                
+        let query = qb.Sql("select * from User where userId in (@id)", Params.Auto<UserId list> "id", Results.Single<User> "")                
 
         let createConnection() = 
             createConnectionMock

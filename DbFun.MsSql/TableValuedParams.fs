@@ -68,11 +68,11 @@ module TableValuedParamsImpl =
                 let call = Expression.Call(recParam, colSetter, Expression.Constant(ordinal), convertedValue)
                 let setter = Expression.Lambda<Action<SqlDataRecord, 'Arg>>(call, recParam, valueParam).Compile()
                 { new ITVParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, command: SqlDataRecord) = 
+                    member __.SetValue (value: 'Arg, index: int option, command: SqlDataRecord) = 
                         setter.Invoke(command, value)
-                    member __.SetNull(command: SqlDataRecord) = 
+                    member __.SetNull(index: int option, command: SqlDataRecord) = 
                         command.SetDBNull(ordinal)
-                    member __.SetArtificial(command: SqlDataRecord) = 
+                    member __.SetArtificial(index: int option, command: SqlDataRecord) = 
                         command.SetValue(ordinal, this.GetArtificialValue<'Arg>())
                 }
 

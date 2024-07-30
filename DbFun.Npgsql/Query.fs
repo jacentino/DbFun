@@ -1,21 +1,15 @@
-﻿namespace DbFun.MsSql.Builders
+﻿namespace DbFun.Npgsql.Builders
 
-open DbFun.Core.Builders
-open DbFun.Core.Diagnostics
-open DbFun.MsSql.Builders
-open System.Data
 open System
-open Microsoft.Data.SqlClient.Server
+open System.Data
+open DbFun.Core.Diagnostics
 
-/// <summary>
-/// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
-/// </summary>
 type QueryConfig = 
     {
-        Common      : DbFun.Core.Builders.QueryConfig
-        TvpBuilders : TableValuedParamsImpl.IBuilder list
+        Common          : DbFun.Core.Builders.QueryConfig
+        PgArrayBuilders : PgArrayParamsImpl.IBuilder list
     }
-    with 
+    with         
         /// <summary>
         /// Creates default configuration.
         /// </summary>
@@ -24,15 +18,40 @@ type QueryConfig =
         /// </param>
         static member Default(createConnection: unit -> IDbConnection) = 
             let common = DbFun.Core.Builders.QueryConfig.Default(createConnection)
-            { Common = common; TvpBuilders = TableValuedParamsImpl.getDefaultBuilders() }
+            { Common = common; PgArrayBuilders = PgArrayParamsImpl.getDefaultBuilders() }
 
         /// <summary>
-        /// Handles collections of compound types (records, tuples) as table-valued parameters.
+        /// Adds Postgres array support.
         /// </summary>
-        member this.UseTvpParams() = 
-            let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
-            let tvpBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) 
-            { this with Common = { this.Common with ParamBuilders = tvpBuilder :: this.Common.ParamBuilders } }
+        member this.UsePostgresArrayParams() = 
+            let pgArrayProvider = ParamsImpl.BaseSetterProvider(PgArrayParamsImpl.getDefaultBuilders())
+            let pgArrayBuilder = ParamsImpl.PgArrayBuilder(pgArrayProvider) 
+            { this with Common = { this.Common with ParamBuilders = pgArrayBuilder :: this.Common.ParamBuilders } }
+
+        /// <summary>
+        /// Adds Postgres array support.
+        /// </summary>
+        member this.UsePostgresArrayResults() = 
+            { this with 
+                Common = 
+                    { this.Common with 
+                        RowBuilders = 
+                            RowsImpl.ArrayItemConverter<DateTime, DateOnly>(DateOnly.FromDateTime) ::
+                            RowsImpl.ArrayItemConverter<TimeSpan, TimeOnly>(TimeOnly.FromTimeSpan) ::
+                            RowsImpl.ArrayColumnBuilder() ::
+                            RowsImpl.ArrayCollectionConverter() :: 
+                            RowsImpl.EnumArrayConverter<int>() ::
+                            RowsImpl.EnumArrayConverter<char>() ::
+                            RowsImpl.UnionArrayConverter() ::
+                            this.Common.RowBuilders 
+                    } 
+            }
+
+        /// <summary>
+        /// Adds Postgres array support.
+        /// </summary>
+        member this.UsePostgresArrays() = 
+            this.UsePostgresArrayParams().UsePostgresArrayResults()
 
         /// <summary>
         /// Adds a converter mapping application values of a given type to ptoper database parameter values.
@@ -41,7 +60,14 @@ type QueryConfig =
         /// Function converting application values to database parameter values.
         /// </param>
         member this.AddRowConverter(converter: 'Source -> 'Target) = 
-            { this with Common = this.Common.AddRowConverter(converter) }
+            { this with 
+                Common = 
+                    { this.Common with 
+                        RowBuilders = RowsImpl.ArrayItemConverter(converter) :: this.Common.RowBuilders 
+                    }.AddRowConverter(converter)
+            }
+
+            //.AddRowConverter(converter)
 
         /// <summary>
         /// Adds builder for table-valued parameters.
@@ -49,14 +75,14 @@ type QueryConfig =
         /// <param name="builder">
         /// The builder.
         /// </param>
-        member this.AddTvpBuilder(builder: TableValuedParamsImpl.IBuilder) = 
-            let tvpBuilders = builder :: this.TvpBuilders
-            let tvpProvider = ParamsImpl.BaseSetterProvider(tvpBuilders)
-            let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(this.Common.CreateConnection, tvpProvider) :> ParamsImpl.IBuilder
-            let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.TVPCollectionBuilder -> tvpCollBuilder | b -> b)
+        member this.AddPgArrayBuilder(builder: PgArrayParamsImpl.IBuilder) = 
+            let pgArrayBuilders = builder :: this.PgArrayBuilders
+            let pgArrayProvider = ParamsImpl.BaseSetterProvider(pgArrayBuilders)
+            let arrayBuilder = ParamsImpl.PgArrayBuilder(pgArrayProvider) :> DbFun.Core.Builders.ParamsImpl.IBuilder
+            let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.PgArrayBuilder -> arrayBuilder | b -> b)
             { this with
-                Common      = { this.Common with ParamBuilders = paramBuilders }
-                TvpBuilders = tvpBuilders
+                Common          = { this.Common with ParamBuilders = paramBuilders }
+                PgArrayBuilders = pgArrayBuilders
             }
 
         /// <summary>
@@ -66,9 +92,9 @@ type QueryConfig =
         /// Function converting database column values to application values.
         /// </param>
         member this.AddParamConverter(converter: 'Source -> 'Target) = 
-            let tvpBuilder = ParamsImpl.Converter<'Source, 'Target>(converter) 
+            let arrayBuilder = ParamsImpl.Converter<'Source, 'Target>(converter) 
             { this with Common = this.Common.AddParamConverter(converter) }
-                .AddTvpBuilder(tvpBuilder)
+                .AddPgArrayBuilder(arrayBuilder)
 
         /// <summary>
         /// Adds a configurator for parameter builders of types determined by canBuild function.
@@ -81,7 +107,7 @@ type QueryConfig =
         /// </param>
         member this.AddParamConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
-                .AddTvpBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
+                .AddPgArrayBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
 
         /// <summary>
         /// Adds a configurator for row builders of types determined by canBuild function.
@@ -162,7 +188,19 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
         QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
-    /// Handles collections of compound types (records, tuples) as table-valued parameters.
+    /// Handles collections as array parameters.
     /// </summary>
-    member __.UseTvpParams() = 
-        QueryBuilder(config.UseTvpParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+    member __.UsePostgresArrayParamss() = 
+        QueryBuilder(config.UsePostgresArrayParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Handles collections as array results.
+    /// </summary>
+    member __.UsePostgresArrayResults() = 
+        QueryBuilder(config.UsePostgresArrayResults(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Provides full support for Postgress arrays.
+    /// </summary>
+    member __.UsePostgresArrays() = 
+        QueryBuilder(config.UsePostgresArrays(), ?compileTimeErrorLog = compileTimeErrorLog)

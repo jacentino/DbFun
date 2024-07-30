@@ -14,7 +14,7 @@ module Types =
     /// <param name="typ">
     /// The type to be checked.
     /// </param>
-    let isSimpleType (typ: Type) = typ.IsPrimitive || List.contains typ [ typeof<string>; typeof<DateTime>; typeof<DateTimeOffset>; typeof<TimeSpan>; typeof<Guid>; typeof<byte array> ] 
+    let isSimpleType (typ: Type) = typ.IsPrimitive || List.contains typ [ typeof<string>; typeof<DateTime>; typeof<DateTimeOffset>; typeof<TimeSpan>; typeof<Guid>; typeof<byte array>; typeof<Decimal> ] 
 
     /// <summary>
     /// Checks if a given type is an option type.

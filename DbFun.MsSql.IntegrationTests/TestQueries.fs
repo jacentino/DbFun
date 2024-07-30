@@ -87,7 +87,7 @@ module TestQueries =
         <*> Results.List<Comment>()
         <*> Results.List<string> "name")
 
-    let findPosts = query.TemplatedSql ( 
+    let findPosts = query.HandleCollectionParams().Sql ( 
         Templating.define 
             "select p.id, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status from post p
              {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"

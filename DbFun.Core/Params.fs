@@ -16,11 +16,12 @@ module ParamsImpl =
 
     type SimpleBuilder() =
 
-        member __.FindOrCreateParam(command: IDbCommand, name: string) = 
+        member __.FindOrCreateParam(command: IDbCommand, name: string, itemIndex: int option) = 
+            let name' = name + (itemIndex |> Option.map string |> Option.defaultValue "")
             let index = command.Parameters.IndexOf(name)
             if index = -1 then
                 let param = command.CreateParameter()
-                param.ParameterName <- name
+                param.ParameterName <- name'
                 command.Parameters.Add param |> ignore
                 param
             else
@@ -45,68 +46,62 @@ module ParamsImpl =
 
             member this.Build<'Arg> (name: string, _, ()) = 
                 { new IParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, command: IDbCommand) = 
-                        let param = this.FindOrCreateParam(command, name)
+                    member __.SetValue (value: 'Arg, index: int option, command: IDbCommand) = 
+                        let param = this.FindOrCreateParam(command, name, index)
                         this.Update(param, value)
-                    member __.SetNull(command: IDbCommand) = 
-                        let param = this.FindOrCreateParam(command, name)
+                    member __.SetNull(index: int option, command: IDbCommand) = 
+                        let param = this.FindOrCreateParam(command, name, index)
                         this.Update(param, DBNull.Value)
-                    member __.SetArtificial(command: IDbCommand) = 
-                        let param = this.FindOrCreateParam(command, name)
+                    member __.SetArtificial(index: int option, command: IDbCommand) = 
+                        let param = this.FindOrCreateParam(command, name, index)
                         param.Value <- this.GetArtificialValue<'Arg>()
                 }
 
-    type SimpleCollectionBuilder() =
 
-        let setValues (name: string, values: 'Element seq, command: IDbCommand): unit =
-                let offset = command.Parameters.Count
-                for value in values do           
-                    let param = command.CreateParameter()
-                    param.ParameterName <- sprintf "%s%d" name (command.Parameters.Count - offset)
-                    param.Value <- value
-                    command.Parameters.Add param |> ignore
-                command.CommandText <- command.CommandText.Replace(sprintf "(@%s)" name, sprintf "(%s)" (values |> Seq.mapi (fun i _ -> sprintf "@%s%d" name i) |> String.concat ", "))
+    type SequenceIndexingBuilder() =
 
-        member __.SetSeq(name: string) =
-            fun (values: 'Element seq, command: IDbCommand) -> setValues(name, values, command)
+        static member CreateParamSetter(itemSetter: IParamSetter<'Item>, setValue: IDbCommand -> 'Collection -> unit) = 
+            { new IParamSetter<'Collection> with
+                member __.SetValue (items: 'Collection, _: int option, command: IDbCommand) = 
+                    let offset = command.Parameters.Count
+                    setValue command items
+                    let names = List.init (command.Parameters.Count - offset) (fun i -> (command.Parameters[i + offset] :?> IDataParameter).ParameterName)
+                    if not names.IsEmpty then
+                        let baseName = names.Head.Remove(names.Head.Length - 1)
+                        if names |> List.mapi (fun i name -> name, sprintf "%s%d" baseName i) |> List.forall (fun (name1, name2) -> name1 = name2) then
+                            let paramNames = names |> List.map (sprintf "@%s") |> String.concat ", " |> sprintf "(%s)"
+                            command.CommandText <- command.CommandText.Replace(sprintf "(@%s)" baseName, paramNames)
+                member __.SetNull(index: int option, command: IDbCommand) = 
+                    itemSetter.SetNull(index, command)
+                member __.SetArtificial(index: int option, command: IDbCommand) = 
+                    itemSetter.SetArtificial(index, command)
+            }
 
-        member __.SetList(name: string) =
-            fun (values: 'Element list, command: IDbCommand) -> setValues(name, values, command)
+        member __.CreateSeqSetter<'Item>(name: string, provider: IParamSetterProvider) = 
+            let itemSetter = provider.Setter<'Item>(name, ())
+            SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-        member __.SetArray(name: string) =
-            fun (values: 'Element array, command: IDbCommand) -> setValues(name, values, command)
+        member __.CreateListSetter<'Item>(name: string, provider: IParamSetterProvider) = 
+            let itemSetter = provider.Setter<'Item>(name, ())
+            SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
-        member __.SetArtificial(setter: IParamSetter<'Element>) = 
-            setter.SetArtificial
+        member __.CreateArraySetter<'Item>(name: string, provider: IParamSetterProvider) = 
+            let itemSetter = provider.Setter<'Item>(name, ())
+            SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
         interface IBuilder with
 
-            member __.CanBuild (argType: Type) = Types.isCollectionType argType && Types.isSimpleType (Types.getElementType argType)
+            member __.CanBuild (argType: Type) = Types.isCollectionType argType 
 
-            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, ()) = 
-                let elemType = Types.getElementType(typeof<'Arg>)
-                let elemSetter = provider.Setter(elemType, name, ())
-                let setValueMethod = 
-                    if typeof<'Arg>.IsArray then
-                        this.GetType().GetMethod("SetArray").MakeGenericMethod(elemType)
-                    elif typedefof<'Arg> = typedefof<list<_>> then
-                        this.GetType().GetMethod("SetList").MakeGenericMethod(elemType)
-                    else
-                        this.GetType().GetMethod("SetSeq").MakeGenericMethod(elemType)
-                let valueSetter = setValueMethod.Invoke(this, [| name |]) :?> ('Arg * IDbCommand -> unit)
-                let setArtificialMethod = this.GetType().GetMethod("SetArtificial").MakeGenericMethod(elemType)
-                let artificialSetter = setArtificialMethod.Invoke(this, [| elemSetter |]) :?> (IDbCommand -> unit)
-                { new IParamSetter<'Arg> with
-                    member __.SetValue (value: 'Arg, command: IDbCommand) = 
-                        valueSetter(value, command)
-                    member __.SetNull(command: IDbCommand) = 
-                        let param = command.CreateParameter()
-                        param.ParameterName <- name
-                        param.Value <- DBNull.Value
-                        command.Parameters.Add param |> ignore
-                    member __.SetArtificial(command: IDbCommand) = 
-                        artificialSetter(command)
-                }
+            member this.Build<'Arg> (name: string, provider: IParamSetterProvider, _: unit) = 
+                let itemType = Types.getElementType typeof<'Arg>
+                let setterName = 
+                    if typeof<'Arg>.IsArray then "CreateArraySetter"
+                    elif typedefof<'Arg> = typedefof<list<_>> then "CreateListSetter"
+                    else "CreateSeqSetter"
+                let createSetterMethod = this.GetType().GetMethod(setterName).MakeGenericMethod(itemType)
+                createSetterMethod.Invoke(this, [| name; provider |]) :?> IParamSetter<'Arg>
+    
 
     type BaseSetterProvider = GenericSetters.BaseSetterProvider<unit, IDbCommand>
 
@@ -120,13 +115,7 @@ module ParamsImpl =
 
     type Converter<'Source, 'Target> = GenericSetters.Converter<unit, IDbCommand, 'Source, 'Target>
 
-    type SeqItemConverter<'Source, 'Target> = GenericSetters.SeqItemConverter<unit, IDbCommand, 'Source, 'Target>
-
     type EnumConverter<'Underlying> = GenericSetters.EnumConverter<unit, IDbCommand, 'Underlying>
-
-    type EnumSeqConverter<'Underlying> = GenericSetters.EnumSeqConverter<unit, IDbCommand, 'Underlying>
-
-    type UnionSeqBuilder = GenericSetters.UnionSeqBuilder<unit, IDbCommand>
 
     type UnionBuilder = GenericSetters.UnionBuilder<unit, IDbCommand>
 
@@ -138,8 +127,7 @@ module ParamsImpl =
 
     type Configurator<'Config> = GenericSetters.Configurator<unit, IDbCommand, 'Config>
 
-    let getDefaultBuilders(): IBuilder list = 
-        [ SimpleBuilder(); SimpleCollectionBuilder() ] @ GenericSetters.getDefaultBuilders()
+    let getDefaultBuilders(): IBuilder list = SimpleBuilder() :: GenericSetters.getDefaultBuilders()
 
 
 /// <summary>
@@ -147,6 +135,72 @@ module ParamsImpl =
 /// </summary>
 type Params() = 
     inherit GenericSetters.GenericSetterBuilder<unit, IDbCommand>()
+
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The sequence item type specifier.
+    /// </param>
+    static member Seq (itemSpecifier: ParamSpecifier<'Item>) = 
+        fun (provider: IParamSetterProvider, prototype: unit) ->
+            let itemSetter = itemSpecifier(provider, prototype)
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The sequence item base name.
+    /// </param>
+    static member Seq<'Item> (?name: string) = 
+        fun (provider: IParamSetterProvider, _: unit) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Seq.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+    /// <summary>
+    /// Creates a builder handling list parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The list item type specifier.
+    /// </param>
+    static member List (itemSpecifier: ParamSpecifier<'Item>) = 
+        fun (provider: IParamSetterProvider, prototype: unit) ->
+            let itemSetter = itemSpecifier(provider, prototype)
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+    /// <summary>
+    /// Creates a builder handling sequence parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The list item name.
+    /// </param>
+    static member List<'Item> (?name: string) = 
+        fun (provider: IParamSetterProvider, _: unit) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> List.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+    /// <summary>
+    /// Creates a builder handling array parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="itemSpecifier">
+    /// The array item type specifier.
+    /// </param>
+    static member Array (itemSpecifier: ParamSpecifier<'Item>) = 
+        fun (provider: IParamSetterProvider, prototype: unit) ->
+            let itemSetter = itemSpecifier(provider, prototype)
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
+
+    /// <summary>
+    /// Creates a builder handling array parameters. The builder creates multiple command parameters with names supplemented with item index.
+    /// </summary>
+    /// <param name="name">
+    /// The array item name.
+    /// </param>
+    static member Array<'Item> (?name: string) = 
+        fun (provider: IParamSetterProvider, _: unit) ->
+            let itemSetter = provider.Setter<'Item>(defaultArg name "", ())
+            ParamsImpl.SequenceIndexingBuilder.CreateParamSetter(itemSetter, fun command -> Array.iteri (fun i v -> itemSetter.SetValue(v, Some i, command)))
 
 /// <summary>
 /// The field-to-parameter mapping override.

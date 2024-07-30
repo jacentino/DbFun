@@ -14,7 +14,7 @@ module Commons =
 
     let createConnection (): IDbConnection = new SqlConnection(connectionString)
 
-    let defaultConfig = QueryConfig.Default(createConnection)
+    let defaultConfig = QueryConfig.Default(createConnection).UseTvpParams()
 
     let query = QueryBuilder(defaultConfig)
 

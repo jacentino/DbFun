@@ -7,8 +7,10 @@
 
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="PgArrayParams.fs" />
     <Compile Include="Params.fs" />
-    <Compile Include="QueryConfig.fs" />
+    <Compile Include="Rows.fs" />
+    <Compile Include="Query.fs" />
     <Compile Include="BulkImport.fs" />
   </ItemGroup>
 
