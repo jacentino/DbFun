@@ -18,7 +18,7 @@ module ParamsImpl =
 
         member __.FindOrCreateParam(command: IDbCommand, name: string, itemIndex: int option) = 
             let name' = name + (itemIndex |> Option.map string |> Option.defaultValue "")
-            let index = command.Parameters.IndexOf(name)
+            let index = command.Parameters.IndexOf(name')
             if index = -1 then
                 let param = command.CreateParameter()
                 param.ParameterName <- name'
