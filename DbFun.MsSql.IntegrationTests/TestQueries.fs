@@ -111,7 +111,7 @@ module TestQueries =
                 (Templating.where "p.status in (@statuses)")
             >> Templating.applyWhen (fun c -> not c.tags.IsEmpty) 
                 (Templating.join "join Tag t on t.postId = p.id" >> Templating.where "t.name in (@tags)")
-            >> Templating.applyWith (fun c -> c.sortOrder.ToString()) "p.createdAt asc" Templating.orderBy),
+            >> Templating.applyWith (fun c -> c.sortOrder) (Templating.orderBy { field = SortField.CreatedAt; direction = SortDirection.Asc })),
         Params.Record<Criteria>(), 
         Results.Seq<Post>()) 
 

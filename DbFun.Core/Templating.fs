@@ -24,10 +24,12 @@ module Templating =
     /// <param name="value">
     /// The value to replace a placeholder.
     /// </param>
-    let expand (placeholder: string) (clause: string) (separator: string) (value: string) (template: string) : string =
-        if template.Contains("{{" + placeholder + "}}")
-        then template.Replace("{{" + placeholder + "}}", clause + "{{" + placeholder + "!}}" + value)
-        else template.Replace("{{" + placeholder + "!}}", "{{" + placeholder + "!}}" + value + separator)
+    let expand (placeholder: string) (clause: string) (separator: string) (value: string) (template: string, parameters: 'Params) : string * 'Params =
+        let expanded = 
+            if template.Contains("{{" + placeholder + "}}")
+            then template.Replace("{{" + placeholder + "}}", clause + "{{" + placeholder + "!}}" + value)
+            else template.Replace("{{" + placeholder + "!}}", "{{" + placeholder + "!}}" + value + separator)
+        expanded, parameters
 
     /// <summary>
     /// Removes all remaining placeholders from an expanded template, making it valid sql command.
@@ -55,12 +57,11 @@ module Templating =
     /// <param name="parameters">
     /// The query parameters object.
     /// </param>
-    let applyWhen (guard: 'Params -> bool) (expand: string -> string) (template: string, parameters: 'Params option) = 
-        let expanded = 
-            match parameters with
-            | Some p -> if guard(p) then expand(template) else template
-            | None -> expand(template)
-        expanded, parameters
+    let applyWhen (guard: 'Params -> bool) (expand: string * 'Params option-> string * 'Params option) (template: string, parameters: 'Params option) = 
+        if parameters |> Option.map guard |> Option.defaultValue true then 
+            expand(template, parameters) 
+        else 
+            template, parameters
 
     /// <summary>
     /// Applies a template transformation with a value extracted from query parameters (or default value if parameters object is None).
@@ -80,12 +81,8 @@ module Templating =
     /// <param name="parameters">
     /// The query parameters object.
     /// </param>
-    let applyWith (getter: 'Params -> 'T) (defVal: 'T) (expand: 'T -> string -> string) (template: string, parameters: 'Params option) = 
-        let expanded = 
-            match parameters with
-            | Some p -> expand (getter(p)) template
-            | None -> expand defVal template
-        expanded, parameters
+    let applyWith (getter: 'Params -> 'T) (expand: string * 'T option -> string * 'T option) (template: string, parameters: 'Params option) = 
+        expand (template, parameters |> Option.map getter) |> fst, parameters
 
     /// <summary>
     /// Defines a template transformation using template string and transformation function.
