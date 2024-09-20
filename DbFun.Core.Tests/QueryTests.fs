@@ -593,7 +593,61 @@ module QueryTests =
             ]
 
         Assert.Equal("select * from User u  join Role r on r.postId = u.id  where r.name in (@roles0, @roles1) and status in (@statuses0, @statuses1) ", command.CommandText)
+        Assert.Equal<User>(expected, users)
 
+
+    [<Fact>]
+    let ``Templated batches``() = 
+
+        let createProtoConnection() = 
+            createConnectionMock
+                [ "userId", DbType.Int32; "name", DbType.String; "email", DbType.String; "created", DbType.DateTime] 
+                [
+                    [ ],
+                    [ ]                            
+                ]
+
+        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
+
+        let query = qb.Sql<User list, unit>(
+            Templating.define "insert into User (userId, name, email, created) values {{VALUES}}"
+                (Templating.applyWith List.length
+                    (Templating.enumerate "VALUES" "(@userId{{IDX}}, @name{{IDX}}, @email{{IDX}}, @created{{IDX}})" ", "))
+            )
+
+        let connection = 
+            createConnectionMock
+                [   "userId0", DbType.Int32; "name0", DbType.String; "email0", DbType.String; "created0", DbType.DateTime
+                    "userId1", DbType.Int32; "name1", DbType.String; "email1", DbType.String; "created1", DbType.DateTime
+                ] 
+                [
+                    [ ],
+                    [ ]                            
+                ]
+    
+        let command = connection.CreateCommand()
+        let connector = new Connector(connection)
+
+        let users = [
+            { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime(2024, 1, 1) }
+            { userId = 2; name = "placenty"; email = "placenty@gmail.com"; created = DateTime(2024, 2, 1) }
+        ]
+
+        query users connector |> Async.RunSynchronously
+
+        Assert.Equal(
+            "insert into User (userId, name, email, created) values (@userId0, @name0, @email0, @created0), (@userId1, @name1, @email1, @created1)", 
+            command.CommandText)
+        Assert.Equal(box 1, (command.Parameters["userId0"] :?> IDataParameter).Value)
+        Assert.Equal(box 2, (command.Parameters["userId1"] :?> IDataParameter).Value)
+        Assert.Equal(box "jacenty", (command.Parameters["name0"] :?> IDataParameter).Value)
+        Assert.Equal(box "placenty", (command.Parameters["name1"] :?> IDataParameter).Value)
+        Assert.Equal(box 2, (command.Parameters["userId1"] :?> IDataParameter).Value)
+        Assert.Equal(box "jacenty@gmail.com", (command.Parameters["email0"] :?> IDataParameter).Value)
+        Assert.Equal(box "placenty@gmail.com", (command.Parameters["email1"] :?> IDataParameter).Value)
+        Assert.Equal(box (DateTime(2024, 1, 1)), (command.Parameters["created0"] :?> IDataParameter).Value)
+        Assert.Equal(box (DateTime(2024, 2, 1)), (command.Parameters["created1"] :?> IDataParameter).Value)
+    
 
     [<Fact>]
     let ``Custom converters - parameters``() = 

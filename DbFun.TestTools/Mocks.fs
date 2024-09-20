@@ -162,7 +162,10 @@ module Mocks =
             .Setup(fun x -> x.ExecuteReader(It.IsAny<CommandBehavior>()))
             .Callback(fun () ->
                 for name, dbType in args do
-                    let param = parameters.[name] :?> IDataParameter
+                    let index = parameters.IndexOf(name)
+                    if index = -1 then
+                        raise (ArgumentException(sprintf "Parameter %s does not exist." name))
+                    let param = parameters.[index] :?> IDataParameter
                     if param.DbType <> dbType then
                         raise (ArgumentException(sprintf "Parameter %s has incorrect type. Expected: %A, actual: %A " name dbType param.DbType))
             )

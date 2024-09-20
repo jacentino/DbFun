@@ -83,6 +83,33 @@ module Templating =
     /// </param>
     let applyWith (getter: 'Params -> 'T) (expand: string * 'T option -> string * 'T option) (template: string, parameters: 'Params option) = 
         expand (template, parameters |> Option.map getter) |> fst, parameters
+           
+    /// <summary>
+    /// Enumarets over items and expands itemTemplate with indexes of subsequent items, concatenates expanded templates
+    /// and replaces occurance of a placeholder in a parent template.
+    /// </summary>
+    /// <param name="placeholder">
+    /// The placeholder name of expanded items in a parent template. 
+    /// </param>
+    /// <param name="itemTemplate">
+    /// The item template.
+    /// </param>
+    /// <param name="separator">
+    /// The separator used when concatenating expanded items.
+    /// </param>
+    /// <param name="items">
+    /// The item sequence.
+    /// </param>
+    /// <param name="template">
+    /// The parent template.
+    /// </param>
+    let enumerate placeholder (itemTemplate: string) separator (template: string, count: int option) = 
+        let values = 
+            if count |> Option.defaultValue 0 > 0 then
+                Seq.init (count |> Option.defaultValue 0) (fun i -> itemTemplate.Replace("{{IDX}}", i.ToString())) |> String.concat separator
+            else
+                itemTemplate.Replace("{{IDX}}", "")
+        template.Replace(sprintf "{{%s}}" placeholder, values), count
 
     /// <summary>
     /// Defines a template transformation using template string and transformation function.
