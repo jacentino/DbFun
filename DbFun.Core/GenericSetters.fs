@@ -885,7 +885,7 @@ module GenericSetters =
                 let item2Setter = provider.Setter<'Arg2>(name2, prototype)
                 let item3Setter = provider.Setter<'Arg3>(name3, prototype)
                 let item4Setter = provider.Setter<'Arg4>(name4, prototype)
-                let item5Setter = provider.Setter<'Arg5>(name4, prototype)
+                let item5Setter = provider.Setter<'Arg5>(name5, prototype)
                 { new ISetter<'DbObject, 'Arg1 * 'Arg2 * 'Arg3 * 'Arg4 * 'Arg5> with
                     member __.SetValue((val1: 'Arg1, val2: 'Arg2, val3: 'Arg3, val4: 'Arg4, val5: 'Arg5), index: int option, command: 'DbObject) =
                         item1Setter.SetValue(val1, index, command)

@@ -119,9 +119,17 @@ type QueryConfig =
             { this with ParamBuilders = ParamsImpl.SequenceIndexingBuilder() :: this.ParamBuilders }
 
 /// <summary>
+/// 
+/// </summary>
+[<AbstractClass>]
+type CommandExecutor() = 
+    abstract CreateCommand:IDbConnection -> IDbCommand
+
+/// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) =
+type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErrorLog>) as this =
+    inherit CommandExecutor()
 
     let compileTimeErrorLog = 
         if config.LogCompileTimeErrors then 
@@ -147,7 +155,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
             use connection = config.CreateConnection()
             connection.Open()
             use transaction = connection.BeginTransaction()
-            use command = connection.CreateCommand()
+            use command = this.CreateCommand(connection)
             command.CommandType <- commandType
             command.CommandText <- commandText
             command.Transaction <- transaction
@@ -159,7 +167,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
 
     let executeQuery (provider: IConnector, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
-            use command = provider.Connection.CreateCommand()
+            use command = this.CreateCommand(provider.Connection)
             command.CommandType <- CommandType.Text
             command.CommandText <- commandText
             command.Transaction <- provider.Transaction
@@ -173,7 +181,7 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
 
     let executeProcedure (provider: IConnector, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
         async {
-            use command = provider.Connection.CreateCommand()
+            use command = this.CreateCommand(provider.Connection)
             command.CommandType <- CommandType.StoredProcedure
             command.CommandText <- commandText
             command.Transaction <- provider.Transaction
@@ -198,6 +206,9 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: ref<CompileTimeErro
                             |> List.map (fun (line, source, ex) -> CompileTimeException(sprintf "Cannot compile query in %s, line: %d" source line, ex) :> exn))
         | None ->
             raise <| CompileTimeException(sprintf "Cannot compile query in %s, line: %d" sourcePath sourceLine, ex)
+
+
+    override __.CreateCommand(connection: IDbConnection) = connection.CreateCommand()
 
     /// <summary>
     /// Creates query builder object with default configuration

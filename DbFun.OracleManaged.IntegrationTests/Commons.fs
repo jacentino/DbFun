@@ -1,10 +1,10 @@
-﻿namespace DbFun.Npgsql.IntegrationTests
+﻿namespace DbFun.OracleManaged.IntegrationTests
 
 open System.Configuration
 open DbFun.Core
-open DbFun.Npgsql.Builders
+open DbFun.OracleManaged.Builders
 open System.Data
-open Npgsql
+open Oracle.ManagedDataAccess.Client
 
 module Commons = 
 
@@ -12,12 +12,13 @@ module Commons =
         let config = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location)
         config.ConnectionStrings.ConnectionStrings.["DbFunTests"].ConnectionString
 
-    let createConnection (): IDbConnection = new NpgsqlConnection(connectionString)
+    let createConnection(): IDbConnection = new OracleConnection(connectionString)
 
-    let config = QueryConfig.Default(createConnection).UsePostgresArrays()
+    let config = QueryConfig.Default(createConnection).UseOracleArrayParams()
 
     let query = QueryBuilder(config)
 
-    let bulkImport = BulkImportBuilder()
-
     let run dbCall = DbCall.Run(createConnection, dbCall)
+
+
+
