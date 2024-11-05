@@ -21,6 +21,8 @@ module TestQueries =
             "insert into blog (blogid, name, title, description, owner, createdAt) 
              values (:blogid, :name, :title, :description, :owner, :createdAt)")
 
+    let insertBlogsWithBulkCopy = bulkCopy.WriteToServer<Blog>()
+
     let insertBlogProc =
         query.DisablePrototypeCalls().Proc("sp_add_blog", 
             Params.Int("blogId"), 

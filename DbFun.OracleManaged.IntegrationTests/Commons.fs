@@ -15,8 +15,9 @@ module Commons =
     let createConnection(): IDbConnection = new OracleConnection(connectionString)
 
     let config = QueryConfig.Default(createConnection).UseOracleArrayParams()
-
     let query = QueryBuilder(config)
+
+    let bulkCopy = BulkCopyBuilder()
 
     let run dbCall = DbCall.Run(createConnection, dbCall)
 

@@ -10,6 +10,7 @@
     <Compile Include="OracleArrayParams.fs" />
     <Compile Include="Params.fs" />
     <Compile Include="Query.fs" />
+    <Compile Include="BulkCopy.fs" />
   </ItemGroup>
 
   <ItemGroup>
