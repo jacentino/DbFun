@@ -31,6 +31,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.OracleManaged", "DbFu
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.OracleManaged.IntegrationTests", "DbFun.OracleManaged.IntegrationTests\DbFun.OracleManaged.IntegrationTests.fsproj", "{7BD78D7C-E132-4875-B10D-E77375A21938}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.Firebird", "DbFun.Firebird\DbFun.Firebird.fsproj", "{BCA48710-3625-48F1-9779-55981369333F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DbFun.Firebird.IntegrationTests", "DbFun.Firebird.IntegrationTests\DbFun.Firebird.IntegrationTests.fsproj", "{FA6EE7B8-A16D-4282-A095-C15714B82AE0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -93,6 +97,14 @@ Global
 		{7BD78D7C-E132-4875-B10D-E77375A21938}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BD78D7C-E132-4875-B10D-E77375A21938}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7BD78D7C-E132-4875-B10D-E77375A21938}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCA48710-3625-48F1-9779-55981369333F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCA48710-3625-48F1-9779-55981369333F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCA48710-3625-48F1-9779-55981369333F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCA48710-3625-48F1-9779-55981369333F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA6EE7B8-A16D-4282-A095-C15714B82AE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA6EE7B8-A16D-4282-A095-C15714B82AE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA6EE7B8-A16D-4282-A095-C15714B82AE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA6EE7B8-A16D-4282-A095-C15714B82AE0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
