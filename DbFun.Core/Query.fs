@@ -119,7 +119,8 @@ type QueryConfig =
             { this with ParamBuilders = ParamsImpl.SequenceIndexingBuilder() :: this.ParamBuilders }
 
 /// <summary>
-/// 
+/// Purely technical class, added to allow to customize command creation.
+/// In QueryBuilder defaults to just connection.CreateCommand().
 /// </summary>
 [<AbstractClass>]
 type CommandExecutor() = 
