@@ -102,5 +102,3 @@ type Criteria =
             sortOrder   = { field = SortField.CreatedAt; direction = SortDirection.Desc }
         }
 
-
-

@@ -20,6 +20,9 @@ module Tests =
 
     [<Fact>]
     let ``Query returning many rows`` () =
+        Tooling.deleteAllButFirstBlog() 
+        |> run 
+        |> Async.RunSynchronously    
         let blogs = TestQueries.getAllBlogs() |> run |> Async.RunSynchronously
         Assert.Equal(1, blogs |> Seq.length)
 
@@ -64,6 +67,9 @@ module Tests =
 
     [<Fact>]
     let ``Query filtering by DateTimeOffset`` () =
+        Tooling.deleteAllButFirstBlog() 
+        |> run 
+        |> Async.RunSynchronously    
         let blogs = 
             TestQueries.getBlogsBefore(DateTimeOffset.Now) 
             |> run 

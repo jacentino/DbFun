@@ -53,8 +53,6 @@ module Models =
     }
 
 
-open Models
-
 module Tooling = 
 
     let getNumberOfBlogs = query.Sql<unit, int>("select count(*) from blog")
