@@ -4,9 +4,9 @@ open System
 open System.Data
 open DbFun.Core.Diagnostics
 
-type QueryConfig = 
+type QueryConfig<'DbKey> = 
     {
-        Common          : DbFun.Core.Builders.QueryConfig
+        Common          : DbFun.Core.Builders.QueryConfig<'DbKey>
         PgArrayBuilders : PgArrayParamsImpl.IBuilder list
     }
     with         
@@ -16,8 +16,8 @@ type QueryConfig =
         /// <param name="createConnection">
         /// The function creating database connection (with proper connection string, but not open).
         /// </param>
-        static member Default(createConnection: unit -> IDbConnection) = 
-            let common = DbFun.Core.Builders.QueryConfig.Default(createConnection)
+        static member Default(createConnection: 'DbKey -> IDbConnection) = 
+            let common = DbFun.Core.Builders.QueryConfig<'DbKey>.Default(createConnection)
             { Common = common; PgArrayBuilders = PgArrayParamsImpl.getDefaultBuilders() }
 
         /// <summary>
@@ -140,11 +140,13 @@ type QueryConfig =
         member this.HandleCollectionParams() = 
             { this with Common = this.Common.HandleCollectionParams() }
 
+type QueryConfig = QueryConfig<unit>
+
 /// <summary>
 /// Provides methods creating various query functions.
 /// </summary>
-type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
-    inherit DbFun.Core.Builders.QueryBuilder(config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
+type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
+    inherit DbFun.Core.Builders.QueryBuilder<'DbKey>(dbKey, config.Common, ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// The configuration of the query builder.
@@ -157,8 +159,8 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     /// <param name="createConnection">
     /// Function creating connection, assigned with a proper connection string, but not open.
     /// </param>
-    new(createConnection: unit -> IDbConnection) = 
-        QueryBuilder(QueryConfig.Default(createConnection))
+    new(dbKey: 'DbKey, createConnection: 'DbKey -> IDbConnection) = 
+        QueryBuilder<'DbKey>(dbKey, QueryConfig<'DbKey>.Default(createConnection))
 
     /// <summary>
     /// Creates new builder with the specified command timeout.
@@ -167,40 +169,56 @@ type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErro
     /// The timeout value in seconds.
     /// </param>
     member this.Timeout(timeout: int) = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with Timeout = Some timeout } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, { this.Config with Common = { this.Config.Common with Timeout = Some timeout } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder with compile-time error logging and deferred exceptions.
     /// </summary>
     member this.LogCompileTimeErrors() = 
-        QueryBuilder({ this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, { this.Config with Common = { this.Config.Common with LogCompileTimeErrors = true } }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Creates new builder generating query functions without discovering resultset structure using SchemaOnly calls.
     /// </summary>
     member this.DisablePrototypeCalls() = 
-        QueryBuilder({ this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, { this.Config with Common = this.Config.Common.DisablePrototypeCalls() }, ?compileTimeErrorLog = this.RawCompileTimeErrorLog)
 
     /// <summary>
     /// Allows to handle collections by generating parameters for each item with name modified by adding item index.
     /// </summary>
     member __.HandleCollectionParams() = 
-        QueryBuilder(config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.HandleCollectionParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Handles collections as array parameters.
     /// </summary>
     member __.UsePostgresArrayParamss() = 
-        QueryBuilder(config.UsePostgresArrayParams(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.UsePostgresArrayParams(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Handles collections as array results.
     /// </summary>
     member __.UsePostgresArrayResults() = 
-        QueryBuilder(config.UsePostgresArrayResults(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.UsePostgresArrayResults(), ?compileTimeErrorLog = compileTimeErrorLog)
 
     /// <summary>
     /// Provides full support for Postgress arrays.
     /// </summary>
     member __.UsePostgresArrays() = 
-        QueryBuilder(config.UsePostgresArrays(), ?compileTimeErrorLog = compileTimeErrorLog)
+        QueryBuilder<'DbKey>(dbKey, config.UsePostgresArrays(), ?compileTimeErrorLog = compileTimeErrorLog)
+
+
+/// <summary>
+/// Provides methods creating various query functions.
+/// </summary>
+type QueryBuilder(config: QueryConfig, ?compileTimeErrorLog: Ref<CompileTimeErrorLog>) =
+    inherit QueryBuilder<unit>((), config, ?compileTimeErrorLog = compileTimeErrorLog)
+
+    /// <summary>
+    /// Creates query builder object with default configuration
+    /// </summary>
+    /// <param name="createConnection">
+    /// Function creating connection, assigned with a proper connection string, but not open.
+    /// </param>
+    new(createConnection: unit -> IDbConnection) = 
+        QueryBuilder(QueryConfig.Default(createConnection))

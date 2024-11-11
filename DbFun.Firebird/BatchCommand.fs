@@ -116,7 +116,10 @@ type BatchCommandConfig =
             }
 
 
-type BatchCommandBuilder(?config: BatchCommandConfig) = 
+/// <summary>
+/// Provides methods creating batch processing functions.
+/// </summary>
+type BatchCommandBuilder<'DbKey>(dbKey: 'DbKey, ?config: BatchCommandConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (BatchParamsImpl.getDefaultBuilders())
 
@@ -129,14 +132,14 @@ type BatchCommandBuilder(?config: BatchCommandConfig) =
     /// <param name="specifier">
     /// The parameter specifier.
     /// </param>
-    member __.Command(commandText: string, specifier: BatchParamSpecifier<'Record>): 'Record seq -> DbCall<FbBatchNonQueryResult> = 
+    member __.Command(commandText: string, specifier: BatchParamSpecifier<'Record>): 'Record seq -> DbCall<'DbKey, FbBatchNonQueryResult> = 
         let provider = GenericSetters.BaseSetterProvider<unit, FbParameterCollection>(builders)
         let setter = specifier(provider, ())
-        fun (records: 'Record seq) (connector: IConnector) ->
+        fun (records: 'Record seq) (connector: IConnector<'DbKey>) ->
             async {
                 use command = new FbBatchCommand(commandText)
-                command.Connection <- connector.GetConnection() :?> FbConnection
-                command.Transaction <- connector.GetTransaction() :?> FbTransaction
+                command.Connection <- connector.GetConnection(dbKey) :?> FbConnection
+                command.Transaction <- connector.GetTransaction(dbKey) :?> FbTransaction
                 for r in records do
                     let batchParams = command.AddBatchParameters()
                     setter.SetValue(r, None, batchParams)
@@ -150,5 +153,13 @@ type BatchCommandBuilder(?config: BatchCommandConfig) =
     /// <param name="commandText">
     /// The SQL command.
     /// </param>
-    member this.Command<'Record>(commandText: string): 'Record seq -> DbCall<FbBatchNonQueryResult> = 
+    member this.Command<'Record>(commandText: string): 'Record seq -> DbCall<'DbKey, FbBatchNonQueryResult> = 
         this.Command(commandText, BatchParams.Auto<'Record>())
+
+
+/// <summary>
+/// Provides methods creating batch processing functions.
+/// </summary>
+type BatchCommandBuilder(?config: BatchCommandConfig) = 
+    inherit BatchCommandBuilder<unit>((), ?config = config)
+

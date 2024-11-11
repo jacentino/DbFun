@@ -19,13 +19,3 @@ module Commons =
     let query = QueryBuilder(defaultConfig)
 
     let run dbCall = DbCall.Run(createConnection, dbCall)
-
-
-module Tooling = 
-    
-    open Commons
-
-    let getNumberOfBlogs = query.Sql<unit, int>("select count(*) from blog")
-    
-    let deleteAllButFirstBlog = query.Sql<unit, unit>("delete from blog where id > 1")
-

@@ -88,7 +88,7 @@ type BulkCopyConfig =
 /// <summary>
 /// Provides methods creating bulk import functions.
 /// </summary>
-type BulkCopyBuilder(?config: BulkCopyConfig) = 
+type BulkCopyBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkCopyConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (getDefaultBuilders())
 
@@ -101,12 +101,12 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
     /// <param name="tableName">
     /// The target table name.
     /// </param>
-    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         let dataTable = new DataTable()
         let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders)
         let setter = specifier(provider, dataTable)
         setter.SetArtificial(None, null)
-        fun (records: 'Record seq) (connector: IConnector) ->
+        fun (records: 'Record seq) (connector: IConnector<'DbKey>) ->
             let dataRow = dataTable.NewRow()
             async {
                 let rows = 
@@ -115,7 +115,7 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
                             setter.SetValue(r, None, dataRow)
                             yield dataRow
                     } |> Seq.toArray
-                let bulkCopy = new OracleBulkCopy(connector.GetConnection() :?> OracleConnection)
+                let bulkCopy = new OracleBulkCopy(connector.GetConnection(dbKey) :?> OracleConnection)
                 bulkCopy.DestinationTableName <- defaultArg tableName typeof<'Record>.Name
                 bulkCopy.WriteToServer(rows)
             }
@@ -129,6 +129,11 @@ type BulkCopyBuilder(?config: BulkCopyConfig) =
     /// <param name="name">
     /// The builder name argument.
     /// </param>
-    member this.WriteToServer<'Record>(?name: string, ?tableName: string): 'Record seq -> DbCall<unit> = 
+    member this.WriteToServer<'Record>(?name: string, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         this.WriteToServer(BulkCopyParams.Auto<'Record>(?name = name), ?tableName = tableName)
 
+/// <summary>
+/// Provides methods creating bulk import functions.
+/// </summary>
+type BulkCopyBuilder(?config: BulkCopyConfig) = 
+    inherit BulkCopyBuilder<unit>((), ?config = config)
