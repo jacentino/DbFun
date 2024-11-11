@@ -112,7 +112,7 @@ type DbCall() =
         }
 
     /// <summary>
-    /// Executes many database computations on in parallel.
+    /// Executes many database computations in parallel.
     /// </summary>
     /// <param name="dbCalls">
     /// Database computations to be executed in parallel.
