@@ -626,7 +626,7 @@ module QueryTests =
                 ]
     
         let command = connection.CreateCommand()
-        let connector = new Connector(connection)
+        let connector = new Connector(fun () -> connection)
 
         let users = [
             { userId = 1; name = "jacenty"; email = "jacenty@gmail.com"; created = DateTime(2024, 1, 1) }
