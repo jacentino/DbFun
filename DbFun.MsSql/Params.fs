@@ -163,10 +163,6 @@ module ParamsImpl =
 
     type Configurator<'Config> = GenericSetters.Configurator<SqlDataRecord, SqlDataRecord, 'Config>
 
-    let getDefaultBuilders(): ParamsImpl.IBuilder list = 
-        let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
-        [ TVPCollectionBuilder(tvpProvider) ] @ ParamsImpl.getDefaultBuilders()
-
 open ParamsImpl
 
 /// <summary>
