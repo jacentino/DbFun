@@ -16,7 +16,9 @@ module ParamsTests =
     let connection = new SqlConnection()
 
     let makeBuilderParams(createConnection: unit -> IDbConnection) = 
-        let provider = BaseSetterProvider<IDbConnection, IDbCommand>(ParamsImpl.getDefaultBuilders())
+        let tvpProvider = ParamsImpl.BaseSetterProvider(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(tvpProvider) :> ParamsImpl.IBuilder
+        let provider = BaseSetterProvider<IDbConnection, IDbCommand>(tvpCollBuilder :: ParamsImpl.getDefaultBuilders())
         provider :> IParamSetterProvider, createConnection()
 
 

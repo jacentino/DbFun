@@ -24,6 +24,9 @@ module Templating =
     /// <param name="value">
     /// The value to replace a placeholder.
     /// </param>
+    /// <param name="parameters">
+    /// The template parameters.
+    /// </param>
     let expand (placeholder: string) (clause: string) (separator: string) (value: string) (template: string, parameters: 'Params) : string * 'Params =
         let expanded = 
             if template.Contains("{{" + placeholder + "}}")
@@ -69,9 +72,6 @@ module Templating =
     /// <param name="getter">
     /// The function extracting a value  from  query parameters.
     /// </param>
-    /// <param name="defVal">
-    /// The default value.
-    /// </param>
     /// <param name="expand">
     /// The template transformation function.
     /// </param>
@@ -97,11 +97,11 @@ module Templating =
     /// <param name="separator">
     /// The separator used when concatenating expanded items.
     /// </param>
-    /// <param name="items">
-    /// The item sequence.
-    /// </param>
     /// <param name="template">
     /// The parent template.
+    /// </param>
+    /// <param name="count">
+    /// The number of repetitions.
     /// </param>
     let enumerate placeholder (itemTemplate: string) separator (template: string, count: int option) = 
         let values = 

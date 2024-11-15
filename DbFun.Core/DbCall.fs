@@ -83,7 +83,6 @@ type DbCall() =
     static member InTransaction (isolationLevel: IsolationLevel): DbCall<unit, 'T> -> DbCall<unit, 'T> = 
         wrapInTransaction ((), Some isolationLevel)
 
-
     /// <summary>
     /// Wraps database computation in a transaction of a certain isolation level.
     /// </summary>
