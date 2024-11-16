@@ -13,7 +13,7 @@ It's fast, type safe and gives you full control on your queries.
 No custom query DSL enabled - just raw SQL.
 
 It's available as a [Nuget package](https://www.nuget.org/packages/DbFun.Core/)
-There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql), [Oracle](https://www.nuget.org/packages/DbFun.OracleManaged), and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlConnector) databases.
+There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql), [Oracle](https://www.nuget.org/packages/DbFun.OracleManaged), [Firebird](https://www.nuget.org/packages/DbFun.Firebird) and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlConnector) databases.
 
 ## Features
 * All SQL features available
@@ -32,11 +32,13 @@ There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSq
 In its core DbFun does not use any features specific to some db provider, so it works with any ADO.NET provider. 
 The only limitation is possibility of execution of commands in `SchemaOnly` mode.
 
-It was tested against MS SqlServer, PostgreSQL, MySQL and SQLite.
+It was tested against MS SqlServer, PostgreSQL, MySQL, Oracle, Firebird and SQLite.
 
 There are extensions, enabling provider-specific features:
 * the extension for MS SQL, that allows to use table valued parameters
 * the extension for PostgreSQL, making use of array parameters possible and adding more comfortable bulk import mechanism
+* the extension for Oracle, allowing use of array parameters and adding better support for bulk copy
+* the extension for Firebird, improving batch command usage
 * the extension for MySQL (when using MySqlConnector) improving use of bulk copy 
 * the extension for SQLite, that allows to use date and time values
 
