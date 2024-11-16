@@ -15,4 +15,9 @@ module Diagnostics =
     /// </summary>
     type CompileTimeErrorLog = list<int * string * exn>
 
-   
+
+    /// <summary>
+    /// The exception occurring in the command execution phase.
+    /// </summary>
+    type RuntimeException(message: string, innerException: Exception) = 
+        inherit Exception(message, innerException)

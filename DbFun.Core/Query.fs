@@ -164,34 +164,42 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
         else
             resultReaderBuilder(null)
 
-    let executeQuery (provider: IConnector<'DbKey>, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
+    let executeQuery (provider: IConnector<'DbKey>, commandText: string, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit, sourcePath: string, sourceLine: int) = 
         async {
-            use command = this.CreateCommand(provider.GetConnection(dbKey))
-            command.CommandType <- CommandType.Text
-            command.CommandText <- commandText
-            command.Transaction <- provider.GetTransaction(dbKey)
-            match config.Timeout with
-            | Some timeout -> command.CommandTimeout <- timeout
-            | None -> ()
-            setParams(command)
-            use! dataReader = executeReaderAsync(command, CommandBehavior.Default)
-            return! resultReader.Read(dataReader)
+            try
+                use command = this.CreateCommand(provider.GetConnection(dbKey))
+                command.CommandType <- CommandType.Text
+                command.CommandText <- commandText
+                command.Transaction <- provider.GetTransaction(dbKey)
+                match config.Timeout with
+                | Some timeout -> command.CommandTimeout <- timeout
+                | None -> ()
+                setParams(command)
+                use! dataReader = executeReaderAsync(command, CommandBehavior.Default)
+                return! resultReader.Read(dataReader)
+            with ex ->
+                raise <| RuntimeException(sprintf "Error executing command in %s, line: %d\nCommand Text: %s\n" sourcePath sourceLine commandText, ex)
+                return Unchecked.defaultof<'Result>
         }
 
-    let executeProcedure (provider: IConnector<'DbKey>, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit) = 
+    let executeProcedure (provider: IConnector<'DbKey>, commandText: string, outParamGetter: IOutParamGetter<'OutParams>, resultReader: IResultReader<'Result>, setParams: IDbCommand -> unit, sourcePath: string, sourceLine: int) = 
         async {
-            use command = this.CreateCommand(provider.GetConnection(dbKey))
-            command.CommandType <- CommandType.StoredProcedure
-            command.CommandText <- commandText
-            command.Transaction <- provider.GetTransaction(dbKey)
-            match config.Timeout with
-            | Some timeout -> command.CommandTimeout <- timeout
-            | None -> ()
-            setParams(command)
-            outParamGetter.Create(command)
-            use! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
-            let! result = resultReader.Read(dataReader)
-            return result, outParamGetter.Get(command)
+            try
+                use command = this.CreateCommand(provider.GetConnection(dbKey))
+                command.CommandType <- CommandType.StoredProcedure
+                command.CommandText <- commandText
+                command.Transaction <- provider.GetTransaction(dbKey)
+                match config.Timeout with
+                | Some timeout -> command.CommandTimeout <- timeout
+                | None -> ()
+                setParams(command)
+                outParamGetter.Create(command)
+                use! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
+                let! result = resultReader.Read(dataReader)
+                return result, outParamGetter.Get(command)
+            with ex ->
+                raise <| RuntimeException(sprintf "Error executing procedure %s in %s, line: %d" commandText sourcePath sourceLine, ex)
+                return Unchecked.defaultof<'Result * 'OutParams>
         }
 
     let handleException (sourcePath: string, sourceLine: int, ex: exn) = 
@@ -303,7 +311,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             let resultReader = executePrototypeQuery(connection, CommandType.Text, template(None), setArtificial, resultSpecifier')
 
             fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
-                executeQuery(provider, template(Some parameters), resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
+                executeQuery(provider, template(Some parameters), resultReader, (fun cmd -> paramSetter.SetValue(parameters, None, cmd)), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -490,7 +498,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     paramSetter2.SetValue(parameters2, None, command)
 
                 fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector<'DbKey>) ->
-                    executeQuery(provider, template(Some (parameters1, parameters2)), resultReader, setParams(parameters1, parameters2))
+                    executeQuery(provider, template(Some (parameters1, parameters2)), resultReader, setParams(parameters1, parameters2), sourcePath, sourceLine)
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
@@ -671,7 +679,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter3.SetValue(parameters3, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector<'DbKey>) ->
-                executeQuery(provider, template(Some (parameters1, parameters2, parameters3)), resultReader, setParams(parameters1, parameters2, parameters3))
+                executeQuery(provider, template(Some (parameters1, parameters2, parameters3)), resultReader, setParams(parameters1, parameters2, parameters3), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -874,7 +882,13 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter4.SetValue(parameters4, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector<'DbKey>) ->
-                executeQuery(provider, template(Some (parameters1, parameters2, parameters3, parameters4)), resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
+                executeQuery(
+                    provider, 
+                    template(Some (parameters1, parameters2, parameters3, parameters4)), 
+                    resultReader, 
+                    setParams(parameters1, parameters2, parameters3, parameters4), 
+                    sourcePath, 
+                    sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -1111,7 +1125,9 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     provider, 
                     template(Some (parameters1, parameters2, parameters3, parameters4, parameters5)), 
                     resultReader, 
-                    setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
+                    setParams(parameters1, parameters2, parameters3, parameters4, parameters5), 
+                    sourcePath, 
+                    sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -1482,7 +1498,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
 
                 let resultReader = executePrototypeQuery(connection, CommandType.StoredProcedure, procName, setArtificial, resultSpecifier')
                 fun (parameters: 'Params) (provider: IConnector<'DbKey>) ->
-                    executeProcedure(provider, procName, outParamGetter, resultReader, fun cmd -> paramSetter.SetValue(parameters, None, cmd))
+                    executeProcedure(provider, procName, outParamGetter, resultReader, (fun cmd -> paramSetter.SetValue(parameters, None, cmd)), sourcePath, sourceLine)
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
@@ -1606,7 +1622,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter2.SetValue(parameters2, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (provider: IConnector<'DbKey>) ->
-                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2))
+                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -1743,7 +1759,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter3.SetValue(parameters3, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (provider: IConnector<'DbKey>) ->
-                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3))
+                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -1895,7 +1911,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter4.SetValue(parameters4, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (provider: IConnector<'DbKey>) ->
-                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4))
+                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
@@ -2065,7 +2081,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 paramSetter5.SetValue(parameters5, None, command)
 
             fun (parameters1: 'Params1) (parameters2: 'Params2) (parameters3: 'Params3) (parameters4: 'Params4) (parameters5: 'Params5) (provider: IConnector<'DbKey>) ->
-                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5))
+                executeProcedure(provider, procName, outParamGetter, resultReader, setParams(parameters1, parameters2, parameters3, parameters4, parameters5), sourcePath, sourceLine)
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
