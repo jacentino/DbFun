@@ -18,11 +18,10 @@ module Commons =
     let mySqlConnectionString = config.ConnectionStrings.ConnectionStrings.["MySql"].ConnectionString        
     let postgresConnectionString = config.ConnectionStrings.ConnectionStrings.["Postgres"].ConnectionString        
 
-    let createConnection discriminator: IDbConnection = 
-        match discriminator with
-        | MsSqlServer   -> new SqlConnection(msSqlConnectionString)
-        | MySql         -> new MySqlConnection(mySqlConnectionString)
-        | Postgres      -> new Npgsql.NpgsqlConnection(postgresConnectionString)
+    let createConnection = function 
+        | MsSqlServer -> new SqlConnection(msSqlConnectionString) :> IDbConnection
+        | MySql       -> new MySqlConnection(mySqlConnectionString)
+        | Postgres    -> new Npgsql.NpgsqlConnection(postgresConnectionString)
 
 
     let run dbCall = DbCall.Run(createConnection, dbCall)
