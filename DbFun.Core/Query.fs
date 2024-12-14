@@ -160,6 +160,25 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             command.Transaction <- transaction
             setParams(command)
             use prototype = command.ExecuteReader(CommandBehavior.SchemaOnly)
+            // Somehow, the above does not return a reader that is ... ready,
+            // at least not so that the resultReaderBuilder can get correct
+            // field information immediately in my use case (DB2/400 SQL).
+            // The effect is that the reader knows of no fields in the result
+            // set when the builder wants to find fields to match the record,
+            // raising an exception.
+            //
+            // A SQL query that worked with SqlFun fails in DbFun, for no more
+            // apparent reason than the difference in how (where?) the two
+            // query for fields.
+            //
+            // Even debugging with a breakpoint before calling the builder can
+            // give the reader enough time to finish "initializing".
+            //
+            // Fortunately, something else that seems to work is asking the
+            // reader for the field-count before calling the builder, so that's
+            // what we're doing below even though it would seem we don't care
+            // about the answer.
+            prototype.FieldCount |> ignore
             resultReaderBuilder(prototype)
         else
             resultReaderBuilder(null)
