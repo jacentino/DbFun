@@ -17,8 +17,11 @@ module Mocks =
         let rowIndex = ref -1
 
         let currents() = 
-            let header, data = data.[rsIndex.Value]
-            {| header = header; data = data; row = if rowIndex.Value >= 0 then data.[rowIndex.Value] else [] |}
+            if data.IsEmpty then
+                {| header = []; data = []; row = [] |}
+            else
+                let header, data = data.[rsIndex.Value]
+                {| header = header; data = data; row = if rowIndex.Value >= 0 then data.[rowIndex.Value] else [] |}
 
         let get(index: int): obj = currents().row.[index]
 
