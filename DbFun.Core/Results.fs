@@ -693,12 +693,14 @@ type Results() =
             let constructor = target.Type.GetConstructor(propValues |> Array.map (fun expr -> expr.Type))
             Expression.New(constructor, propValues)            
 
-    static member private GenerateMerge (target: Expr<'Result2>): Func<'Result1, 'Result2, 'Result1> = 
+    static member private GenerateMerge (target: Expr): Func<'Result1, 'Result2, 'Result1> = 
         let result1Param = Expression.Parameter(typeof<'Result1>)
         let result2Param = Expression.Parameter(typeof<'Result2>)
         let propChain = Results.GetPropChain(target) 
         let construct = Results.GenerateMerge(propChain, result1Param, result2Param)
         Expression.Lambda<Func<'Result1, 'Result2, 'Result1>>(construct, result1Param, result2Param).Compile()
+
+    
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
@@ -741,6 +743,58 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
         let merge = Results.GenerateMerge(target)
         Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
+
+    /// <summary>
+    /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
+    /// consolidate master ('Result1) values with lists of detail ('Result2) values.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result1 -> 'Result2 list>): 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =         
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
+        | _ -> failwithf "Incorrect expression specifying target join property: %A" target
+
+    /// <summary>
+    /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
+    /// consolidate master ('Result1) values with array of detail ('Result2) values.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result1 -> 'Result2 array>): 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =         
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toArray))
+        | _ -> failwithf "Incorrect expression specifying target join property: %A" target
+
+    /// <summary>
+    /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
+    /// consolidate master ('Result1) values with sequence of detail ('Result2) values.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2 when 'Key: comparison>([<ReflectedDefinition>] target: Expr<'Result1 -> 'Result2 seq>): 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
+            ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
+        | _ -> failwithf "Incorrect expression specifying target join property: %A" target
+
 
     /// <summary>
     /// Removes a key specifier from a result.
@@ -813,9 +867,55 @@ type Results() =
     /// </param>
     static member Group (target: Expr<'Result2 seq>):
             ResultSpecifier<('Result1 * 'Result2 option) seq> -> ResultSpecifier<'Result1 seq> =
-        let merge = Results.GenerateMerge<'Result2 seq, 'Result1>(target)
+        let merge = Results.GenerateMerge(target)
         fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
             Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
+
+    /// <summary>
+    /// Groups list of tuples by first item and consilidates this item with list of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group ([<ReflectedDefinition>] target: Expr<'Result1 -> 'Result2 list>): 
+            ResultSpecifier<('Result1 * 'Result2 option) list> -> ResultSpecifier<'Result1 list> =
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
+                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult
+        | _ -> failwithf "Incorrect expression specifying target group property: %A" target
+
+
+    /// <summary>
+    /// Groups array of tuples by first item and consilidates this item with an array of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group ([<ReflectedDefinition>] target: Expr<'Result1 -> 'Result2 array>):
+            ResultSpecifier<('Result1 * 'Result2 option) array> -> ResultSpecifier<'Result1 array> =
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
+                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult
+        | _ -> failwithf "Incorrect expression specifying target group property: %A" target
+
+    /// <summary>
+    /// Groups seq of tuples by first item and consilidates this item with seq of corresponding second items by assigning them to a specified property.
+    /// </summary>
+    /// <param name="target">
+    /// The expression specifying a path to a property that should be updated with details values.
+    /// </param>
+    static member Group (target: Expr<'Result1 -> 'Result2 seq>):
+            ResultSpecifier<('Result1 * 'Result2 option) seq> -> ResultSpecifier<'Result1 seq> =
+        match target with
+        | Lambda (_, body) -> 
+            let merge = Results.GenerateMerge(body)
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
+                Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
+        | _ -> failwithf "Incorrect expression specifying target group property: %A" target
 
 /// <summary>
 /// Definitions allowing for applicative functor-like result combining.

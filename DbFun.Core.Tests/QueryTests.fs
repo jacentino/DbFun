@@ -19,13 +19,6 @@ type Diag() =
 
 module QueryTests = 
 
-    type Criteria = 
-        {
-            name    : string option
-            roles   : string list option
-            statuses: Status list option
-        }
-
     let createConfig createConnection = QueryConfig.Default(createConnection)
 
     [<Fact>]
@@ -300,6 +293,52 @@ module QueryTests =
             }
 
         Assert.Equal<UserWithRoles seq>([expected], user)
+            
+
+    [<Fact>]
+    let ``Joins with lambda expr merge``() =
+        
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1) ]
+                    ]
+                    [ col<int> "userId"; col<string> "name";  ],
+                    [
+                        [ 1; "Administrator" ]
+                        [ 1; "Guest" ]
+                    ]                            
+                ]
+
+        let qb = QueryBuilder (createConfig createConnection)
+
+        let query = 
+             qb.Sql (
+                "select * from User where userId = @id;
+                 select * from Role where userId = @id",             
+                Params.Auto<int>("id"),
+                Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
+                |> Results.Join _.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+                |> Results.Unkeyed)
+                
+
+        let connector = new Connector(createConnection)
+
+        let user = query 1 connector |> Async.RunSynchronously |> Seq.toList
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+                roles = [ "Administrator"; "Guest" ]
+            }
+
+        Assert.Equal<UserWithRoles seq>([expected], user)
 
 
     [<Fact>]
@@ -363,6 +402,45 @@ module QueryTests =
             Params.Auto<int>("id"),                        
             Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
             |> Results.Group any<UserWithRoles>.roles)
+
+        let connector = new Connector(createConnection)
+
+        let user = query 1 connector |> Async.RunSynchronously 
+
+        let expected = 
+            {
+                userId = 1
+                name = "jacentino"
+                email = "jacentino@gmail.com"
+                created = DateTime(2023, 1, 1)
+                roles = [ "Administrator"; "Guest" ]
+            }
+
+        Assert.Equal<UserWithRoles list>([expected], user)
+
+
+    [<Fact>]
+    let ``Grouping with lambda expr merge``() =
+        
+        let createConnection() = 
+            createConnectionMock
+                [ "id", DbType.Int32 ]
+                [
+                    [ col<int> "userId"; col<string> "name"; col<string> "email"; col<DateTime> "created"; col<string> "roleName" ],
+                    [
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Administrator" ]
+                        [ 1; "jacentino"; "jacentino@gmail.com"; DateTime(2023, 1, 1); "Guest" ]
+                    ]
+                ]
+
+        let qb = QueryBuilder (createConfig createConnection)
+
+        let query = qb.Sql (
+            "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
+             where u.userId = @id",
+            Params.Auto<int>("id"),                        
+            Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
+            |> Results.Group _.roles)
 
         let connector = new Connector(createConnection)
 
@@ -535,6 +613,14 @@ module QueryTests =
 
         Assert.Equal(line + 1, lineNo)
         Assert.Contains("QueryTests.fs", fileName)
+
+
+    type Criteria = 
+        {
+            name    : string option
+            roles   : string list option
+            statuses: Status list option
+        }
 
 
     [<Fact>]
