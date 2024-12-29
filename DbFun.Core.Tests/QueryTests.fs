@@ -321,7 +321,7 @@ module QueryTests =
                  select * from Role where userId = @id",             
                 Params.Auto<int>("id"),
                 Results.Seq(Rows.PKeyed<int, UserWithRoles>("userId", "user")) 
-                |> Results.Join _.roles (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
+                |> Results.Join (fun u -> u.roles) (Results.Seq(Rows.FKeyed<int, string>("userId", "name")))
                 |> Results.Unkeyed)
                 
 
@@ -440,7 +440,7 @@ module QueryTests =
              where u.userId = @id",
             Params.Auto<int>("id"),                        
             Results.List(Rows.Tuple<UserWithRoles, string option>("user", "roleName"))
-            |> Results.Group _.roles)
+            |> Results.Group (fun u -> u.roles))
 
         let connector = new Connector(createConnection)
 
