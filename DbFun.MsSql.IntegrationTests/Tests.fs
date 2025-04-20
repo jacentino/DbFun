@@ -1,6 +1,7 @@
 namespace DbFun.MsSql.IntegrationTests
 
 open System
+open FSharp.Control
 open Xunit
 open DbFun.Core
 open DbFun.MsSql.IntegrationTests.Models
@@ -25,6 +26,20 @@ module Tests =
         |> Async.RunSynchronously    
         let blogs = TestQueries.getAllBlogs() |> run |> Async.RunSynchronously
         Assert.Equal(1, blogs |> Seq.length)
+
+    [<Fact>]
+    let ``Query returning many rows in AsyncSeq`` () =
+        Tooling.deleteAllButFirstBlog() 
+        |> run 
+        |> Async.RunSynchronously    
+        let length = 
+            dbsession {
+                let! blogs = TestQueries.getAllBlogsAsync()
+                return! blogs |> AsyncSeq.length |> DbCall.FromAsync
+            } 
+            |> run 
+            |> Async.RunSynchronously
+        Assert.Equal(1, int(length))
 
     [<Fact>]
     let ``Query returning one row optionally - row exists`` () =

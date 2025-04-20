@@ -3,6 +3,7 @@
 open System
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
+open FSharp.Control
 open DbFun.Core
 open DbFun.TestTools
 open DbFun.MsSql.IntegrationTests.Models
@@ -26,6 +27,7 @@ module TestQueries =
 
     let getAllBlogs = query.Sql<unit, Blog seq>("select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog") 
             
+    let getAllBlogsAsync = query.Sql<unit, Blog AsyncSeq>("select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog") 
 
     let getBlogsBefore = query.Sql(
         "select id, name, title, description, owner, createdAt, modifiedAt, modifiedBy from Blog where createdAt <= @createdTo", 

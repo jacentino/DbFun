@@ -7,10 +7,17 @@ open System.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
 open DbFun.Core
+open FSharp.Control
 open System.Data.Common
+
+[<RequireQualifiedAccess>]
+type ResultReaderType = 
+    | Eager
+    | Lazy
 
 type IResultReader<'Result> = 
     abstract member Read: IDataReader -> Async<'Result>
+    abstract member Type: ResultReaderType
 
 type ResultSpecifier<'Result> = IRowGetterProvider * IDataReader -> IResultReader<'Result>
 
@@ -55,8 +62,9 @@ type Results() =
 
     static member private EmptyReader<'Result>() =
         { new IResultReader<'Result> with
-                member __.Read(_: IDataReader): Async<'Result> = 
-                    async.Return Unchecked.defaultof<'Result>
+            member __.Read(_: IDataReader): Async<'Result> = 
+                async.Return Unchecked.defaultof<'Result>
+            member __.Type = ResultReaderType.Eager
         }        
 
     /// <summary>
@@ -80,6 +88,7 @@ type Results() =
                         async.Return (getter.Get(reader))
                     else
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -97,6 +106,7 @@ type Results() =
                         async.Return (getter.Get(reader))
                     else
                         failwithf "Cannot read %A object, resultset is empty. Use option type." typeof<'Result>
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -114,6 +124,7 @@ type Results() =
                         async.Return (Some <| getter.Get(reader))
                     else
                         async.Return None
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -131,6 +142,7 @@ type Results() =
                         async.Return (Some <| getter.Get(reader))
                     else
                         async.Return None
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -148,6 +160,7 @@ type Results() =
                         [ while reader.Read() do
                             getter.Get(reader)
                         ]
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -165,6 +178,55 @@ type Results() =
                         [ while reader.Read() do
                             getter.Get(reader)
                         ]
+                member __.Type = ResultReaderType.Eager
+            }
+
+    /// <summary>
+    /// Creates result builder retrieving many rows as an async sequence.
+    /// </summary>
+    /// <param name="rowBuilder">
+    /// The underlying row builder.
+    /// </param>
+    static member AsyncSeq<'Result> (rowBuilder: RowSpecifier<'Result>): ResultSpecifier<'Result AsyncSeq> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = rowBuilder(provider, prototype)
+            { new IResultReader<'Result AsyncSeq> with
+                member __.Read(reader: IDataReader) = 
+                    asyncSeq {
+                        match reader with
+                        | :? DbDataReader as dbReader ->
+                            while! dbReader.ReadAsync() |> Async.AwaitTask do
+                                getter.Get(reader)
+                        | _ ->
+                            while reader.Read() do
+                                getter.Get(reader)
+                        reader.Dispose()
+                    } |> async.Return
+                member __.Type = ResultReaderType.Lazy
+            }
+
+    /// <summary>
+    /// Creates result builder retrieving many rows as an async sequence.
+    /// </summary>
+    /// <param name="name">
+    /// The result column name or record prefix.
+    /// </param>
+    static member AsyncSeq<'Result> (?name: string): ResultSpecifier<'Result AsyncSeq> = 
+        fun (provider: IRowGetterProvider, prototype: IDataReader)  ->
+            let getter = provider.Getter<'Result>(defaultArg name "", prototype)
+            { new IResultReader<'Result AsyncSeq> with
+                member __.Read(reader: IDataReader) = 
+                    asyncSeq {
+                        use _ = reader
+                        match reader with
+                        | :? DbDataReader as dbReader ->
+                            while! dbReader.ReadAsync() |> Async.AwaitTask do
+                                getter.Get(reader)
+                        | _ ->
+                            while reader.Read() do
+                                getter.Get(reader)
+                    } |> async.Return
+                member __.Type = ResultReaderType.Lazy
             }
 
     /// <summary>
@@ -182,6 +244,7 @@ type Results() =
                         [ while reader.Read() do
                             getter.Get(reader)
                         ]
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -199,6 +262,7 @@ type Results() =
                         [ while reader.Read() do
                             getter.Get(reader)
                         ]
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -216,6 +280,7 @@ type Results() =
                         [| while reader.Read() do
                             getter.Get(reader)
                         |]
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -233,6 +298,7 @@ type Results() =
                         [| while reader.Read() do
                             getter.Get(reader)
                         |]
+                member __.Type = ResultReaderType.Eager
             }
 
     static member Auto<'Result> (?name: string): ResultSpecifier<'Result> = 
@@ -247,6 +313,10 @@ type Results() =
                 elif typedefof<'Result>.IsArray then "Array"
                 else "Seq"
             let collectionMethod = typeof<Results>.GetMethod(methodName, [| typeof<string option> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
+            let reader = collectionMethod.Invoke(null, [| name |]) :?> ResultSpecifier<'Result>
+            reader
+        elif typedefof<'Result>.IsAssignableTo(typedefof<AsyncSeq<_>>) then 
+            let collectionMethod = typeof<Results>.GetMethod("AsyncSeq", [| typeof<string option> |]).MakeGenericMethod(Types.getElementType typeof<'Result>)
             let reader = collectionMethod.Invoke(null, [| name |]) :?> ResultSpecifier<'Result>
             reader
         elif typeof<'Result> = typeof<unit> then
@@ -391,6 +461,7 @@ type Results() =
                         let! result2 = reader2.Read(reader)
                         return result1, result2
                     }
+                member __.Type = ResultReaderType.Eager
             }            
 
     /// <summary>
@@ -437,6 +508,7 @@ type Results() =
                         let! result3 = reader3.Read(reader)
                         return result1, result2, result3
                     }
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -493,6 +565,7 @@ type Results() =
                         let! result4 = reader4.Read(reader)
                         return result1, result2, result3, result4
                     }
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -569,6 +642,7 @@ type Results() =
                         let! result5 = reader5.Read(reader)
                         return result1, result2, result3, result4, result5
                     }
+                member __.Type = ResultReaderType.Eager
             }
 
     /// <summary>
@@ -616,6 +690,7 @@ type Results() =
                         let! result = srcReader.Read(reader)
                         return mapper(result)
                     }
+                member __.Type = ResultReaderType.Eager
             }
 
 
@@ -646,6 +721,7 @@ type Results() =
                             let merged = result1 |> Seq.map (fun (k, r1) -> k, merge(r1, result2'.TryGetValue k.Primary |> (function (true, r2s) -> r2s |> Seq.map snd | (false, _) -> Seq.empty)))
                             return merged
                         }
+                    member __.Type = ResultReaderType.Eager
                 }
 
     /// <summary>
@@ -955,6 +1031,7 @@ module MultipleResults =
                         let! result = resultReader.Read(reader)
                         return combine(result)                    
                     }
+                member __.Type = ResultReaderType.Eager
               interface IAdvancer with
                 member __.Advance(reader: IDataReader) = advance [typeof<'Next>] reader
                 member __.AdvanceAsync(reader: IDataReader) = advanceAsync [typeof<'Next>] reader
@@ -972,6 +1049,7 @@ module MultipleResults =
             fun (_: IRowGetterProvider, _: IDataReader)  ->
                 { new IResultReader<'ResultBuilder> with
                     member __.Read(_: IDataReader) = async.Return combiner
+                    member __.Type = ResultReaderType.Eager
                   interface IAdvancer with
                     member __.Advance(_: IDataReader) = ()
                     member __.AdvanceAsync(_: IDataReader) = async.Return ()

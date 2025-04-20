@@ -194,8 +194,13 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 | Some timeout -> command.CommandTimeout <- timeout
                 | None -> ()
                 setParams(command)
-                use! dataReader = executeReaderAsync(command, CommandBehavior.Default)
-                return! resultReader.Read(dataReader)
+                match resultReader.Type with
+                | ResultReaderType.Eager ->
+                    use! dataReader = executeReaderAsync(command, CommandBehavior.Default)
+                    return! resultReader.Read(dataReader)
+                | ResultReaderType.Lazy ->
+                    let! dataReader = executeReaderAsync(command, CommandBehavior.Default)
+                    return! resultReader.Read(dataReader)
             with ex ->
                 raise <| RuntimeException(sprintf "Error executing command in %s, line: %d\nCommand Text: %s\n" sourcePath sourceLine commandText, ex)
                 return Unchecked.defaultof<'Result>
@@ -213,9 +218,15 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 | None -> ()
                 setParams(command)
                 outParamGetter.Create(command)
-                use! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
-                let! result = resultReader.Read(dataReader)
-                return result, outParamGetter.Get(command)
+                match resultReader.Type with
+                | ResultReaderType.Eager ->
+                    use! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
+                    let! result = resultReader.Read(dataReader)
+                    return result, outParamGetter.Get(command)
+                | ResultReaderType.Lazy ->
+                    let! dataReader = executeReaderAsync(command, CommandBehavior.Default) 
+                    let! result = resultReader.Read(dataReader)
+                    return result, outParamGetter.Get(command)
             with ex ->
                 raise <| RuntimeException(sprintf "Error executing procedure %s in %s, line: %d" commandText sourcePath sourceLine, ex)
                 return Unchecked.defaultof<'Result * 'OutParams>

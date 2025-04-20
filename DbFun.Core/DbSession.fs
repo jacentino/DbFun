@@ -1,6 +1,7 @@
 namespace DbFun.Core
 
 open System
+open FSharp.Control
 
 module ComputationBuilderImpl = 
     
@@ -19,6 +20,11 @@ module ComputationBuilderImpl =
         member this.Combine(value: DbCall<'k, 't1>, y: DbCall<'k, 't2>): DbCall<'k, 't2> = this.Bind(value, fun value' -> y)
         member __.Delay(f: unit-> 'Env -> 't Async) = fun env -> async { return! f () env }
         member __.For (items: seq<'t>,  f: 't -> DbCall<'k, unit>): DbCall<'k, unit> = 
+            fun env -> async {
+                for item in items do 
+                    do! f item env
+            }
+        member __.For (items: AsyncSeq<'t>,  f: 't -> DbCall<'k, unit>): DbCall<'k, unit> = 
             fun env -> async {
                 for item in items do 
                     do! f item env
