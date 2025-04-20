@@ -196,7 +196,6 @@ type Results() =
                         use _ = reader
                         match reader with
                         | :? DbDataReader as dbReader ->
-                            // while! cannot be used when compiled from github actions
                             let mutable itemExists = true
                             let! exists = dbReader.ReadAsync() |> Async.AwaitTask
                             itemExists <- exists
@@ -226,8 +225,13 @@ type Results() =
                         use _ = reader
                         match reader with
                         | :? DbDataReader as dbReader ->
-                            while! dbReader.ReadAsync() |> Async.AwaitTask do
+                            let mutable itemExists = true
+                            let! exists = dbReader.ReadAsync() |> Async.AwaitTask
+                            itemExists <- exists
+                            while itemExists do
                                 getter.Get(reader)
+                                let! exists = dbReader.ReadAsync() |> Async.AwaitTask
+                                itemExists <- exists
                         | _ ->
                             while reader.Read() do
                                 getter.Get(reader)
