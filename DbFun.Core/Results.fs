@@ -193,14 +193,19 @@ type Results() =
             { new IResultReader<'Result AsyncSeq> with
                 member __.Read(reader: IDataReader) = 
                     asyncSeq {
+                        use _ = reader
                         match reader with
                         | :? DbDataReader as dbReader ->
-                            while! dbReader.ReadAsync() |> Async.AwaitTask do
+                            let mutable itemExists = true
+                            let! exists = dbReader.ReadAsync() |> Async.AwaitTask
+                            itemExists <- exists
+                            while itemExists do
                                 getter.Get(reader)
+                                let! exists = dbReader.ReadAsync() |> Async.AwaitTask
+                                itemExists <- exists
                         | _ ->
                             while reader.Read() do
-                                getter.Get(reader)
-                        reader.Dispose()
+                                getter.Get(reader)                        
                     } |> async.Return
                 member __.Type = ResultReaderType.Lazy
             }
