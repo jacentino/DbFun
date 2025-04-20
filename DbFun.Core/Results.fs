@@ -196,6 +196,7 @@ type Results() =
                         use _ = reader
                         match reader with
                         | :? DbDataReader as dbReader ->
+                            // while! cannot be used when compiled from github actions
                             let mutable itemExists = true
                             let! exists = dbReader.ReadAsync() |> Async.AwaitTask
                             itemExists <- exists
