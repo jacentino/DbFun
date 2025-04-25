@@ -536,7 +536,7 @@ module QueryTests =
         let line = Diag.GetLine()
         let ex = Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
         Assert.Contains("QueryTests.fs", ex.Message)
-        Assert.Contains(sprintf "line: %d" (line + 1), ex.Message)
+        Assert.Contains(sprintf "line %d" (line + 1), ex.Message)
 
 
     [<Fact>]
@@ -587,7 +587,7 @@ module QueryTests =
 
         let ex = Assert.Throws<AggregateException>(fun () -> query  1 connector |> Async.RunSynchronously |> ignore)
         Assert.Contains("QueryTests.fs", ex.InnerExceptions.[0].Message)
-        Assert.Contains(sprintf "line: %d" (line + 1), ex.InnerExceptions.[0].Message)
+        Assert.Contains(sprintf "line %d" (line + 1), ex.InnerExceptions.[0].Message)
 
 
     [<Fact>]

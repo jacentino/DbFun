@@ -240,9 +240,9 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                 raise <| AggregateException("One or more exceptions occured when compiling queries.", 
                             errorLog.Value 
                             |> List.rev
-                            |> List.map (fun (line, source, ex) -> CompileTimeException(sprintf "Cannot compile query in %s, line: %d" source line, ex) :> exn))
+                            |> List.map (fun (line, source, ex) -> CompileTimeException(sprintf "Cannot compile query in %s, line %d: %s" source line ex.Message, ex) :> exn))
         | None ->
-            raise <| CompileTimeException(sprintf "Cannot compile query in %s, line: %d" sourcePath sourceLine, ex)
+            raise <| CompileTimeException(sprintf "Cannot compile query in %s, line %d: %s" sourcePath sourceLine ex.Message, ex)
 
 
     override __.CreateCommand(connection: IDbConnection) = connection.CreateCommand()
