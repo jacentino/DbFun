@@ -424,7 +424,7 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params -> DbCall<'DbKey, 'Result> =         
-            this.Sql((fun _ -> commandText), paramSpecifier, resultSpecifier, sourcePath, sourceLine) 
+            this.Sql((fun _ -> commandText), (fun p -> paramSpecifier p), resultSpecifier, sourcePath, sourceLine) 
 
     /// <summary>
     /// Builds a one arg query function based on raw SQL text.
