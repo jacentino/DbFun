@@ -42,6 +42,20 @@ module Tests =
         Assert.Equal(1, int(length))
 
     [<Fact>]
+    let ``Query returning many rows in AsyncSeq with autolifting async`` () =
+        Tooling.deleteAllButFirstBlog() 
+        |> run 
+        |> Async.RunSynchronously    
+        let length = 
+            dbsession {
+                let! blogs = TestQueries.getAllBlogsAsync()
+                return! blogs |> AsyncSeq.length
+            } 
+            |> run 
+            |> Async.RunSynchronously
+        Assert.Equal(1, int(length))
+
+    [<Fact>]
     let ``Query returning one row optionally - row exists`` () =
         let blog = TestQueries.getBlogOptional 1 |> run |> Async.RunSynchronously
         Assert.NotNull(blog)

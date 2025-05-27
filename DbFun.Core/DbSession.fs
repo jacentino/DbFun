@@ -9,6 +9,10 @@ module ComputationBuilderImpl =
     /// The computation builder for database computations.
     /// </summary>
     type DbSessionBuilder() = 
+        member __.Source(value: seq<'t>): seq<'t> = value 
+        member __.Source(value: AsyncSeq<'t>): AsyncSeq<'t> = value 
+        member __.Source(value: DbCall<'k, 't>): DbCall<'k, 't> = value
+        member __.Source(value: Async<'t>): DbCall<'k, 't> = fun _ -> value
         member __.Return(value: 't): DbCall<'k, 't> = fun _ -> async { return value }
         member __.ReturnFrom(value: DbCall<'k, 't>): DbCall<'k, 't> = value
         member __.Bind(rd: DbCall<'k, 't1>, f: 't1 -> DbCall<'k, 't2>): DbCall<'k, 't2> = 
