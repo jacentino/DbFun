@@ -21,6 +21,7 @@ module GenericGetters =
         abstract member Getter: string * 'Prototype -> IGetter<'DbObject, 'Result>
         abstract member Builder: Type -> IBuilder<'Prototype, 'DbObject> option
         abstract member AllBuilders: Type -> IBuilder<'Prototype, 'DbObject> seq
+        abstract member Compiler: ICompiler
     and
         IBuilder<'Prototype, 'DbObject> = 
             abstract member CanBuild: Type -> bool
@@ -65,7 +66,9 @@ module GenericGetters =
             member __.Build<'Result2>(provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
                 builder(provider, prototype) :?> IGetter<'DbObject, 'Result2>
 
-    type BaseGetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq) = 
+    type BaseGetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, ?compiler: ICompiler) = 
+
+        let compiler = compiler |> Option.defaultWith (fun () -> LinqExpressionCompiler())
 
         member this.GetGetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
@@ -86,6 +89,8 @@ module GenericGetters =
                 builders |> Seq.tryFind (fun b -> b.CanBuild argType)
             member __.AllBuilders(argType: Type) = 
                 builders |> Seq.filter (fun b -> b.CanBuild argType)
+            member __.Compiler: ICompiler = compiler
+                
 
     type InitialDerivedGetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: IGetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
 
@@ -115,6 +120,8 @@ module GenericGetters =
                 baseProvider.Builder(argType)
             member __.AllBuilders(argType: Type) = 
                 baseProvider.AllBuilders(argType)
+            member __.Compiler: ICompiler = 
+                baseProvider.Compiler
 
     and DerivedGetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: IGetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
 
@@ -148,6 +155,8 @@ module GenericGetters =
                 baseProvider.Builder(argType)
             member __.AllBuilders(argType: Type) = 
                 baseProvider.AllBuilders(argType)
+            member __.Compiler: ICompiler = 
+                baseProvider.Compiler
 
 
     type UnitBuilder<'Prototype, 'DbObject>() =
@@ -173,7 +182,7 @@ module GenericGetters =
 
             member __.CanBuild (resType: Type) = Types.isCollectionType resType 
 
-            member __.Build<'Result> (string, _: IGetterProvider<'Prototype, 'DbObject>, _: _: 'Prototype): IGetter<'DbObject, 'Result> = 
+            member __.Build<'Result> (string, provider: IGetterProvider<'Prototype, 'DbObject>, _: _: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let newCall = 
                     if typeof<'Result>.IsAbstract then 
                         Expression.New(typedefof<list<_>>.MakeGenericType(typeof<'Result>.GetGenericArguments().[0])) :> Expression
@@ -181,7 +190,7 @@ module GenericGetters =
                         Expression.NewArrayInit(typeof<'Result>.GetElementType()) :> Expression
                     else
                         Expression.New(typeof<'Result>) :> Expression
-                let constructor = Expression.Lambda<Func<'Result>>(newCall).Compile()
+                let constructor = provider.Compiler.Compile<Func<'Result>>(newCall)
                 { new IGetter<'DbObject, 'Result> with
                     member __.Get (_: 'DbObject) = 
                         constructor.Invoke()
@@ -246,7 +255,7 @@ module GenericGetters =
             member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
                 let getter = provider.Getter<'Underlying>(name, prototype)   
                 let underlyingParam = Expression.Parameter(typeof<'Underlying>)
-                let convert = Expression.Lambda<Func<'Underlying, 'Result>>(Expression.Convert(underlyingParam, typeof<'Result>), underlyingParam).Compile()                    
+                let convert = provider.Compiler.Compile<Func<'Underlying, 'Result>>(Expression.Convert(underlyingParam, typeof<'Result>), underlyingParam)
                 { new IGetter<'DbObject, 'Result> with
                     member __.Get (record: 'DbObject) = 
                         convert.Invoke(getter.Get(record))
@@ -283,13 +292,13 @@ module GenericGetters =
                     ]
 
                 let getters = gettersAndCheckers |> Seq.map (fun (g, _, _) -> g) |> constructor
-                let getFunction = Expression.Lambda<Func<'DbObject, 'Result>>(getters, recordParam).Compile()
+                let getFunction = provider.Compiler.Compile<Func<'DbObject, 'Result>>(getters, recordParam)
 
                 let nullCheckers = gettersAndCheckers |> Seq.map (fun (_, n, _) -> n) |> multiAnd
-                let isNullFunction = Expression.Lambda<Func<'DbObject, bool>>(nullCheckers, recordParam).Compile()
+                let isNullFunction = provider.Compiler.Compile<Func<'DbObject, bool>>(nullCheckers, recordParam)
 
                 let creators = gettersAndCheckers |> Seq.map (fun (_, _, c) -> c) |> Expression.Block
-                let createFunction = Expression.Lambda<Action<'DbObject>>(creators , recordParam).Compile()
+                let createFunction = provider.Compiler.Compile<Action<'DbObject>>(creators, recordParam)
 
                 { new IGetter<'DbObject, 'Result> with
                     member __.Get (record: 'DbObject) = 

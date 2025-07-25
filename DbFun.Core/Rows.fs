@@ -43,7 +43,7 @@ module RowsImpl =
                 
             member __.CanBuild(argType: Type): bool = Types.isSimpleType argType
                     
-            member this.Build(name: string, _, prototype: IDataRecord): IRowGetter<'Result> = 
+            member this.Build(name: string, provider, prototype: IDataRecord): IRowGetter<'Result> = 
                 let ordinal = 
                     try
                         if String.IsNullOrEmpty(name) && prototype.FieldCount = 1 then
@@ -66,7 +66,7 @@ module RowsImpl =
                             raise <| Exception(sprintf "Column type doesn't match field type: %s (%s -> %s)" name call.Type.Name typeof<'Result>.Name, ex)
                     else
                         call :> Expression
-                let getter = Expression.Lambda<Func<IDataRecord, 'Result>>(convertedCall, recParam).Compile()
+                let getter = provider.Compiler.Compile<Func<IDataRecord, 'Result>>(convertedCall, recParam)
                 { new IRowGetter<'Result> with
                     member __.Get(record: IDataRecord): 'Result = 
                         getter.Invoke(record)

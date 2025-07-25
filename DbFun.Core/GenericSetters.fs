@@ -21,6 +21,7 @@ module GenericSetters =
         abstract member Setter: string * 'Prototype -> ISetter<'DbObject, 'Arg>
         abstract member Builder: Type -> IBuilder<'Prototype, 'DbObject> option
         abstract member AllBuilders: Type -> IBuilder<'Prototype, 'DbObject> seq
+        abstract member Compiler: ICompiler
     and
         IBuilder<'Prototype, 'DbObject> = 
         abstract member CanBuild: Type -> bool
@@ -65,7 +66,9 @@ module GenericSetters =
                 setter(provider, prototype) :?> ISetter<'DbObject, 'Arg2>
 
 
-    type BaseSetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq) = 
+    type BaseSetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, ?compiler: ICompiler) = 
+
+        let compiler = compiler |> Option.defaultWith (fun () -> LinqExpressionCompiler())
 
         member this.GetSetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetSetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)
@@ -86,6 +89,7 @@ module GenericSetters =
                 builders |> Seq.tryFind (fun b -> b.CanBuild argType)
             member __.AllBuilders(argType: Type) = 
                 builders |> Seq.filter (fun b -> b.CanBuild argType)
+            member __.Compiler: ICompiler = compiler
 
     type InitialDerivedSetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: ISetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
 
@@ -115,6 +119,8 @@ module GenericSetters =
                 baseProvider.Builder(argType)
             member __.AllBuilders(argType: Type) = 
                 baseProvider.AllBuilders(argType)
+            member __.Compiler: ICompiler = 
+                baseProvider.Compiler
 
     and DerivedSetterProvider<'Prototype, 'DbObject, 'Config>(baseProvider: ISetterProvider<'Prototype, 'DbObject>, config: 'Config, overrides: IOverride<'Prototype, 'DbObject> seq) =
 
@@ -148,6 +154,8 @@ module GenericSetters =
                 baseProvider.Builder(argType)
             member __.AllBuilders(argType: Type) = 
                 baseProvider.AllBuilders(argType)
+            member __.Compiler: ICompiler = 
+                baseProvider.Compiler
 
     type UnitBuilder<'Prototype, 'DbObject>() =
 
@@ -210,7 +218,7 @@ module GenericSetters =
             member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
                 let setter = provider.Setter<'Underlying>(name, prototype)   
                 let enumParam = Expression.Parameter(typeof<'Arg>)
-                let convert = Expression.Lambda<Func<'Arg, 'Underlying>>(Expression.Convert(enumParam, typeof<'Underlying>), enumParam).Compile()                    
+                let convert = provider.Compiler.Compile<Func<'Arg, 'Underlying>>(Expression.Convert(enumParam, typeof<'Underlying>), enumParam)
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
                         setter.SetValue(convert.Invoke(value), index, command)
@@ -272,13 +280,13 @@ module GenericSetters =
                     ]
 
                 let valueAssignments = assignments |> Seq.map (fun (setVal, _, _) -> setVal) |> Expression.Block
-                let setValueFunction = Expression.Lambda<Action<'Arg, int option, 'DbObject>>(valueAssignments, valueParam, indexParam, commandParam).Compile()
+                let setValueFunction = provider.Compiler.Compile<Action<'Arg, int option, 'DbObject>>(valueAssignments, valueParam, indexParam, commandParam)
 
                 let nullAssignments = assignments |> Seq.map (fun (_, setNull, _) -> setNull) |> Expression.Block
-                let setNullFunction = Expression.Lambda<Action<int option, 'DbObject>>(nullAssignments, indexParam, commandParam).Compile()
+                let setNullFunction = provider.Compiler.Compile<Action<int option, 'DbObject>>(nullAssignments, indexParam, commandParam)
 
                 let artifAssignments = assignments |> Seq.map (fun (_, _, setArtif) -> setArtif) |> Expression.Block
-                let setArtifFunction = Expression.Lambda<Action<int option, 'DbObject>>(artifAssignments, indexParam, commandParam).Compile()
+                let setArtifFunction = provider.Compiler.Compile<Action<int option, 'DbObject>>(artifAssignments, indexParam, commandParam)
 
                 { new ISetter<'DbObject, 'Arg> with
                     member __.SetValue (value: 'Arg, index: int option, command: 'DbObject) = 
@@ -349,7 +357,7 @@ module GenericSetters =
         member this.Build(name: string, prefix: string, naming: UnionNaming, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
             let tagSetter = provider.Setter<string>(name, prototype)   
             let uc = Expression.Parameter(typeof<'Arg>)
-            let getTag = Expression.Lambda<Func<'Arg, int>>(Expression.Property(uc, "Tag"), uc).Compile()
+            let getTag = provider.Compiler.Compile<Func<'Arg, int>>(Expression.Property(uc, "Tag"), uc)
             let createUCSetterMethod = this.GetType().GetMethod("CreateUnionCaseSetter")
             let dbTags = 
                 [ for uc in FSharpType.GetUnionCases typeof<'Arg> do                         

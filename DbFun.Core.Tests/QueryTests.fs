@@ -12,7 +12,6 @@ open DbFun.Core.Diagnostics
 open System.Data
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
-open System.Collections.Generic
 
 type Diag() = 
     static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line

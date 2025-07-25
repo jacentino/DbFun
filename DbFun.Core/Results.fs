@@ -778,15 +778,22 @@ type Results() =
                 |]
             let constructor = target.Type.GetConstructor(propValues |> Array.map (fun expr -> expr.Type))
             Expression.New(constructor, propValues)            
-
-    static member private GenerateMerge (target: Expr): Func<'Result1, 'Result2, 'Result1> = 
+    
+    static member private GenerateMerge (provider: IRowGetterProvider, target: Expr): Func<'Result1, 'Result2, 'Result1> = 
         let result1Param = Expression.Parameter(typeof<'Result1>)
         let result2Param = Expression.Parameter(typeof<'Result2>)
         let propChain = Results.GetPropChain(target) 
         let construct = Results.GenerateMerge(propChain, result1Param, result2Param)
-        Expression.Lambda<Func<'Result1, 'Result2, 'Result1>>(construct, result1Param, result2Param).Compile()
-
+        provider.Compiler.Compile<Func<'Result1, 'Result2, 'Result1>>(construct, result1Param, result2Param)
     
+    static member private JoinWithGeneratedMerge 
+            (target: Expr, convert: 'Result2 seq -> 'TargetProp)
+            (rs1: ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq>)
+            (rs2: ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq>)
+            (provider: IRowGetterProvider, prototype: IDataReader) 
+            : IResultReader<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
+        let merge = Results.GenerateMerge(provider, target)
+        Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> convert)) rs1 rs2 (provider, prototype)
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
@@ -799,8 +806,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
-        let merge = Results.GenerateMerge(target)
-        Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
+        Results.JoinWithGeneratedMerge(target, Seq.toList)
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
@@ -813,8 +819,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
-        let merge = Results.GenerateMerge(target)
-        Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toArray))
+        Results.JoinWithGeneratedMerge(target, Seq.toArray)
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
@@ -827,8 +832,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'PK2, 'Key> * 'Result2) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> -> 
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> = 
-        let merge = Results.GenerateMerge(target)
-        Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
+        Results.JoinWithGeneratedMerge(target, id)
 
     /// <summary>
     /// Joins two results by a key using primary key of result1 and foreign key of result2 and merge function to 
@@ -843,8 +847,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =         
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toList))
+            Results.JoinWithGeneratedMerge(body, Seq.toList)
         | _ -> failwithf "Incorrect expression specifying target join property: %A" target
 
     /// <summary>
@@ -860,8 +863,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =         
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s |> Seq.toArray))
+            Results.JoinWithGeneratedMerge(body, Seq.toArray)
         | _ -> failwithf "Incorrect expression specifying target join property: %A" target
 
     /// <summary>
@@ -877,8 +879,7 @@ type Results() =
             ResultSpecifier<(RowsImpl.KeySpecifier<'Key, 'FK1> * 'Result1) seq> =
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            Results.Join<'Key, 'FK1, 'PK2, 'Result1, 'Result2>(fun (r1: 'Result1, r2s: 'Result2 seq) -> merge.Invoke(r1, r2s))
+            Results.JoinWithGeneratedMerge(body, id)
         | _ -> failwithf "Incorrect expression specifying target join property: %A" target
 
 
@@ -929,9 +930,9 @@ type Results() =
     /// </param>
     static member Group ([<ReflectedDefinition>] target: Expr<'Result2 list>): 
             ResultSpecifier<('Result1 * 'Result2 option) list> -> ResultSpecifier<'Result1 list> =
-        let merge = Results.GenerateMerge(target)
-        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
-            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+            let merge = Results.GenerateMerge(provider, target)
+            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
 
     /// <summary>
     /// Groups array of tuples by first item and consilidates this item with an array of corresponding second items by assigning them to a specified property.
@@ -941,9 +942,9 @@ type Results() =
     /// </param>
     static member Group ([<ReflectedDefinition>] target: Expr<'Result2 array>):
             ResultSpecifier<('Result1 * 'Result2 option) array> -> ResultSpecifier<'Result1 array> =
-        let merge = Results.GenerateMerge(target)
-        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
-            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+            let merge = Results.GenerateMerge(provider, target)
+            Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
 
     /// <summary>
     /// Groups seq of tuples by first item and consilidates this item with seq of corresponding second items by assigning them to a specified property.
@@ -953,9 +954,9 @@ type Results() =
     /// </param>
     static member Group (target: Expr<'Result2 seq>):
             ResultSpecifier<('Result1 * 'Result2 option) seq> -> ResultSpecifier<'Result1 seq> =
-        let merge = Results.GenerateMerge(target)
-        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
-            Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
+        fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+            let merge = Results.GenerateMerge(provider, target)
+            Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
 
     /// <summary>
     /// Groups list of tuples by first item and consilidates this item with list of corresponding second items by assigning them to a specified property.
@@ -967,9 +968,9 @@ type Results() =
             ResultSpecifier<('Result1 * 'Result2 option) list> -> ResultSpecifier<'Result1 list> =
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) ->
-                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) list>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+                let merge = Results.GenerateMerge(provider, body)
+                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 list) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
         | _ -> failwithf "Incorrect expression specifying target group property: %A" target
 
 
@@ -983,9 +984,9 @@ type Results() =
             ResultSpecifier<('Result1 * 'Result2 option) array> -> ResultSpecifier<'Result1 array> =
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) ->
-                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) array>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+                let merge = Results.GenerateMerge(provider, target)
+                Results.Group (fun  (r1: 'Result1) (r2l: 'Result2 array) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
         | _ -> failwithf "Incorrect expression specifying target group property: %A" target
 
     /// <summary>
@@ -998,9 +999,9 @@ type Results() =
             ResultSpecifier<('Result1 * 'Result2 option) seq> -> ResultSpecifier<'Result1 seq> =
         match target with
         | Lambda (_, body) -> 
-            let merge = Results.GenerateMerge(body)
-            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) ->
-                Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult
+            fun (sourceResult: IRowGetterProvider * IDataReader -> IResultReader<('Result1 * 'Result2 option) seq>) (provider: IRowGetterProvider, prototype: IDataReader) ->
+                let merge = Results.GenerateMerge(provider, target)
+                Results.Group (fun (r1: 'Result1) (r2l: 'Result2 seq) -> merge.Invoke(r1, r2l)) sourceResult (provider, prototype)
         | _ -> failwithf "Incorrect expression specifying target group property: %A" target
 
 /// <summary>

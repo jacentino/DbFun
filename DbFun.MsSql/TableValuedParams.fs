@@ -49,7 +49,7 @@ module TableValuedParamsImpl =
 
             member __.CanBuild (argType: Type) = Types.isSimpleType(argType)
 
-            member this.Build<'Arg> (name: string, _, prototype: SqlDataRecord) = 
+            member this.Build<'Arg> (name: string, provider, prototype: SqlDataRecord) = 
                 let ordinal = prototype.GetOrdinal(name)
                 let fieldType = prototype.GetFieldType(ordinal)
                 let colSetter = typedColAccessMethods |> List.tryFind (fst >> (=) fieldType) |> Option.map snd |> Option.defaultValue setValueMethod
@@ -66,7 +66,7 @@ module TableValuedParamsImpl =
                     else
                         valueParam :> Expression
                 let call = Expression.Call(recParam, colSetter, Expression.Constant(ordinal), convertedValue)
-                let setter = Expression.Lambda<Action<SqlDataRecord, 'Arg>>(call, recParam, valueParam).Compile()
+                let setter = provider.Compiler.Compile<Action<SqlDataRecord, 'Arg>>(call, recParam, valueParam)
                 { new ITVParamSetter<'Arg> with
                     member __.SetValue (value: 'Arg, index: int option, command: SqlDataRecord) = 
                         setter.Invoke(command, value)
