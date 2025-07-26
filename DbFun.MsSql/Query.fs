@@ -7,10 +7,6 @@ open System.Data
 open System
 open Microsoft.Data.SqlClient.Server
 
-module MultipleConnections = 
-
-    ()
-
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
 /// </summary>

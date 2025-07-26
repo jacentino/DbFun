@@ -4,7 +4,7 @@ open System
 open System.Linq.Expressions
 
 type ICompiler = 
-    abstract member Compile<'Function>: body: Expression * [<ParamArray>] args: ParameterExpression[]  -> 'Function
+    abstract member Compile<'Function>: body: Expression * [<ParamArray>] args: ParameterExpression[]  -> 'Function when 'Function : null 
 
 type LinqExpressionCompiler() =     
     interface ICompiler with
