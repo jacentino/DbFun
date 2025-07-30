@@ -3,6 +3,7 @@
 open System.Data
 open DbFun.Core
 open DbFun.Core.Diagnostics
+open DbFun.Core.Builders.Compilers
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System
@@ -119,6 +120,86 @@ type QueryConfig<'DbKey> =
         /// </summary>
         member this.HandleCollectionParams() = 
             { this with ParamBuilders = ParamsImpl.SequenceIndexingBuilder() :: this.ParamBuilders }
+
+
+type IDerivedConfig<'Derived, 'DbKey> = 
+    abstract member MapCommon: (QueryConfig<'DbKey> -> QueryConfig<'DbKey>)-> 'Derived
+
+type IDerivedConfigExtensions = 
+
+    /// <summary>
+    /// Adds a converter mapping application values of a given type to ptoper database parameter values.
+    /// </summary>
+    /// <param name="convert">
+    /// Function converting application values to database parameter values.
+    /// </param>
+    [<Extension>]
+    static member AddParamConverter(config: IDerivedConfig<'Derived, 'DbKey>, convert: 'Source -> 'Target) = 
+        config.MapCommon(fun common -> common.AddParamConverter(convert))
+
+    /// <summary>
+    /// Adds a converter mapping database values to application values.
+    /// </summary>
+    /// <param name="convert">
+    /// Function converting database column values to application values.
+    /// </param>
+    [<Extension>]
+    static member AddRowConverter(config: IDerivedConfig<'Derived, 'DbKey>, convert: 'Source -> 'Target) = 
+        config.MapCommon(fun common -> common.AddRowConverter(convert))
+
+    /// <summary>
+    /// Adds a configurator for parameter builders of types determined by canBuild function.
+    /// </summary>
+    /// <param name="getConfig">
+    /// Creates a configuration object.
+    /// </param>
+    /// <param name="canBuild">
+    /// Function determining whether a given type is handled by the configurator.
+    /// </param>
+    [<Extension>]
+    static member AddParamConfigurator(config: IDerivedConfig<'Derived, 'DbKey>, getConfig: string -> 'Config, canBuild: Type -> bool) = 
+        config.MapCommon(fun common -> common.AddParamConfigurator(getConfig, canBuild))
+
+    /// <summary>
+    /// Adds a configurator for row builders of types determined by canBuild function.
+    /// </summary>
+    /// <param name="getConfig">
+    /// Creates a configuration object.
+    /// </param>
+    /// <param name="canBuild">
+    /// Function determining whether a given type is handled by the configurator.
+    /// </param>
+    [<Extension>]
+    static member AddRowConfigurator(config: IDerivedConfig<'Derived, 'DbKey>, getConfig: string -> 'Config, canBuild: Type -> bool) = 
+        config.MapCommon(fun common -> common.AddRowConfigurator(getConfig, canBuild))
+
+    /// <summary>
+    /// Adds a configurator for both parameter and row builders of types determined by canBuild function.
+    /// </summary>
+    /// <param name="getConfig">
+    /// Creates a configuration object.
+    /// </param>
+    /// <param name="canBuild">
+    /// Function determining whether a given type is handled by the configurator.
+    /// </param>
+    [<Extension>]
+    static member AddConfigurator(config: IDerivedConfig<'Derived, 'DbKey>, getConfig: string -> 'Config, canBuild: Type -> bool) = 
+        config.MapCommon(fun common -> common.AddConfigurator(getConfig, canBuild))
+
+    /// <summary>
+    /// Allows to generate functions executing queries without discovering resultset structure using SchemaOnly calls.
+    /// </summary>
+    [<Extension>]
+    static member DisablePrototypeCalls(config: IDerivedConfig<'Derived, 'DbKey>) = 
+        config.MapCommon(fun common -> common.DisablePrototypeCalls())
+
+    /// <summary>
+    /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
+    /// </summary>    
+    [<Extension>]
+    static member HandleCollectionParams(config: IDerivedConfig<'Derived, 'DbKey>) = 
+        config.MapCommon(fun common -> common.HandleCollectionParams())
+
 
 /// <summary>
 /// Purely technical class, added to allow to customize command creation.

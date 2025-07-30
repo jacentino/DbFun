@@ -5,6 +5,7 @@ open System.Reflection
 open System.Linq.Expressions
 open Microsoft.FSharp.Reflection
 open DbFun.Core
+open DbFun.Core.Builders.Compilers
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open System.Text.RegularExpressions
@@ -66,9 +67,7 @@ module GenericGetters =
             member __.Build<'Result2>(provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) = 
                 builder(provider, prototype) :?> IGetter<'DbObject, 'Result2>
 
-    type BaseGetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, ?compiler: ICompiler) = 
-
-        let compiler = compiler |> Option.defaultWith (fun () -> LinqExpressionCompiler())
+    type BaseGetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, compiler: ICompiler) = 
 
         member this.GetGetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetGetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)

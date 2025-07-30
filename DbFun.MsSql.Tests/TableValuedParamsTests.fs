@@ -8,12 +8,13 @@ open DbFun.MsSql.Builders
 open DbFun.TestTools.Models
 open DbFun.Core.Builders.GenericSetters
 open DbFun.Core.Builders
+open DbFun.Core.Builders.Compilers
 
 module TableValuedParamsTests = 
 
     [<Fact>]
     let ``Simple values``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = [| SqlMetaData("id", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<int>("id") (tvpProvider, record)
@@ -23,7 +24,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Char enums``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = [| SqlMetaData("status", SqlDbType.Char, 1) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Status>("status") (tvpProvider, record)
@@ -33,7 +34,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Int enums``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = [| SqlMetaData("role", SqlDbType.Int) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Role>("role") (tvpProvider, record)
@@ -43,7 +44,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``String enums``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = [| SqlMetaData("access", SqlDbType.VarChar, 2) |]
         let record = SqlDataRecord(metadata)
         let setter = TVParams.Auto<Access>("access") (tvpProvider, record)
@@ -53,7 +54,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Records``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = 
             [| 
                 SqlMetaData("userId", SqlDbType.Int)
@@ -79,7 +80,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Records with overrides``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = 
             [| 
                 SqlMetaData("id", SqlDbType.Int)
@@ -106,7 +107,7 @@ module TableValuedParamsTests =
 
     [<Fact>]
     let ``Tuples``() =         
-        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let metadata = 
             [| 
                 SqlMetaData("userId", SqlDbType.Int)

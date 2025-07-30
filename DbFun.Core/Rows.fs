@@ -4,6 +4,7 @@ open System
 open System.Data
 open System.Linq.Expressions
 open DbFun.Core
+open DbFun.Core.Builders.Compilers
 
 type IRowGetter<'Result> = GenericGetters.IGetter<IDataRecord, 'Result>
 

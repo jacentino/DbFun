@@ -1,9 +1,11 @@
 ﻿namespace DbFun.OracleManaged.Builders
 
+open System
 open DbFun.Core.Diagnostics
 open System.Data
 open Oracle.ManagedDataAccess.Client
-open System
+open DbFun.Core.Builders
+open DbFun.OracleManaged.Builders
 
 type QueryConfig<'DbKey> = 
     {
@@ -26,7 +28,7 @@ type QueryConfig<'DbKey> =
         /// Adds Oracle array support.
         /// </summary>
         member this.UseOracleArrayParams() = 
-            let oracleArrayProvider = ParamsImpl.BaseSetterProvider(OracleArrayParamsImpl.getDefaultBuilders())
+            let oracleArrayProvider = ParamsImpl.BaseSetterProvider(OracleArrayParamsImpl.getDefaultBuilders(), this.Common.Compiler)
             let oracleArrayBuilder = ParamsImpl.OracleArrayBuilder(oracleArrayProvider) 
             { this with Common = { this.Common with ParamBuilders = oracleArrayBuilder :: this.Common.ParamBuilders } }
 
@@ -39,7 +41,7 @@ type QueryConfig<'DbKey> =
         /// </param>
         member this.AddOracleArrayBuilder(builder: OracleArrayParamsImpl.IBuilder) = 
             let pgArrayBuilders = builder :: this.OracleArrayBuilders
-            let oracleArrayProvider = ParamsImpl.BaseSetterProvider(pgArrayBuilders)
+            let oracleArrayProvider = ParamsImpl.BaseSetterProvider(pgArrayBuilders, this.Common.Compiler)
             let arrayBuilder = ParamsImpl.OracleArrayBuilder(oracleArrayProvider) :> DbFun.Core.Builders.ParamsImpl.IBuilder
             let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.OracleArrayBuilder -> arrayBuilder | b -> b)
             { this with
@@ -72,12 +74,9 @@ type QueryConfig<'DbKey> =
                 .AddOracleArrayBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
 
 
-        /// <summary>
-        /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
-        /// </summary>
-        member this.HandleCollectionParams() = 
-            { this with Common = this.Common.HandleCollectionParams() }
-
+        interface IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
+            member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 
+                { this with Common = map(this.Common) }
 
 type QueryConfig = QueryConfig<unit>
 

@@ -45,6 +45,7 @@ module BulkCopyParamsImpl =
 
 open BulkCopyParamsImpl
 open Oracle.ManagedDataAccess.Client
+open DbFun.Core.Builders.Compilers
 
 type BulkCopyParams() = 
     inherit DbFun.Core.Builders.GenericSetters.GenericSetterBuilder<DataTable, DataRow>()
@@ -55,6 +56,7 @@ type BulkCopyParams() =
 type BulkCopyConfig = 
     {
         ParamBuilders   : IBuilder list
+        Compiler        : ICompiler
     }
     with
         /// <summary>
@@ -91,6 +93,7 @@ type BulkCopyConfig =
 type BulkCopyBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkCopyConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (getDefaultBuilders())
+    let compiler = defaultArg (config |> Option.map (fun c -> c.Compiler)) (LinqExpressionCompiler())
 
     /// <summary>
     /// Generates a function performing bulk import.
@@ -103,7 +106,7 @@ type BulkCopyBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkCopyConfig) =
     /// </param>
     member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         let dataTable = new DataTable()
-        let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders)
+        let provider = GenericSetters.BaseSetterProvider<DataTable, DataRow>(builders, compiler)
         let setter = specifier(provider, dataTable)
         setter.SetArtificial(None, null)
         fun (records: 'Record seq) (connector: IConnector<'DbKey>) ->

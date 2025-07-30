@@ -7,6 +7,7 @@ open System.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
 open DbFun.Core
+open DbFun.Core.Builders.Compilers
 open FSharp.Control
 open System.Data.Common
 

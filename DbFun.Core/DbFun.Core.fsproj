@@ -11,7 +11,7 @@
     <Compile Include="Any.fs" />
     <Compile Include="Models.fs" />
     <Compile Include="Naming.fs" />
-    <Compile Include="Compiler.fs" />
+    <Compile Include="Compilers.fs" />
     <Compile Include="GenericGetters.fs" />
     <Compile Include="GenericSetters.fs" />
     <Compile Include="Params.fs" />

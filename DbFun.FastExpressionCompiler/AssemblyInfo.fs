@@ -1,4 +1,5 @@
-﻿namespace DbFun.Firebird.AssemblyInfo
+﻿namespace DbFun.FastExpressionCompiler.AssemblyInfo
+
 
 open System.Reflection
 open System.Runtime.InteropServices
@@ -6,12 +7,12 @@ open System.Runtime.InteropServices
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[<assembly: AssemblyTitle("DbFun.Firebird")>]
+[<assembly: AssemblyTitle("DbFun.FastExpressionCompiler")>]
 [<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyProduct("DbFun.Firebird")>]
-[<assembly: AssemblyCopyright("Copyright © 2024")>]
+[<assembly: AssemblyProduct("DbFun.FastExpressionCompiler")>]
+[<assembly: AssemblyCopyright("Copyright © 2025")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
 
@@ -21,7 +22,7 @@ open System.Runtime.InteropServices
 [<assembly: ComVisible(false)>]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[<assembly: Guid("AD0B7C85-2A2F-43C4-B772-552CE93883AE")>]
+[<assembly: Guid("4AFF2C20-4E0F-4D67-85E4-2564302E96B7")>]
 
 // Version information for an assembly consists of the following four values:
 // 
@@ -38,3 +39,4 @@ open System.Runtime.InteropServices
 
 do
     ()
+

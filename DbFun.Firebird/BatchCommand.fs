@@ -4,6 +4,7 @@ open DbFun.Core.Builders
 open FirebirdSql.Data.FirebirdClient
 open System
 open DbFun.Core
+open DbFun.Core.Builders.Compilers
 open System.Data
 
 
@@ -86,6 +87,7 @@ type BatchParamOverride<'Arg> = GenericSetters.Override<unit, FbParameterCollect
 type BatchCommandConfig = 
     {
         ParamBuilders   : BatchParamsImpl.IBuilder list
+        Compiler        : ICompiler
     }
     with
         /// <summary>
@@ -122,6 +124,7 @@ type BatchCommandConfig =
 type BatchCommandBuilder<'DbKey>(dbKey: 'DbKey, ?config: BatchCommandConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (BatchParamsImpl.getDefaultBuilders())
+    let compiler = defaultArg (config |> Option.map (fun c -> c.Compiler)) (LinqExpressionCompiler())
 
     /// <summary>
     /// Generates a function performing batch processing.
@@ -133,7 +136,7 @@ type BatchCommandBuilder<'DbKey>(dbKey: 'DbKey, ?config: BatchCommandConfig) =
     /// The parameter specifier.
     /// </param>
     member __.Command(commandText: string, specifier: BatchParamSpecifier<'Record>): 'Record seq -> DbCall<'DbKey, FbBatchNonQueryResult> = 
-        let provider = GenericSetters.BaseSetterProvider<unit, FbParameterCollection>(builders)
+        let provider = GenericSetters.BaseSetterProvider<unit, FbParameterCollection>(builders, compiler)
         let setter = specifier(provider, ())
         fun (records: 'Record seq) (connector: IConnector<'DbKey>) ->
             async {

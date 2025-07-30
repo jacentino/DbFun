@@ -6,6 +6,7 @@ open DbFun.MsSql.Builders
 open System.Data
 open System
 open Microsoft.Data.SqlClient.Server
+open DbFun.Core.Builders.Compilers
 
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.
@@ -36,19 +37,9 @@ type QueryConfig<'DbKey> =
         /// Handles collections of compound types (records, tuples) as table-valued parameters.
         /// </summary>
         member this.UseTvpParams() = 
-            let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders())
+            let tvpProvider = GenericSetters.BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
             let tvpBuilder = ParamsImpl.TVPCollectionBuilder(tvpProvider) 
             { this with Common = { this.Common with ParamBuilders = tvpBuilder :: this.Common.ParamBuilders } }
-
-        /// <summary>
-        /// Adds a converter mapping application values of a given type to ptoper database parameter values.
-        /// </summary>
-        /// <param name="convert">
-        /// Function converting application values to database parameter values.
-        /// </param>
-        member this.AddRowConverter(converter: 'Source -> 'Target) = 
-            { this with Common = this.Common.AddRowConverter(converter) }
-
         /// <summary>
         /// Adds builder for table-valued parameters.
         /// </summary>
@@ -57,7 +48,7 @@ type QueryConfig<'DbKey> =
         /// </param>
         member this.AddTvpBuilder(builder: TableValuedParamsImpl.IBuilder) = 
             let tvpBuilders = builder :: this.TvpBuilders
-            let tvpProvider = ParamsImpl.BaseSetterProvider(tvpBuilders)
+            let tvpProvider = ParamsImpl.BaseSetterProvider(tvpBuilders, LinqExpressionCompiler())
             let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(tvpProvider) :> ParamsImpl.IBuilder
             let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.TVPCollectionBuilder -> tvpCollBuilder | b -> b)
             { this with
@@ -90,18 +81,6 @@ type QueryConfig<'DbKey> =
                 .AddTvpBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
 
         /// <summary>
-        /// Adds a configurator for row builders of types determined by canBuild function.
-        /// </summary>
-        /// <param name="getConfig">
-        /// Creates a configuration object.
-        /// </param>
-        /// <param name="canBuild">
-        /// Function determining whether a given type is handled by the configurator.
-        /// </param>
-        member this.AddRowConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
-            { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
-
-        /// <summary>
         /// Adds a configurator for both parameter and row builders of types determined by canBuild function.
         /// </summary>
         /// <param name="getConfig">
@@ -114,11 +93,11 @@ type QueryConfig<'DbKey> =
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
 
-        /// <summary>
-        /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
-        /// </summary>
-        member this.HandleCollectionParams() = 
-            { this with Common = this.Common.HandleCollectionParams() }
+
+        interface IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
+            member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 
+                { this with Common = map(this.Common) }
+
 
 /// <summary>
 /// Microsoft SQL Server-specific configuration, including tvp-parameter builders.

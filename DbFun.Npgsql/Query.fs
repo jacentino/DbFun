@@ -3,6 +3,8 @@
 open System
 open System.Data
 open DbFun.Core.Diagnostics
+open DbFun.Core.Builders
+open DbFun.Npgsql.Builders
 
 type QueryConfig<'DbKey> = 
     {
@@ -24,7 +26,7 @@ type QueryConfig<'DbKey> =
         /// Adds Postgres array support.
         /// </summary>
         member this.UsePostgresArrayParams() = 
-            let pgArrayProvider = ParamsImpl.BaseSetterProvider(PgArrayParamsImpl.getDefaultBuilders())
+            let pgArrayProvider = ParamsImpl.BaseSetterProvider(PgArrayParamsImpl.getDefaultBuilders(), this.Common.Compiler)
             let pgArrayBuilder = ParamsImpl.PgArrayBuilder(pgArrayProvider) 
             { this with Common = { this.Common with ParamBuilders = pgArrayBuilder :: this.Common.ParamBuilders } }
 
@@ -77,7 +79,7 @@ type QueryConfig<'DbKey> =
         /// </param>
         member this.AddPgArrayBuilder(builder: PgArrayParamsImpl.IBuilder) = 
             let pgArrayBuilders = builder :: this.PgArrayBuilders
-            let pgArrayProvider = ParamsImpl.BaseSetterProvider(pgArrayBuilders)
+            let pgArrayProvider = ParamsImpl.BaseSetterProvider(pgArrayBuilders, this.Common.Compiler)
             let arrayBuilder = ParamsImpl.PgArrayBuilder(pgArrayProvider) :> DbFun.Core.Builders.ParamsImpl.IBuilder
             let paramBuilders = this.Common.ParamBuilders |> List.map (function :? ParamsImpl.PgArrayBuilder -> arrayBuilder | b -> b)
             { this with
@@ -92,7 +94,7 @@ type QueryConfig<'DbKey> =
         /// Function converting database column values to application values.
         /// </param>
         member this.AddParamConverter(converter: 'Source -> 'Target) = 
-            let arrayBuilder = ParamsImpl.Converter<'Source, 'Target>(converter) 
+            let arrayBuilder = DbFun.Npgsql.Builders.ParamsImpl.Converter<'Source, 'Target>(converter) 
             { this with Common = this.Common.AddParamConverter(converter) }
                 .AddPgArrayBuilder(arrayBuilder)
 
@@ -110,18 +112,6 @@ type QueryConfig<'DbKey> =
                 .AddPgArrayBuilder(ParamsImpl.Configurator<'Config>(getConfig, canBuild))
 
         /// <summary>
-        /// Adds a configurator for row builders of types determined by canBuild function.
-        /// </summary>
-        /// <param name="getConfig">
-        /// Creates a configuration object.
-        /// </param>
-        /// <param name="canBuild">
-        /// Function determining whether a given type is handled by the configurator.
-        /// </param>
-        member this.AddRowConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
-            { this with Common = this.Common.AddRowConfigurator(getConfig, canBuild) }
-
-        /// <summary>
         /// Adds a configurator for both parameter and row builders of types determined by canBuild function.
         /// </summary>
         /// <param name="getConfig">
@@ -134,11 +124,11 @@ type QueryConfig<'DbKey> =
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
 
-        /// <summary>
-        /// Allows to handle collections by replicating parameters for each item with name modified by adding item index.
-        /// </summary>
-        member this.HandleCollectionParams() = 
-            { this with Common = this.Common.HandleCollectionParams() }
+
+        interface DbFun.Core.Builders.IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
+            member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 
+                { this with Common = map(this.Common) }
+
 
 type QueryConfig = QueryConfig<unit>
 

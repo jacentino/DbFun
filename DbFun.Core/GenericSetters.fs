@@ -5,6 +5,7 @@ open System.Reflection
 open FSharp.Reflection
 open System.Linq.Expressions
 open DbFun.Core
+open DbFun.Core.Builders.Compilers
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open System.Text.RegularExpressions
@@ -66,9 +67,7 @@ module GenericSetters =
                 setter(provider, prototype) :?> ISetter<'DbObject, 'Arg2>
 
 
-    type BaseSetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, ?compiler: ICompiler) = 
-
-        let compiler = compiler |> Option.defaultWith (fun () -> LinqExpressionCompiler())
+    type BaseSetterProvider<'Prototype, 'DbObject>(builders: IBuilder<'Prototype, 'DbObject> seq, compiler: ICompiler) = 
 
         member this.GetSetter(argType: Type, name: string, prototype: 'Prototype): obj = 
             let method = this.GetType().GetMethods() |> Seq.find (fun m -> m.Name = "GetSetter" && m.IsGenericMethod && m.GetGenericArguments().Length = 1)

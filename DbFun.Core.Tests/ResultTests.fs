@@ -5,16 +5,24 @@ open System.Data
 open FSharp.Control
 open Xunit
 open DbFun.Core.Builders
+open DbFun.FastExpressionCompiler.Compilers
 open DbFun.TestTools.Models
 open DbFun.TestTools.Mocks
 open DbFun.Core.Builders.GenericGetters
+open DbFun.Core.Builders.Compilers
 
 module ResultTests = 
 
-    let provider = BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders())
+    let compilers: ICompiler list = [ LinqExpressionCompiler(); Compiler() ]
+
+    let providers = 
+        compilers 
+        |> List.map (fun compiler -> [| BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders(), Compiler()) |])
+        
     
-    [<Fact>]
-    let ``One record``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``One record``(provider: IRowGetterProvider) = 
 
         let reader = createDataReaderMock
                         [
@@ -25,7 +33,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
         let result = Results.Single<User>("") (builderParams)
         let value = result.Read(reader) |> Async.RunSynchronously
 
@@ -39,8 +47,9 @@ module ResultTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]
-    let ``Many records``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Many records``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -52,7 +61,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
 
         let result = Results.List<User>("") builderParams
         let value = result.Read(reader) |> Async.RunSynchronously 
@@ -75,8 +84,9 @@ module ResultTests =
         Assert.Equal<User list>(expected, value)
 
 
-    [<Fact>]
-    let ``Many records AsyncSeq``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Many records AsyncSeq``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -88,7 +98,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
 
         let result = Results.AsyncSeq<User>("") builderParams
         let value = result.Read(reader) |> Async.RunSynchronously 
@@ -114,8 +124,9 @@ module ResultTests =
         Assert.Equal<User list>(expected, valueList)
 
 
-    [<Fact>]
-    let ``Optional record - Some``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Optional record - Some``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -139,8 +150,9 @@ module ResultTests =
         Assert.Equal(Some expected, value)
 
 
-    [<Fact>]
-    let ``Optional record - None``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Optional record - None``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -148,15 +160,16 @@ module ResultTests =
                             [ ]                            
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
         let result = Results.Optional<User>("") builderParams
         let value = result.Read(reader) |> Async.RunSynchronously
 
         Assert.Equal(None, value)
 
 
-    [<Fact>]
-    let ``Multiple results``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Multiple results``(provider) = 
         let prototype, regular = 
             createPrototypeAndRegular
                 [
@@ -172,7 +185,7 @@ module ResultTests =
                     ]
                 ]
 
-        let builderParams = provider :> IRowGetterProvider, prototype 
+        let builderParams = provider, prototype 
         let result = 
             Results.Multiple(
                 Results.Single<User>(""),
@@ -197,8 +210,9 @@ module ResultTests =
         Assert.Equal(expected, (user, roles))
 
 
-    [<Fact>]
-    let ``Mapping``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Mapping``(provider) = 
         
         let prototype, regular = 
             createPrototypeAndRegular
@@ -215,7 +229,7 @@ module ResultTests =
                     ]
                 ]
 
-        let builderParams = provider :> IRowGetterProvider, prototype 
+        let builderParams = provider, prototype 
         let result = 
             (Results.Multiple(
                 Results.Single<User>(""), 
@@ -237,8 +251,9 @@ module ResultTests =
                 
         Assert.Equal(expected, value)
 
-    [<Fact>]
-    let ``Auto - one record``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Auto - one record``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -249,7 +264,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
         let result = Results.Auto<User>() (builderParams)
         let value = result.Read(reader) |> Async.RunSynchronously
 
@@ -264,8 +279,9 @@ module ResultTests =
 
 
 
-    [<Fact>]
-    let ``Auto - optional record``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Auto - optional record``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -289,8 +305,9 @@ module ResultTests =
         Assert.Equal(Some expected, value)
 
 
-    [<Fact>]
-    let ``Auto - many records``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Auto - many records``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -302,7 +319,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
 
         let result = Results.Auto<User list>() builderParams
         let value = result.Read(reader) |> Async.RunSynchronously 
@@ -325,8 +342,9 @@ module ResultTests =
         Assert.Equal<User list>(expected, value)
 
 
-    [<Fact>]
-    let ``Auto - many records AsyncSeq``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Auto - many records AsyncSeq``(provider) = 
 
         let reader = createDataReaderMock
                         [
@@ -338,7 +356,7 @@ module ResultTests =
                             
                         ]
 
-        let builderParams = provider :> IRowGetterProvider, reader 
+        let builderParams = provider, reader 
 
         let result = Results.Auto<User AsyncSeq>() builderParams
         let value = result.Read(reader) |> Async.RunSynchronously 

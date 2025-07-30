@@ -4,6 +4,7 @@ open System
 open Xunit
 open DbFun.Core
 open DbFun.Core.Builders
+open DbFun.FastExpressionCompiler
 open DbFun.Core.Builders.MultipleResults
 open DbFun.TestTools
 open DbFun.TestTools.Models
@@ -12,16 +13,20 @@ open DbFun.Core.Diagnostics
 open System.Data
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
+open DbFun.Core.Builders.Compilers
+open DbFun.FastExpressionCompiler.Compilers
 
 type Diag() = 
     static member GetLine([<CallerLineNumber; Optional; DefaultParameterValue(0)>] line: int) = line
 
 module QueryTests = 
 
-    let createConfig createConnection = QueryConfig.Default(createConnection)
+    let compilers: ICompiler array list = [ [| LinqExpressionCompiler() |]; [| Compiler() |] ]
 
-    [<Fact>]
-    let ``Simple queries``() = 
+    let createConfig createConnection compiler = { QueryConfig.Default(createConnection) with Compiler = compiler }
+
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Simple queries``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -33,7 +38,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
                
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 
@@ -52,8 +57,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Simple queries - param by name``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Simple queries - param by name``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -65,7 +70,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id", Results.Auto()) 
 
@@ -84,8 +89,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Simple queries - simplest form``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Simple queries - simplest form``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -97,7 +102,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql<int, User>("select * from User where userId = @Id", "id") 
 
@@ -116,8 +121,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Multiple results``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Multiple results``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -134,7 +139,7 @@ module QueryTests =
                     ]                           
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql(
             "select * from User where userId = @id;
@@ -158,8 +163,8 @@ module QueryTests =
         Assert.Equal<string seq>(["Administrator"; "Guest"], roles)
 
 
-    [<Fact>]
-    let ``Multiple results applicative``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Multiple results applicative``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -176,7 +181,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql(
                 "select * from User where userId = @id;
@@ -202,8 +207,8 @@ module QueryTests =
         Assert.Equal<string seq>(["Administrator"; "Guest"], roles)
 
 
-    [<Fact>]
-    let ``Joins with lambda merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Joins with lambda merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -220,7 +225,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql (
             "select * from User where userId = @id;
@@ -247,8 +252,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles seq>([expected], user)
             
 
-    [<Fact>]
-    let ``Joins with expr merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Joins with expr merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -265,7 +270,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
         let uwr = any<UserWithRoles>
 
         let query = 
@@ -294,8 +299,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles seq>([expected], user)
             
 
-    [<Fact>]
-    let ``Joins with lambda expr merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Joins with lambda expr merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -312,7 +317,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = 
              qb.Sql (
@@ -340,8 +345,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles seq>([expected], user)
 
 
-    [<Fact>]
-    let ``Grouping with lambda merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Grouping with lambda merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -354,7 +359,7 @@ module QueryTests =
                     ]
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql (
             "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
@@ -379,8 +384,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles list>([expected], user)
 
 
-    [<Fact>]
-    let ``Grouping with expr merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Grouping with expr merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -393,7 +398,7 @@ module QueryTests =
                     ]
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql (
             "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
@@ -418,8 +423,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles list>([expected], user)
 
 
-    [<Fact>]
-    let ``Grouping with lambda expr merge``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Grouping with lambda expr merge``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -432,7 +437,7 @@ module QueryTests =
                     ]
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
 
         let query = qb.Sql (
             "select u.*, r.name as roleName from User u left join Role r on u.userId = r.userId
@@ -457,8 +462,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles list>([expected], user)
 
             
-    [<Fact>]
-    let ``Procedures``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Procedures``(compiler) = 
 
         let createConnection() = 
             setupCommandOutParams
@@ -468,7 +473,7 @@ module QueryTests =
                     "created", box (DateTime(2023, 1, 1))
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
                
         let query = qb.Proc("getUser", Params.Auto<int> "id", OutParams.Record<User>(), Results.Unit) 
 
@@ -487,8 +492,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
             
-    [<Fact>]
-    let ``Procedures - simplest form``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Procedures - simplest form``(compiler) = 
 
         let createConnection() = 
             setupCommandOutParams
@@ -498,7 +503,7 @@ module QueryTests =
                     "created", box (DateTime(2023, 1, 1))
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
                
         let query = qb.Proc<int, User, unit>("getUser", "id") 
 
@@ -516,8 +521,8 @@ module QueryTests =
 
         Assert.Equal(expected, user)
 
-    [<Fact>]
-    let ``Compile-time errors - immediately``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Compile-time errors - immediately``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -530,7 +535,7 @@ module QueryTests =
                             
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
                
         let line = Diag.GetLine()
         let ex = Assert.Throws<CompileTimeException>(fun () -> qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "") |> ignore)
@@ -538,8 +543,8 @@ module QueryTests =
         Assert.Contains(sprintf "line %d" (line + 1), ex.Message)
 
 
-    [<Fact>]
-    let ``Compile-time errors - logging``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Compile-time errors - logging``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -552,7 +557,7 @@ module QueryTests =
                             
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder(createConfig createConnection compiler).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
@@ -564,8 +569,8 @@ module QueryTests =
         Assert.Contains("QueryTests.fs", fileName)
 
 
-    [<Fact>]
-    let ``Compile-time errors - deferred throw``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Compile-time errors - deferred throw``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -577,7 +582,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder(createConfig createConnection compiler).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         let query = qb.Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")                   
@@ -589,8 +594,8 @@ module QueryTests =
         Assert.Contains(sprintf "line %d" (line + 1), ex.InnerExceptions.[0].Message)
 
 
-    [<Fact>]
-    let ``Compile-time errors - logging & derived QueryBuilder``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Compile-time errors - logging & derived QueryBuilder``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -602,7 +607,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder(createConfig createConnection).LogCompileTimeErrors()
+        let qb = QueryBuilder(createConfig createConnection compiler).LogCompileTimeErrors()
                
         let line = Diag.GetLine()
         qb.Timeout(30).Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")               
@@ -622,8 +627,8 @@ module QueryTests =
         }
 
 
-    [<Fact>]
-    let ``Templated queries``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Templated queries``(compiler) = 
 
         let createProtoConnection() = 
             createConnectionMock
@@ -633,7 +638,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder((createConfig createProtoConnection).HandleCollectionParams())
+        let qb = QueryBuilder((createConfig createProtoConnection compiler).HandleCollectionParams())
                
         let query = 
             qb.Sql(
@@ -682,8 +687,8 @@ module QueryTests =
         Assert.Equal<User>(expected, users)
 
 
-    [<Fact>]
-    let ``Templated batches``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Templated batches``(compiler) = 
 
         let createProtoConnection() = 
             createConnectionMock
@@ -693,7 +698,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let qb = QueryBuilder ((createConfig createProtoConnection).HandleCollectionParams())
+        let qb = QueryBuilder ((createConfig createProtoConnection compiler).HandleCollectionParams())
 
         let query = qb.Sql<User list, unit>(
             Templating.define "insert into User (userId, name, email, created) values {{VALUES}}"
@@ -735,8 +740,8 @@ module QueryTests =
         Assert.Equal(box (DateTime(2024, 2, 1)), (command.Parameters["created1"] :?> IDataParameter).Value)
     
 
-    [<Fact>]
-    let ``Custom converters - parameters``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Custom converters - parameters``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -748,7 +753,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let config = createConfig(createConnection).AddParamConverter(fun (UserId id) -> id)
+        let config = (createConfig createConnection compiler).AddParamConverter(fun (UserId id) -> id)
 
         let qb = QueryBuilder(config)
                
@@ -770,8 +775,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Custom converters - parameters - list``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Custom converters - parameters - list``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -781,7 +786,7 @@ module QueryTests =
                     [ ]                            
                 ]
 
-        let config = createConfig(createConnection)
+        let config = (createConfig createConnection compiler)
                         .AddParamConverter(fun (UserId id) -> id)
                         .HandleCollectionParams()
 
@@ -814,8 +819,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Custom converters - results``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Custom converters - results``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -827,7 +832,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let config = createConfig(createConnection).AddRowConverter(UserId)
+        let config = (createConfig createConnection compiler).AddRowConverter(UserId)
 
         let qb = QueryBuilder(config)
                
@@ -845,8 +850,8 @@ module QueryTests =
         Assert.Equal(expected, user)
 
 
-    [<Fact>]
-    let ``Custom converters - parameters & results``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Custom converters - parameters & results``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -858,7 +863,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let config = createConfig(createConnection)
+        let config = (createConfig createConnection compiler)
                         .AddParamConverter(fun (UserId id) -> id)
                         .AddRowConverter(UserId)
 
@@ -879,8 +884,8 @@ module QueryTests =
 
             
 
-    [<Fact>]
-    let ``Configurators``() =
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Configurators``(compiler) =
         
         let createConnection() = 
             createConnectionMock
@@ -897,7 +902,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let config = (createConfig createConnection)
+        let config = (createConfig createConnection compiler)
                         .AddConfigurator((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<UserWithRoles>)
 
         let qb = QueryBuilder (config)
@@ -927,8 +932,8 @@ module QueryTests =
         Assert.Equal<UserWithRoles seq>([expected], user)
 
 
-    [<Fact>]
-    let ``Simple queries - no prototype calls``() = 
+    [<Theory>][<MemberData(nameof compilers)>]
+    let ``Simple queries - no prototype calls``(compiler) = 
 
         let createConnection() = 
             createConnectionMock
@@ -940,7 +945,7 @@ module QueryTests =
                     ]                            
                 ]
 
-        let qb = QueryBuilder (createConfig createConnection)
+        let qb = QueryBuilder (createConfig createConnection compiler)
                
         let query = qb.DisablePrototypeCalls().Sql("select * from User where userId = @Id", Params.Auto<int> "id", Results.Single<User> "")
 

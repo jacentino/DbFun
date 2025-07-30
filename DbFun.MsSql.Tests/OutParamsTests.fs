@@ -4,6 +4,7 @@ open System
 open Xunit
 open Microsoft.Data.SqlClient
 open DbFun.Core.Builders
+open DbFun.Core.Builders.Compilers
 open DbFun.MsSql.Builders
 open System.Data
 open DbFun.TestTools.Models
@@ -11,7 +12,7 @@ open DbFun.TestTools.Models
 module OutParamsTests = 
 
     let connection = new SqlConnection()
-    let provider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders())
+    let provider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
     let builderParams = provider :> IOutParamGetterProvider, ()
 
     [<Fact>]

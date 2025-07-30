@@ -10,15 +10,16 @@ open DbFun.TestTools.Mocks
 open Microsoft.Data.SqlClient.Server
 open DbFun.Core.Builders.GenericSetters
 open System.Data
+open DbFun.Core.Builders.Compilers
 
 module ParamsTests = 
 
     let connection = new SqlConnection()
 
     let makeBuilderParams(createConnection: unit -> IDbConnection) = 
-        let tvpProvider = ParamsImpl.BaseSetterProvider(TableValuedParamsImpl.getDefaultBuilders())
+        let tvpProvider = ParamsImpl.BaseSetterProvider(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(tvpProvider) :> ParamsImpl.IBuilder
-        let provider = BaseSetterProvider<IDbConnection, IDbCommand>(tvpCollBuilder :: ParamsImpl.getDefaultBuilders())
+        let provider = BaseSetterProvider<IDbConnection, IDbCommand>(tvpCollBuilder :: ParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         provider :> IParamSetterProvider, createConnection()
 
 

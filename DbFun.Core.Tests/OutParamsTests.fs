@@ -4,20 +4,30 @@ open System
 open Xunit
 open Microsoft.Data.SqlClient
 open DbFun.Core.Builders
+open DbFun.FastExpressionCompiler.Compilers
 open DbFun.TestTools.Models
+open DbFun.Core.Builders.Compilers
+open DbFun.Core.Builders.GenericSetters
 open System.Data
 
 module OutParamsTests = 
 
     let connection = new SqlConnection()
-    let provider = GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders())
-    let builderParams = provider :> IOutParamGetterProvider, ()
 
-    [<Fact>]
-    let ``Simple types``() = 
+    let compilers: ICompiler list = [ LinqExpressionCompiler(); Compiler()]
+
+    let providers = 
+        compilers 
+        |> List.map (fun compiler -> [|
+            GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.getDefaultBuilders(), compiler)
+        |])
+
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Simple types``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Auto("id") builderParams
+        let getter = OutParams.Auto("id") (provider, ())
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 5
@@ -26,11 +36,12 @@ module OutParamsTests =
         Assert.Equal(5, value)
         
 
-    [<Fact>]
-    let ``Char enum types``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Char enum types``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Auto("status") builderParams
+        let getter = OutParams.Auto("status") (provider, ())
 
         getter.Create(command)
         command.Parameters.["status"].Value <- 'A'
@@ -39,11 +50,12 @@ module OutParamsTests =
         Assert.Equal(Status.Active, value)
         
         
-    [<Fact>]
-    let ``Int enum types``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Int enum types``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Auto("role") builderParams
+        let getter = OutParams.Auto("role") (provider, ())
 
         getter.Create(command)
         command.Parameters.["role"].Value <- 1
@@ -52,11 +64,12 @@ module OutParamsTests =
         Assert.Equal(Role.Guest, value)
         
         
-    [<Fact>]
-    let ``Discriminated union types - simple``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Discriminated union types - simple``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Union<Access>("access") builderParams
+        let getter = OutParams.Union<Access>("access") (provider, ())
 
         getter.Create(command)
         command.Parameters.["access"].Value <- "RW"
@@ -65,11 +78,12 @@ module OutParamsTests =
         Assert.Equal(Access.ReadWrite, value)
         
         
-    [<Fact>]
-    let ``Simple type options - Some``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Simple type options - Some``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Optional<int>("id") builderParams
+        let getter = OutParams.Optional<int>("id") (provider, ())
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 1
@@ -78,11 +92,12 @@ module OutParamsTests =
         Assert.Equal(Some 1, value)
         
         
-    [<Fact>]
-    let ``Simple type options - None``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Simple type options - None``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Optional<int>("id") builderParams
+        let getter = OutParams.Optional<int>("id") (provider, ())
 
         getter.Create(command)
         command.Parameters.["id"].Value <- DBNull.Value
@@ -91,11 +106,12 @@ module OutParamsTests =
         Assert.Equal(None, value)
 
         
-    [<Fact>]        
-    let ``Simple type tuples``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Simple type tuples``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Tuple<int, string>("id", "name") builderParams
+        let getter = OutParams.Tuple<int, string>("id", "name") (provider, ())
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2
@@ -105,11 +121,12 @@ module OutParamsTests =
         Assert.Equal((2, "jacentino"), value)
 
         
-    [<Fact>]        
-    let ``Flat records``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Flat records``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Record<User>() builderParams
+        let getter = OutParams.Record<User>() (provider, ())
 
         getter.Create(command)
         command.Parameters.["userId"].Value <- 2
@@ -128,11 +145,12 @@ module OutParamsTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]        
-    let ``Flat records - prefixed names``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Flat records - prefixed names``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
-        let getter = OutParams.Record<User>("user_", RecordNaming.Prefix) builderParams
+        let getter = OutParams.Record<User>("user_", RecordNaming.Prefix) (provider, ())
 
         getter.Create(command)
         command.Parameters.["user_userId"].Value <- 2
@@ -151,12 +169,13 @@ module OutParamsTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]        
-    let ``Flat records - overrides``() = 
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Flat records - overrides``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
         let u = any<User>
-        let getter = OutParams.Record<User>(overrides = [OutParamOverride<int>(u.userId, OutParams.Auto("id"))]) builderParams
+        let getter = OutParams.Record<User>(overrides = [OutParamOverride<int>(u.userId, OutParams.Auto("id"))]) (provider, ())
 
         getter.Create(command)
         command.Parameters.["id"].Value <- 2

@@ -6,8 +6,10 @@ open Xunit
 open Moq
 
 open DbFun.Core.Builders
+open DbFun.FastExpressionCompiler.Compilers
 open DbFun.TestTools.Models
 open DbFun.Core.Builders.RowsImpl
+open DbFun.Core.Builders.Compilers
 
 module RowTests = 
 
@@ -38,10 +40,17 @@ module RowTests =
     let ncol<'t>(name: string) = 
         name, typeof<'t>, null
 
-    let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders())
+    let compilers: ICompiler list = [ LinqExpressionCompiler(); Compiler() ]
 
-    [<Fact>]
-    let ``Simple types``() = 
+    let providers = 
+        compilers
+        |> List.map (fun compiler -> [| 
+            GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders(), compiler) 
+        |])
+        
+
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Simple types``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("id", 5)
@@ -71,8 +80,8 @@ module RowTests =
         Assert.Equal<byte array>([| 1uy; 2uy; 3uy |], avatar)
 
 
-    [<Fact>]
-    let ``wrong names``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``wrong names``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -81,8 +90,8 @@ module RowTests =
         Assert.Contains("Column doesn't exist: userId", ex.Message)
 
 
-    [<Fact>]
-    let ``wrong types``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``wrong types``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -91,8 +100,8 @@ module RowTests =
         Assert.Contains("Column type doesn't match field type: id (Int32 -> String)", ex.Message)
 
 
-    [<Fact>]
-    let ``Simple option types``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Simple option types``(provider) = 
         
         let record = createDataRecordMock 
                         [   vcol("created", DateTime(2023, 1, 1)) 
@@ -110,8 +119,8 @@ module RowTests =
         Assert.Equal(None, updated)
 
 
-    [<Fact>]
-    let ``Option types - explicit underlying getter``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Option types - explicit underlying getter``(provider) = 
         
         let record = createDataRecordMock 
                         [   vcol("created", DateTime(2023, 1, 1)) 
@@ -129,8 +138,8 @@ module RowTests =
         Assert.Equal(None, updated)
 
 
-    [<Fact>]
-    let ``Char enums``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Char enums``(provider) = 
 
         let record = createDataRecordMock [ vcol("status", 'A') ]
         let builderParams = provider, record
@@ -141,8 +150,8 @@ module RowTests =
         Assert.Equal(Status.Active, value)
 
 
-    [<Fact>]
-    let ``Int enums``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Int enums``(provider) = 
 
         let record = createDataRecordMock [ vcol("role", 2) ]
         let builderParams = provider, record
@@ -153,8 +162,8 @@ module RowTests =
         Assert.Equal(Role.Regular, value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - no fields``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - no fields``(provider) = 
 
         let record = createDataRecordMock [ vcol("access", "RW") ]
         let builderParams = provider, record
@@ -165,8 +174,8 @@ module RowTests =
         Assert.Equal(Access.ReadWrite, value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - unnamed fields``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - unnamed fields``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CS"); vcol("Cash", "PLN"); ncol<string>("number"); ncol<string>("cvc") ]
         let builderParams = provider, record
@@ -177,8 +186,8 @@ module RowTests =
         Assert.Equal(PaymentType.Cash "PLN", value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - named fields``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - named fields``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("Cash"); vcol("number", "1234567890"); vcol("cvc", "222") ]
         let builderParams = provider, record
@@ -189,8 +198,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - prefix``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - prefix``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentnumber", "1234567890"); vcol("paymentcvc", "222") ]
         let builderParams = provider, record
@@ -201,8 +210,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - path``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - path``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentnumber", "1234567890"); vcol("paymentcvc", "222") ]
         let builderParams = provider, record
@@ -213,8 +222,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - case names``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - case names``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("Cash"); vcol("CreditCardnumber", "1234567890"); vcol("CreditCardcvc", "222") ]
         let builderParams = provider, record
@@ -225,8 +234,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - prefix and path``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - prefix and path``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentnumber", "1234567890"); vcol("paymentcvc", "222") ]
         let builderParams = provider, record
@@ -237,8 +246,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - prefix and case names``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - prefix and case names``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentCreditCardnumber", "1234567890"); vcol("paymentCreditCardcvc", "222") ]
         let builderParams = provider, record
@@ -249,8 +258,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - path and case names``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - path and case names``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentCreditCardnumber", "1234567890"); vcol("paymentCreditCardcvc", "222") ]
         let builderParams = provider, record
@@ -261,14 +270,15 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``Discriminated unions - path and case names by configurator``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Discriminated unions - path and case names by configurator``(provider) = 
 
         let record = createDataRecordMock [ vcol("payment", "CC"); ncol<string>("paymentCash"); vcol("paymentCreditCardnumber", "1234567890"); vcol("paymentCreditCardcvc", "222") ]
         let provider: IRowGetterProvider = 
             RowsImpl.BaseGetterProvider(
                 RowsImpl.Configurator<string * UnionNaming>((fun prefix -> prefix, UnionNaming.Path ||| UnionNaming.CaseNames), fun t -> t = typeof<PaymentType>) ::  
-                RowsImpl.getDefaultBuilders())
+                RowsImpl.getDefaultBuilders(),
+                Compiler())
         let builderParams = provider, record
         
         let getter = Rows.Union<PaymentType>("payment") builderParams
@@ -277,8 +287,8 @@ module RowTests =
         Assert.Equal(PaymentType.CreditCard("1234567890", "222"), value)
 
 
-    [<Fact>]
-    let ``DateOnly converter``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``DateOnly converter``(provider) = 
 
         let record = createDataRecordMock [ vcol("created", DateTime(2023, 1, 1)) ]
         let builderParams = provider, record
@@ -289,8 +299,8 @@ module RowTests =
         Assert.Equal(DateOnly.FromDateTime(DateTime(2023, 1, 1)), value)
 
 
-    [<Fact>]
-    let ``TimeOnly converter``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``TimeOnly converter``(provider) = 
 
         let record = createDataRecordMock [ vcol("dayTime", TimeSpan.FromHours(5)) ]
         let builderParams = provider, record
@@ -301,8 +311,8 @@ module RowTests =
         Assert.Equal(TimeOnly.FromTimeSpan(TimeSpan.FromHours(5)), value)
 
 
-    [<Fact>]
-    let ``Simple type tuples``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Simple type tuples``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5); vcol("name", "jacentino") ]
         let builderParams = provider, record
@@ -313,8 +323,8 @@ module RowTests =
         Assert.Equal((5, "jacentino"), t)
         
 
-    [<Fact>]
-    let ``Simple type tuples - explicit item getters``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Simple type tuples - explicit item getters``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5); vcol("name", "jacentino") ]
         let builderParams = provider, record
@@ -325,8 +335,8 @@ module RowTests =
         Assert.Equal((5, "jacentino"), t)
 
 
-    [<Fact>]
-    let ``Tuple options - Some``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Tuple options - Some``(provider) = 
         
         let record = createDataRecordMock [ vcol("id", 5); vcol("name", "jacentino") ]
         let builderParams = provider, record
@@ -337,8 +347,8 @@ module RowTests =
         Assert.Equal(Some (5, "jacentino"), t)
 
 
-    [<Fact>]
-    let ``Tuple options - None``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Tuple options - None``(provider) = 
         
         let record = createDataRecordMock [ ncol<int>("id"); ncol<string>("name") ]
         let builderParams = provider, record
@@ -349,8 +359,8 @@ module RowTests =
         Assert.Equal(None, t)
 
 
-    [<Fact>]
-    let ``Records of simple types``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Records of simple types``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", 5)
@@ -373,8 +383,8 @@ module RowTests =
         Assert.Equal(expected, value)
                             
 
-    [<Fact>]
-    let ``Records - prefixed names``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Records - prefixed names``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("user_userId", 5)
@@ -397,8 +407,8 @@ module RowTests =
         Assert.Equal(expected, value)
                             
 
-    [<Fact>]
-    let ``Records - overrides``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Records - overrides``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("id", 5)
@@ -422,8 +432,8 @@ module RowTests =
         Assert.Equal(expected, value)
                             
 
-    [<Fact>]
-    let ``Records prefix by configurator``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Records prefix by configurator``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("user_userId", 5)
@@ -435,7 +445,8 @@ module RowTests =
         let provider: IRowGetterProvider = 
             RowsImpl.BaseGetterProvider(
                 RowsImpl.Configurator<string * RecordNaming>((fun prefix -> prefix, RecordNaming.Prefix), fun t -> t = typeof<User>) ::  
-                RowsImpl.getDefaultBuilders())
+                RowsImpl.getDefaultBuilders(),
+                Compiler())
         let builderParams = provider, record
 
         let getter = Rows.Record<User>("user_") builderParams
@@ -451,8 +462,8 @@ module RowTests =
         Assert.Equal(expected, value)
                             
 
-    [<Fact>]
-    let ``Record options - Some``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Record options - Some``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", 5)
@@ -475,8 +486,8 @@ module RowTests =
         Assert.Equal(Some expected, value)
 
 
-    [<Fact>]
-    let ``Record options - None``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Record options - None``(provider) = 
 
         let record = createDataRecordMock 
                         [   ncol<int>("userId")
@@ -492,8 +503,8 @@ module RowTests =
         Assert.Equal(None, value)
 
 
-    [<Fact>]
-    let ``Hierarchical records``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Hierarchical records``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", "jacentino")
@@ -517,8 +528,8 @@ module RowTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]
-    let ``Hierarchical records - prefixes``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Hierarchical records - prefixes``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("account_userId", "jacentino")
@@ -542,8 +553,8 @@ module RowTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]
-    let ``Hierarchical records - paths``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Hierarchical records - paths``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("account_userId", "jacentino")
@@ -567,8 +578,8 @@ module RowTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]
-    let ``Hierarchical records - overrides``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Hierarchical records - overrides``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", "jacentino")
@@ -595,8 +606,8 @@ module RowTests =
         Assert.Equal(expected, value)
 
 
-    [<Fact>]
-    let ``Collections - list``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Collections - list``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -607,8 +618,8 @@ module RowTests =
         Assert.Empty(t)
 
 
-    [<Fact>]
-    let ``Collections - array``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Collections - array``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -619,8 +630,8 @@ module RowTests =
         Assert.Empty(t)
 
 
-    [<Fact>]
-    let ``Collections - seq``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Collections - seq``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -631,8 +642,8 @@ module RowTests =
         Assert.Empty(t)
 
 
-    [<Fact>]
-    let ``Units``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Units``(provider) = 
 
         let record = createDataRecordMock [ vcol("id", 5) ]
         let builderParams = provider, record
@@ -644,11 +655,11 @@ module RowTests =
 
 
 
-    [<Fact>]
-    let ``No prototype calls - char enums``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``No prototype calls - char enums``(provider) = 
 
         let record = createDataRecordMock [ vcol("status", 'A') ]
-        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders())
+        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders(), Compiler())
         let builderParams = provider, record
         
         let getter = Rows.Auto<Status> "status" builderParams
@@ -657,8 +668,8 @@ module RowTests =
         Assert.Equal(Status.Active, value)
 
 
-    [<Fact>]
-    let ``No prototype calls - records``() = 
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``No prototype calls - records``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", 5)
@@ -666,7 +677,7 @@ module RowTests =
                             vcol("email", "jacentino@gmail.com")
                             vcol("created", DateTime(2023, 1, 1))
                         ]
-        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders())
+        let provider: IRowGetterProvider = GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>( NoPrototypeColumnBuilder() :: RowsImpl.getDefaultBuilders(), Compiler())
         let builderParams = provider, record
 
         let getter = Rows.Record<User>() builderParams
@@ -680,5 +691,3 @@ module RowTests =
                 created = DateTime(2023, 1, 1)
             }
         Assert.Equal(expected, value)
-                            
-

@@ -42,6 +42,7 @@ module BulkImportParamsImpl =
 
 
 open BulkImportParamsImpl
+open DbFun.Core.Builders.Compilers
 
 type BulkImportParams() = 
     inherit DbFun.Core.Builders.GenericSetters.GenericSetterBuilder<string list ref, NpgsqlBinaryImporter>()
@@ -52,6 +53,7 @@ type BulkImportParams() =
 type BulkImportConfig = 
     {
         ParamBuilders   : IBuilder list
+        Compiler        : ICompiler
     }
     with
         /// <summary>
@@ -87,6 +89,7 @@ type BulkImportConfig =
 type BulkImportBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkImportConfig) = 
 
     let builders = defaultArg (config |> Option.map (fun c -> c.ParamBuilders)) (getDefaultBuilders())
+    let compiler = defaultArg (config |> Option.map (fun c -> c.Compiler)) (LinqExpressionCompiler())
 
     /// <summary>
     /// Generates a function performing bulk import.
@@ -99,7 +102,7 @@ type BulkImportBuilder<'DbKey>(dbKey: 'DbKey, ?config: BulkImportConfig) =
     /// </param>
     member __.WriteToServer<'Record>(specifier: ParamSpecifier<'Record>, ?tableName: string): 'Record seq -> DbCall<'DbKey, unit> = 
         let fieldNames = ref List.empty<string>
-        let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders)
+        let provider = GenericSetters.BaseSetterProvider<string list ref, NpgsqlBinaryImporter>(builders, compiler)
         let setter = specifier(provider, fieldNames)
         setter.SetArtificial(None, null)
         let copyCommand = 
