@@ -4,6 +4,7 @@ open System.Runtime.CompilerServices
 open DbFun.Core.Builders
 open DbFun.FastExpressionCompiler.Compilers
 
+[<Extension>]
 type QueryConfigExtensions = 
 
     [<Extension>]

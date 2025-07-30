@@ -125,6 +125,7 @@ type QueryConfig<'DbKey> =
 type IDerivedConfig<'Derived, 'DbKey> = 
     abstract member MapCommon: (QueryConfig<'DbKey> -> QueryConfig<'DbKey>)-> 'Derived
 
+[<Extension>]
 type IDerivedConfigExtensions = 
 
     /// <summary>
