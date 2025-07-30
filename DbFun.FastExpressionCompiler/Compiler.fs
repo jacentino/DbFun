@@ -10,5 +10,5 @@ open DbFun.Core.Builders.Compilers
 type Compiler() = 
     
     interface ICompiler with
-        member __.Compile(body: Expression, args: ParameterExpression array): 'Function when 'Function : null = 
+        member __.Compile(body: Expression, args: ParameterExpression array): 'Function when 'Function : not struct = 
             ExpressionCompiler.CompileFast<'Function>(Expression.Lambda(body, args))
