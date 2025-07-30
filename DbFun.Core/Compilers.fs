@@ -12,7 +12,7 @@ type ICompiler =
     /// </summary>
     /// <param name="body">The function body expression.</param>
     /// <param name="args">Function parameters expressions.</param>
-    abstract member Compile<'Function>: body: Expression * [<ParamArray>] args: ParameterExpression[]  -> 'Function when 'Function : null 
+    abstract member Compile: body: Expression * [<ParamArray>] args: ParameterExpression[]  -> 'Function when 'Function : null 
 
 /// <summary>
 /// Default implementation of compiler, based on System.Linq.Expressions compilation.
