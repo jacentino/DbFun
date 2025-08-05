@@ -13,7 +13,7 @@ It's fast, type safe and gives you full control on your queries.
 No custom query DSL enabled - just raw SQL.
 
 It's available as a [Nuget package](https://www.nuget.org/packages/DbFun.Core/)
-There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql), [Oracle](https://www.nuget.org/packages/DbFun.OracleManaged), [Firebird](https://www.nuget.org/packages/DbFun.Firebird) and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlConnector) databases, as well as [FastExpressionCompiler](https://www.nuget.org/packages/FastExpressionCompiler) that improves start-up time.
+There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSql), [PostgreSQL](https://www.nuget.org/packages/DbFun.NpgSql), [Oracle](https://www.nuget.org/packages/DbFun.OracleManaged), [Firebird](https://www.nuget.org/packages/DbFun.Firebird) and [MySql](https://www.nuget.org/packages/DbFun.MySqlConnector) (when using MySqlConnector) databases, as well as [FastExpressionCompiler](https://www.nuget.org/packages/DbFunFastExpressionCompiler) that improves start-up time.
 
 ## Features
 * All SQL features available
