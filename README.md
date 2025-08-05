@@ -213,3 +213,10 @@ let getManyPostsWithTagsAndComments = query.Sql<int, Post seq>(
 ```
 
 
+## Documentation & examples
+
+For more comprehensive documentation refer project [wiki](https://github.com/jacentino/DbFun/wiki/).
+
+For more examples refer [test project](https://github.com/jacentino/DbFun/tree/master/DbFun.Core.Tests).
+
+
