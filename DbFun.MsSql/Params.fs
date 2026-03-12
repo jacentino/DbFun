@@ -10,6 +10,8 @@ open Microsoft.Data.SqlClient
 
 module ParamsImpl = 
 
+    type TableValued = TableValued
+
     type TVPCollectionBuilder(tvpProvider: ITVParamSetterProvider) = 
 
         let createMetaData(name: string, typeName: string, maxLen: int64, precision: byte, scale: byte) = 
@@ -126,7 +128,7 @@ module ParamsImpl =
         interface ParamsImpl.IBuilder with
 
             member __.CanBuild(argType: Type): bool = 
-                Types.isCollectionType argType && (FSharpType.IsRecord (Types.getElementType argType) || FSharpType.IsTuple (Types.getElementType argType))
+                argType = typeof<TableValued> || (Types.isCollectionType argType && FSharpType.IsRecord (Types.getElementType argType))
 
             member this.Build(name: string, _: IParamSetterProvider, connection: IDbConnection): IParamSetter<'Arg> = 
                 let elemType = Types.getElementType typeof<'Arg>
@@ -171,14 +173,10 @@ open ParamsImpl
 type Params() = 
     inherit Builders.Params()
         
-    static member GetTvpBuilder<'Arg>(provider: IParamSetterProvider) = 
-        match provider.Builder(typeof<'Arg>) with
-        | Some builder -> 
-            try
-                builder :?> TVPCollectionBuilder
-            with ex ->
-                reraise()
-        | None -> failwithf "Builder not found for type %s" typeof<'Arg>.Name
+    static member GetTvpBuilder(provider: IParamSetterProvider) = 
+        provider.AllBuilders(typeof<TableValued>) 
+        |> Seq.tryPick (function | :? TVPCollectionBuilder as tvp -> Some tvp | _ -> None)
+        |> Option.defaultWith (fun () -> failwith "Builder for table-valued collections not found" )        
 
     /// <summary>
     /// Creates a table-valued builder for a sequence of values (records or tuples).
@@ -190,7 +188,7 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedSeq<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record seq> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateSeqSetter(defaultArg name "", tvpName, connection)
 
     /// <summary>
     /// Creates a table-valued builder for a list of values (records or tuples).
@@ -202,7 +200,7 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedList<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateListSetter(defaultArg name "", tvpName, connection)
 
     /// <summary>
     /// Creates a table-valued builder for an array of values (records or tuples).
@@ -214,7 +212,7 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedArray<'Record>(?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateArraySetter(defaultArg name "", tvpName, connection)
 
     /// <summary>
     /// Creates a table-valued builder for a sequence of values (records or tuples).
@@ -229,7 +227,7 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedSeq<'Record>(createTvpSetter: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record seq> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record seq>(provider).CreateSeqSetter(createTvpSetter, defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateSeqSetter(createTvpSetter, defaultArg name "", tvpName, connection)
 
     /// <summary>
     /// Creates a table-valued builder for a list of values (records or tuples).
@@ -244,7 +242,7 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedList<'Record>(tvpSpecifier: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record list> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record list>(provider).CreateListSetter(tvpSpecifier, defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateListSetter(tvpSpecifier, defaultArg name "", tvpName, connection)
 
     /// <summary>
     /// Creates a table-valued builder for an array of values (records or tuples).
@@ -259,4 +257,4 @@ type Params() =
     /// The name of user-defined table type representing records passed in the parameter.
     /// </param>
     static member TableValuedArray<'Record>(tvpSpecifier: TVParamSpecifier<'Record>, ?name: string, ?tvpName: string): ParamSpecifier<'Record array> =
-        fun (provider, connection) -> Params.GetTvpBuilder<'Record array>(provider).CreateArraySetter(tvpSpecifier, defaultArg name "", tvpName, connection)
+        fun (provider, connection) -> Params.GetTvpBuilder(provider).CreateArraySetter(tvpSpecifier, defaultArg name "", tvpName, connection)

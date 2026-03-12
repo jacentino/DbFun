@@ -52,9 +52,17 @@ module TestQueries =
          select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c join post p on c.postId = p.id where p.blogId = @blogId
          select t.postId, t.name from tag t join post p on t.postId = p.id where p.blogId = @blogId",
         "blogId", 
-        Results.PKeyed<int, Post> "id"
+        Results.PKeyed<int, _> "id"
         |> Results.Join (fun (p, cs) -> { p with comments = buildTree cs }) (Results.FKeyed "postId")
         |> Results.Join p.tags (Results.FKeyed("postId", "name"))
+        |> Results.Unkeyed)
+            
+    let getPostsWithComments = query.Sql<int, Post seq>(
+        "select id, blogId, name, title, content, author, createdAt, modifiedAt, modifiedBy, status from post where blogId = @blogId;
+         select c.id, c.postId, c.parentId, c.content, c.author, c.createdAt from comment c join post p on c.postId = p.id where p.blogId = @blogId",
+        "blogId", 
+        Results.PKeyed<int, Post> "id"
+        |> Results.Join p.comments (Results.FKeyed<int, Comment> "postId")
         |> Results.Unkeyed)
             
 

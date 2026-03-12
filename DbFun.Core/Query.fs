@@ -1616,6 +1616,34 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             with ex ->
                 handleException(sourcePath, sourceLine, ex)
 
+
+    /// <summary>
+    /// Builds a one arg query function invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="paramSpecifier">
+    /// The parameter builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc (procName: string, 
+                    paramSpecifier: ParamSpecifier<'Params>,
+                    resultSpecifier: ResultSpecifier<'Result>,
+                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                    : 'Params -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, paramSpecifier, OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> DbCall.Map fst
+
     /// <summary>
     /// Builds a one arg query function invoking stored procedure.
     /// </summary>
@@ -1647,6 +1675,33 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             : 'Params -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params>(name), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
 
+    /// <summary>
+    /// Builds a one arg query function invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="name">
+    /// The parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc<'Params, 'Result> (
+            procName: string,    
+            name: string,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, Params.Auto<'Params>(name), OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> DbCall.Map fst
 
     /// <summary>
     /// Builds a one arg query function invoking stored procedure.
@@ -1740,6 +1795,38 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
+
+    /// <summary>
+    /// Builds a query function with two curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="paramSpecifier1">
+    /// The first parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier2">
+    /// The second parameter builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc (procName: string, 
+                    paramSpecifier1: ParamSpecifier<'Params1>,
+                    paramSpecifier2: ParamSpecifier<'Params2>,
+                    resultSpecifier: ResultSpecifier<'Result>,
+                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                    : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, paramSpecifier1, paramSpecifier2, OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> (fun f p1 -> f p1 |> DbCall.Map fst)
+
     /// <summary>
     /// Builds a query function with two curried args invoking stored procedure.
     /// </summary>
@@ -1808,6 +1895,40 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
 
+
+    /// <summary>
+    /// Builds a query function with two curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="outParamSpecifier">
+    /// The output parameter builder.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Result> (
+            procName: string,
+            name1: string, name2: string,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> (fun f p1 -> f p1 |> DbCall.Map fst)
 
     /// <summary>
     /// Builds a query function with three curried args invoking stored procedure.
@@ -1883,6 +2004,41 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
     /// <param name="procName">
     /// The stored procedure name.
     /// </param>
+    /// <param name="paramSpecifier1">
+    /// The first parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier2">
+    /// The second parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier3">
+    /// The third parameter builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc (procName: string,
+                    paramSpecifier1: ParamSpecifier<'Params1>,
+                    paramSpecifier2: ParamSpecifier<'Params2>,
+                    paramSpecifier3: ParamSpecifier<'Params3>,
+                    resultSpecifier: ResultSpecifier<'Result>,
+                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                    : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, paramSpecifier1, paramSpecifier2, paramSpecifier3, OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> (fun f p1 p2 -> f p1 p2 |> DbCall.Map fst)
+
+    /// <summary>
+    /// Builds a query function with three curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -1913,6 +2069,40 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
             [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
             : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result * 'OutParams> = 
         this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), outParamSpecifier, resultSpecifier, sourcePath, sourceLine)
+
+    /// <summary>
+    /// Builds a query function with three curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
+    /// The third parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'Result> (
+            procName: string,
+            name1: string, name2: string, name3: string,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> 'Params3 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), Params.Auto<'Params3>(name3), OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> (fun f p1 p2 -> f p1 p2 |> DbCall.Map fst)
 
     /// <summary>
     /// Builds a query function with two curried args invoking stored procedure.
@@ -2029,6 +2219,46 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
         with ex ->
             handleException(sourcePath, sourceLine, ex)
 
+
+    /// <summary>
+    /// Builds a query function with four curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="paramSpecifier1">
+    /// The first parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier2">
+    /// The second parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier3">
+    /// The third parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier4">
+    /// The fourth parameter builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc (procName: string,
+                    paramSpecifier1: ParamSpecifier<'Params1>,
+                    paramSpecifier2: ParamSpecifier<'Params2>,
+                    paramSpecifier3: ParamSpecifier<'Params3>,
+                    paramSpecifier4: ParamSpecifier<'Params4>,
+                    resultSpecifier: ResultSpecifier<'Result>,
+                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, paramSpecifier1, paramSpecifier2, paramSpecifier3, paramSpecifier4, OutParams.Unit, resultSpecifier, sourcePath, sourceLine)
+        >> (fun f p1 p2 p3 -> f p1 p2 p3 |> DbCall.Map fst)
+
     /// <summary>
     /// Builds a query function with four curried args invoking stored procedure.
     /// </summary>
@@ -2072,6 +2302,49 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
                     outParamSpecifier, resultSpecifier,
                     sourcePath, sourceLine)
+
+
+    /// <summary>
+    /// Builds a query function with four curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
+    /// The third parameter name.
+    /// </param>
+    /// <param name="name4">
+    /// The fourth parameter name.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'Result> (
+                procName: string,
+                name1: string, name2: string, name3: string, name4: string,
+                resultSpecifier: ResultSpecifier<'Result>,
+                [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, 
+                    Params.Auto<'Params1>(name1), Params.Auto<'Params2>(name2), 
+                    Params.Auto<'Params3>(name3), Params.Auto<'Params4>(name4), 
+                    OutParams.Unit, resultSpecifier,
+                    sourcePath, sourceLine)
+        >> (fun f p1 p2 p3 -> f p1 p2 p3 |> DbCall.Map fst)
+
     /// <summary>
     /// Builds a query function with four curried args invoking stored procedure.
     /// </summary>
@@ -2205,6 +2478,49 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
     /// <param name="procName">
     /// The stored procedure name.
     /// </param>
+    /// <param name="paramSpecifier1">
+    /// The first parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier2">
+    /// The second parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier3">
+    /// The third parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier4">
+    /// The fourth parameter builder.
+    /// </param>
+    /// <param name="paramSpecifier5">
+    /// The fifth parameter builder.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc (procName: string,
+                    paramSpecifier1: ParamSpecifier<'Params1>,
+                    paramSpecifier2: ParamSpecifier<'Params2>,
+                    paramSpecifier3: ParamSpecifier<'Params3>,
+                    paramSpecifier4: ParamSpecifier<'Params4>,
+                    paramSpecifier5: ParamSpecifier<'Params5>,
+                    resultSpecifier: ResultSpecifier<'Result>,
+                    [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+                    [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+                    : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, paramSpecifier1, paramSpecifier2, paramSpecifier3, paramSpecifier4, paramSpecifier5, OutParams.Unit, resultSpecifier)
+        >> (fun f p1 p2 p3 p4 -> f p1 p2 p3 p4 |> DbCall.Map fst)
+
+    /// <summary>
+    /// Builds a query function with five curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
     /// <param name="name1">
     /// The first parameter name.
     /// </param>
@@ -2247,6 +2563,46 @@ type QueryBuilder<'DbKey>(dbKey: 'DbKey, config: QueryConfig<'DbKey>, ?compileTi
                     outParamSpecifier,
                     resultSpecifier,
                     sourcePath, sourceLine)
+
+    /// <summary>
+    /// Builds a query function with five curried args invoking stored procedure.
+    /// </summary>
+    /// <param name="procName">
+    /// The stored procedure name.
+    /// </param>
+    /// <param name="name1">
+    /// The first parameter name.
+    /// </param>
+    /// <param name="name2">
+    /// The second parameter name.
+    /// </param>
+    /// <param name="name3">
+    /// The third parameter name.
+    /// </param>
+    /// <param name="name4">
+    /// The fourth parameter name.
+    /// </param>
+    /// <param name="name5">
+    /// The fifth parameter name.
+    /// </param>
+    /// <param name="sourcePath">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="sourceLine">
+    /// The calling source path for diagnostic purposes.
+    /// </param>
+    /// <param name="resultSpecifier">
+    /// The result builder.
+    /// </param>
+    member this.Proc<'Params1, 'Params2, 'Params3, 'Params4, 'Params5, 'Result> (
+            procName: string,
+            name1: string, name2: string, name3: string, name4: string, name5: string,
+            resultSpecifier: ResultSpecifier<'Result>,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] sourcePath: string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(0)>] sourceLine: int)
+            : 'Params1 -> 'Params2 -> 'Params3 -> 'Params4 -> 'Params5 -> DbCall<'DbKey, 'Result> = 
+        this.Proc(procName, name1, name2, name3, name4, name5, OutParams.Unit, resultSpecifier)
+        >> (fun f p1 p2 p3 p4 -> f p1 p2 p3 p4 |> DbCall.Map fst)
 
     /// <summary>
     /// Builds a query function with five curried args invoking stored procedure.
