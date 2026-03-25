@@ -121,6 +121,8 @@ module ParamsImpl =
 
     type OptionBuilder = GenericSetters.OptionBuilder<IDbConnection, IDbCommand>
 
+    type PropertiesBuilder = GenericSetters.PropertiesBuilder<IDbConnection, IDbCommand>
+
     type RecordBuilder = GenericSetters.RecordBuilder<IDbConnection, IDbCommand>
 
     type TupleBuilder = GenericSetters.TupleBuilder<IDbConnection, IDbCommand>

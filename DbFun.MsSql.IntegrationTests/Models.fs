@@ -2,6 +2,7 @@
 
 open System
 open Commons
+open DbFun.MsSql.Builders
 
 module Models = 
 
@@ -76,37 +77,40 @@ module Models =
         }
         override this.ToString() = sprintf "%A %A" this.field this.direction
 
-    type Criteria = 
-        {
-            name        : string option
-            title       : string option
-            content     : string option
-            author      : string option
-            createdFrom : DateTime option
-            createdTo   : DateTime option
-            modifiedFrom: DateTime option
-            modifiedTo  : DateTime option
-            statuses    : PostStatus list
-            tags        : string list
-            sortOrder   : SortOrder
-        }
-        static member Default = 
-            {
-                name        = None
-                title       = None
-                content     = None
-                author      = None
-                createdFrom = None
-                createdTo   = None
-                modifiedFrom= None
-                modifiedTo  = None
-                statuses    = []
-                tags        = []
-                sortOrder   = { field = SortField.CreatedAt; direction = SortDirection.Desc }
-            }
+    type Criteria(         
+            ?name        : string,
+            ?title       : string,
+            ?content     : string,
+            ?author      : string,
+            ?createdFrom : DateTime,
+            ?createdTo   : DateTime,
+            ?modifiedFrom: DateTime,
+            ?modifiedTo  : DateTime,
+            ?statuses    : PostStatus list,
+            ?tags        : string list,
+            ?sortOrder   : SortOrder) =
+
+        let statuses = defaultArg statuses []
+        let tags = defaultArg tags []
+        let sortOrder = defaultArg sortOrder { field = SortField.CreatedAt; direction = SortDirection.Desc }
+
+        member __.Name          = name
+        member __.Title         = title
+        member __.Content       = content
+        member __.Author        = author
+        member __.CreatedFrom   = createdFrom
+        member __.CreatedTo     = createdTo
+        member __.ModifiedFrom  = modifiedFrom
+        member __.ModifiedTo    = modifiedTo
+        member __.Statuses      = statuses
+        member __.Tags          = tags
+        member __.SortOrder     = sortOrder
+        
 
 
 module Tooling = 
+
+    let query = QueryBuilder(config)
 
     let getNumberOfBlogs = query.Sql<unit, int>("select count(*) from blog")
     

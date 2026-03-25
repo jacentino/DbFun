@@ -130,6 +130,10 @@ module RowsImpl =
 
     type UnionBuilder = GenericGetters.UnionBuilder<IDataRecord, IDataRecord>
 
+    type ClassBuilder = GenericGetters.ClassBuilder<IDataRecord, IDataRecord>
+
+    type StaticMethodBuilder = GenericGetters.StaticMethodBuilder<IDataRecord, IDataRecord>
+
     type RecordBuilder = GenericGetters.RecordBuilder<IDataRecord, IDataRecord>
 
     type TupleBuilder = GenericGetters.TupleBuilder<IDataRecord, IDataRecord>

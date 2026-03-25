@@ -309,6 +309,32 @@ module GenericGetters =
                 }
 
 
+    type StaticMethodBuilder<'Prototype, 'DbObject>(method: MethodInfo, ?path: bool) = 
+            
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(resType: Type): bool = method.ReturnType.IsAssignableTo(resType)
+
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+                let makeName = if path |> Option.defaultValue false then sprintf "%s%s" name else id
+                let fields = method.GetParameters() |> Array.map (fun f -> f.ParameterType, makeName f.Name)
+                FieldListBuilder.build(provider, fields, (fun elements -> Expression.Call(method, elements)), prototype)
+
+
+    type ClassBuilder<'Prototype, 'DbObject>(clazz: Type, ?path: bool) = 
+            
+        let constructor = clazz.GetConstructors()[0]
+
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(resType: Type): bool = clazz.IsAssignableTo(resType)
+
+            member __.Build<'Result> (name: string, provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): IGetter<'DbObject, 'Result> = 
+                let makeName = if path |> Option.defaultValue false then sprintf "%s%s" name else id
+                let fields = constructor.GetParameters() |> Array.map (fun f -> f.ParameterType, makeName f.Name) 
+                FieldListBuilder.build(provider, fields, (fun elements -> Expression.New(constructor, elements)), prototype)
+
+
     type RecordBuilder<'Prototype, 'DbObject>() = 
             
         let newRecord (recordType: Type) (fieldTypes: Type array) (elements: Expression seq) = 
@@ -472,7 +498,7 @@ module GenericGetters =
             fun (provider, prototype) -> provider.Getter<unit>("", prototype)
 
         /// <summary>
-        /// Creates a builder autmatically detecting its type.
+        /// Creates a builder automatically detecting its type.
         /// </summary>
         /// <param name="name">
         /// The column name or prefix (for indirect results).
@@ -945,3 +971,46 @@ module GenericGetters =
                     | None -> 
                         InitialDerivedGetterProvider<'Prototype, 'DbObject, unit>(provider, (), defaultArg overrides []) 
                 provider.Getter<'Result>(defaultArg name "", prototype)
+
+        /// <summary>
+        /// Creates builder handling particular classes.
+        /// </summary>
+        /// <param name="paramTypes">
+        /// Constructor parameter types.
+        /// </param>
+        /// <param name="name">
+        /// The column name prefix.
+        /// </param>
+        static member Class<'Result>(?paramTypes: Type array, ?name: string): GetterSpecifier<'Prototype, 'DbObject, 'Result> =  
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->            
+                let constructor = paramTypes |> Option.map typeof<'Result>.GetConstructor |> Option.defaultValue (typeof<'Result>.GetConstructors()[0])
+                let makeName = match name with Some name -> sprintf "%s%s" name | None -> id
+                let fields = constructor.GetParameters() |> Array.map (fun f -> f.ParameterType, makeName f.Name)
+                FieldListBuilder.build(provider, fields, (fun elements -> Expression.New(constructor, elements)), prototype)
+
+        /// <summary>
+        /// Creates builder using static method to materialize data.
+        /// </summary>
+        /// <param name="method">
+        /// The method creating result object.
+        /// </param>
+        /// <param name="name">
+        /// The column name prefix.
+        /// </param>
+        static member StaticMethod<'Result>(method: MethodInfo, ?name: string): GetterSpecifier<'Prototype, 'DbObject, 'Result> =  
+            fun (provider: IGetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->            
+                let makeName = match name with Some name -> sprintf "%s%s" name | None -> id
+                let fields = method.GetParameters() |> Array.map (fun f -> f.ParameterType, makeName f.Name)
+                FieldListBuilder.build(provider, fields, (fun elements -> Expression.Call(method, elements)), prototype)
+
+        /// <summary>
+        /// Creates builder using static method to materialize data.
+        /// </summary>
+        /// <param name="methodName">
+        /// The name of the method creating result object.
+        /// </param>
+        /// <param name="name">
+        /// The column name prefix.
+        /// </param>
+        static member StaticMethod<'Owner, 'Result>(methodName: string, ?name: string): GetterSpecifier<'Prototype, 'DbObject, 'Result> = 
+            GenericGetterBuilder.StaticMethod(typeof<'Owner>.GetMethod(methodName), ?name = name)

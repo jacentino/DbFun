@@ -94,10 +94,11 @@ module Tests =
 
         let assemblyFolder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
         let users = [
-                "jacirru",
-                "Jacirru Placirru",
-                "jacirru.placirru@pp.com",
-                File.ReadAllBytes(Path.Combine(assemblyFolder, "jacenty.jpg"))
+                UserProfile(
+                    "jacirru",
+                    "Jacirru Placirru",
+                    "jacirru.placirru@pp.com",
+                    File.ReadAllBytes(Path.Combine(assemblyFolder, "jacenty.jpg")))
         ]
         TestQueries.bulkInsertUsers users |> runSync 
 

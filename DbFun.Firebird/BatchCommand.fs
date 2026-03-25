@@ -66,6 +66,8 @@ module BatchParamsImpl =
 
     type Converter<'Source, 'Target> = GenericSetters.Converter<unit, FbParameterCollection, 'Source, 'Target>
 
+    type PropertiesBuilder = GenericSetters.PropertiesBuilder<unit, FbParameterCollection>
+
     type Configurator<'Config> = GenericSetters.Configurator<unit, FbParameterCollection, 'Config>
 
 
@@ -117,6 +119,39 @@ type BatchCommandConfig =
                 ParamBuilders = BatchParamsImpl.Configurator<'Config>(getConfig, canBuild) :: this.ParamBuilders 
             }
 
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="ownerType">
+        /// The type containing properties.
+        /// </param>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper(ownerType: Type, ?excluded: string seq, ?path: bool) = 
+            { this with ParamBuilders = 
+                            BatchParamsImpl.PropertiesBuilder(ownerType, ?excluded = excluded, ?path = path) :: 
+                            this.ParamBuilders 
+            }
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper<'Type>(?excluded: string seq, ?path: bool) = 
+            { this with ParamBuilders = 
+                            BatchParamsImpl.PropertiesBuilder(typeof<'Type>, ?excluded = excluded, ?path = path) :: 
+                            this.ParamBuilders 
+            }
 
 /// <summary>
 /// Provides methods creating batch processing functions.

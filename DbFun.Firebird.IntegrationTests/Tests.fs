@@ -3,6 +3,8 @@ namespace DbFun.Firebird.IntegrationTests
 open System
 open Xunit
 open Commons
+open System.IO
+open Models
 
 module Tests = 
 
@@ -61,3 +63,19 @@ module Tests =
 
         Assert.True(results.AllSuccess)
 
+
+    [<Fact>]
+    let ``Batch command handles byte array fields properly``() = 
+
+        Tooling.deleteAllUsers() |> runSync
+
+        let assemblyFolder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
+        let users = [
+                UserProfile(
+                    "jacirru",
+                    "Jacirru Placirru",
+                    "jacirru.placirru@pp.com",
+                    Array.empty)
+        ]
+        let results = TestQueries.batchInsertUsers users |> runSync 
+        Assert.True(results.AllSuccess)

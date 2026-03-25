@@ -30,6 +30,11 @@ module ParamsTests =
             BaseSetterProvider<IDbConnection, IDbCommand>(ParamsImpl.SequenceIndexingBuilder() :: ParamsImpl.getDefaultBuilders(), compiler)
         |])
 
+    let providers2 = 
+        compilers 
+        |> List.map (fun compiler -> [|
+            BaseSetterProvider<IDbConnection, IDbCommand>(ParamsImpl.PropertiesBuilder(typeof<Classes.User>) :: ParamsImpl.getDefaultBuilders(), compiler)
+        |])
 
     [<Theory>]
     [<MemberData(nameof providers)>]
@@ -628,6 +633,36 @@ module ParamsTests =
         Assert.Equal(box "placenty", command.Parameters.["name1"].Value)
         Assert.Equal(box "placenty@gmail.com", command.Parameters.["email1"].Value)
         Assert.Equal(box (DateTime.Today.AddDays(-1)), command.Parameters.["created1"].Value)
+
+
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Classes - explicit`` (provider: BaseSetterProvider<IDbConnection, IDbCommand>) = 
+
+        use command = connection.CreateCommand()
+
+        (Params.Properties<Classes.User>()(provider, connection)).SetValue(Classes.User(1, "jacenty", "jacenty@gmail.com", DateTime.Today), None, command)
+
+        Assert.Equal(4, command.Parameters.Count)
+        Assert.Equal(box 1, command.Parameters.["userId"].Value)
+        Assert.Equal(box "jacenty", command.Parameters.["name"].Value)
+        Assert.Equal(box "jacenty@gmail.com", command.Parameters.["email"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["created"].Value)
+
+
+    [<Theory>]
+    [<MemberData(nameof providers2)>]
+    let ``Classes - auto`` (provider: BaseSetterProvider<IDbConnection, IDbCommand>) = 
+
+        use command = connection.CreateCommand()
+
+        (Params.Auto<Classes.User>()(provider, connection)).SetValue(Classes.User(1, "jacenty", "jacenty@gmail.com", DateTime.Today), None, command)
+
+        Assert.Equal(4, command.Parameters.Count)
+        Assert.Equal(box 1, command.Parameters.["userId"].Value)
+        Assert.Equal(box "jacenty", command.Parameters.["name"].Value)
+        Assert.Equal(box "jacenty@gmail.com", command.Parameters.["email"].Value)
+        Assert.Equal(box DateTime.Today, command.Parameters.["created"].Value)
 
 
     [<Theory>]

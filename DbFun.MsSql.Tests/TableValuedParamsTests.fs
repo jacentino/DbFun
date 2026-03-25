@@ -4,11 +4,11 @@ open System
 open System.Data
 open Microsoft.Data.SqlClient.Server
 open Xunit
-open DbFun.MsSql.Builders
-open DbFun.TestTools.Models
 open DbFun.Core.Builders.GenericSetters
 open DbFun.Core.Builders
 open DbFun.Core.Builders.Compilers
+open DbFun.MsSql.Builders
+open DbFun.TestTools.Models
 
 module TableValuedParamsTests = 
 
@@ -71,6 +71,46 @@ module TableValuedParamsTests =
                 email = "jacentino@gmail.com"
                 created = DateTime(2023, 1, 1)
             }
+        setter.SetValue(user, None, record)
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+
+
+    [<Fact>]
+    let ``Classes - explicit``() =         
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
+        let metadata = 
+            [| 
+                SqlMetaData("userId", SqlDbType.Int)
+                SqlMetaData("name", SqlDbType.VarChar, 20)
+                SqlMetaData("email", SqlDbType.VarChar, 100)
+                SqlMetaData("created", SqlDbType.DateTime)
+            |]
+        let record = SqlDataRecord(metadata)
+        let setter = TVParams.Properties<Classes.User>() (tvpProvider, record)
+        let user = Classes.User(3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        setter.SetValue(user, None, record)
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+
+
+    [<Fact>]
+    let ``Classes - auto``() =         
+        let tvpProvider = BaseSetterProvider<SqlDataRecord, SqlDataRecord>(ParamsImpl.PropertiesBuilder(typeof<Classes.User>) :: TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
+        let metadata = 
+            [| 
+                SqlMetaData("userId", SqlDbType.Int)
+                SqlMetaData("name", SqlDbType.VarChar, 20)
+                SqlMetaData("email", SqlDbType.VarChar, 100)
+                SqlMetaData("created", SqlDbType.DateTime)
+            |]
+        let record = SqlDataRecord(metadata)
+        let setter = TVParams.Auto<Classes.User>() (tvpProvider, record)
+        let user = Classes.User(3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
         setter.SetValue(user, None, record)
         Assert.Equal(3, record.GetInt32(0))
         Assert.Equal("jacentino", record.GetString(1))

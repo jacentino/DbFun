@@ -27,7 +27,5 @@ module TestQueries =
         query.DisablePrototypeCalls().Proc("sp_add_blog", 
             Params.Int("blogId"), 
             Params.Tuple<string, string, string, string, DateTime>("name", "title", "description", "owner", "createdAt"), 
-            OutParams.Unit, 
             Results.Unit)
-        >> (fun f id -> f id |> DbCall.Map fst)
 

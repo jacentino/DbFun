@@ -36,7 +36,7 @@ module TestQueries =
 
     let bulkInsertBlogs = bulkImport.WriteToServer<Blog>()
 
-    let bulkInsertUsers = bulkImport.WriteToServer(BulkImportParams.Tuple<string, string, string, byte array>("id", "name", "email", "avatar"), "userprofile")
+    let bulkInsertUsers = bulkImport.WriteToServer(BulkImportParams.Properties<UserProfile>())
 
     let getIntArray = query.Sql<unit, int array list>("select array[1, 2, 3]")
 

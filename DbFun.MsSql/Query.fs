@@ -93,6 +93,34 @@ type QueryConfig<'DbKey> =
             this.AddParamConfigurator(getConfig, canBuild)
                 .AddRowConfigurator(getConfig, canBuild)
 
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="ownerType">
+        /// The type containing properties.
+        /// </param>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper(ownerType: Type, ?excluded: string seq, ?path: bool) = 
+            let tvpBuilder = ParamsImpl.PropertiesBuilder(ownerType, ?excluded = excluded, ?path = path) 
+            { this with Common = this.Common.AddParamPropertyMapper(ownerType, ?excluded = excluded, ?path = path) }
+                .AddTvpBuilder(tvpBuilder)
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper<'OwnerType>(?excluded: string seq, ?path: bool) = 
+            this.AddParamPropertyMapper(typeof<'OwnerType>, ?excluded = excluded, ?path = path)
 
         interface IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
             member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 

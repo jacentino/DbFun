@@ -3,6 +3,7 @@
 open DbFun.Core
 open Commons
 open Models
+open DbFun.Firebird.Builders
 
 module TestQueries = 
 
@@ -16,3 +17,8 @@ module TestQueries =
     let batchInsertBlogs = batch.Command<Blog>(
         "insert into blog (id, name, title, description, owner, createdAt, modifiedAt, modifiedBy) 
          values (@id, @name, @title, @description, @owner, @createdAt, @modifiedAt, @modifiedBy)")
+
+    let batchInsertUsers = batch.Command(
+        "insert into UserProfile (id, name, email)
+         values (@id, @name, @email)",
+         BatchParams.Properties<UserProfile>())

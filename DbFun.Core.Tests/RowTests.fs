@@ -47,6 +47,20 @@ module RowTests =
         |> List.map (fun compiler -> [| 
             GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(RowsImpl.getDefaultBuilders(), compiler) 
         |])
+
+    let providers2 = 
+        compilers
+        |> List.map (fun compiler -> [| 
+            GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(
+                RowsImpl.ClassBuilder(typeof<Classes.User>) :: RowsImpl.getDefaultBuilders(), compiler) 
+        |])
+
+    let providers3 = 
+        compilers
+        |> List.map (fun compiler -> [| 
+            GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(
+                RowsImpl.StaticMethodBuilder(typeof<Classes.User>.GetMethod("Create")) :: RowsImpl.getDefaultBuilders(), compiler) 
+        |])
         
 
     [<Theory>][<MemberData(nameof providers)>]
@@ -603,6 +617,78 @@ module RowTests =
                 password    = "******"
                 signature   = { createdAt = DateTime(2023, 1, 1); createdBy = "admin"; updatedAt = DateTime(2023, 1, 1); updatedBy = "admin" }
             }
+        Assert.Equal(expected, value)
+
+
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Static methods - explicit``(provider) = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let builderParams = provider, record
+
+        let getter = Rows.StaticMethod<Classes.User>(typeof<Classes.User>.GetMethod("Create")) builderParams
+        let value = getter.Get(record)
+
+        let expected = Classes.User(5, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        Assert.Equal(expected, value)
+
+
+    [<Theory>][<MemberData(nameof providers3)>]
+    let ``Static methods - auto``(provider) = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let builderParams = provider, record
+
+        let getter = Rows.Auto<Classes.User>() builderParams
+        let value = getter.Get(record)
+
+        let expected = Classes.User(5, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        Assert.Equal(expected, value)
+
+
+    [<Theory>][<MemberData(nameof providers)>]
+    let ``Classes - explicit``(provider) = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let builderParams = provider, record
+
+        let getter = Rows.Class<Classes.User>() builderParams
+        let value = getter.Get(record)
+
+        let expected = Classes.User(5, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        Assert.Equal(expected, value)
+
+
+    [<Theory>][<MemberData(nameof providers2)>]
+    let ``Classes - auto``(provider) = 
+
+        let record = createDataRecordMock 
+                        [   vcol("userId", 5)
+                            vcol("name", "jacentino")
+                            vcol("email", "jacentino@gmail.com")
+                            vcol("created", DateTime(2023, 1, 1))
+                        ]
+        let builderParams = provider, record
+
+        let getter = Rows.Auto<Classes.User>() builderParams
+        let value = getter.Get(record)
+
+        let expected = Classes.User(5, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
         Assert.Equal(expected, value)
 
 

@@ -8,6 +8,7 @@ open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System
 open System.Data.Common
+open System.Reflection
 
 /// <summary>
 /// The query builder configuration data.
@@ -55,6 +56,39 @@ type QueryConfig<'DbKey> =
             }
 
         /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="ownerType">
+        /// The type containing properties.
+        /// </param>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper(ownerType: Type, ?excluded: string seq, ?path: bool) = 
+            { this with ParamBuilders = 
+                            ParamsImpl.PropertiesBuilder(ownerType, ?excluded = excluded, ?path = path) :: 
+                            this.ParamBuilders 
+            }
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper<'Type>(?excluded: string seq, ?path: bool) = 
+            { this with ParamBuilders = 
+                            ParamsImpl.PropertiesBuilder(typeof<'Type>, ?excluded = excluded, ?path = path) :: 
+                            this.ParamBuilders 
+            }
+
+        /// <summary>
         /// Adds a converter mapping database values to application values.
         /// </summary>
         /// <param name="convert">
@@ -63,7 +97,65 @@ type QueryConfig<'DbKey> =
         member this.AddRowConverter(convert: 'Source -> 'Target) = 
             { this with 
                 RowBuilders = RowsImpl.Converter<'Source, 'Target>(convert) :: this.RowBuilders
-                OutParamBuilders = OutParamsImpl.Converter<'Source, 'Target>(convert) ::  this.OutParamBuilders
+                OutParamBuilders = OutParamsImpl.Converter<'Source, 'Target>(convert) :: this.OutParamBuilders
+            }
+
+        /// <summary>
+        /// Adds a mapper of the specified class.
+        /// </summary>
+        /// <param name="clazz">
+        /// The class.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowClassMapper(clazz: Type, ?path: bool) = 
+            { this with 
+                RowBuilders = RowsImpl.ClassBuilder(clazz, ?path = path) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.ClassBuilder(clazz, ?path = path) :: this.OutParamBuilders
+            }
+
+        /// <summary>
+        /// Adds a mapper of the specified class.
+        /// </summary>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowClassMapper<'Class>(?path: bool) = 
+            { this with 
+                RowBuilders = RowsImpl.ClassBuilder(typeof<'Class>, ?path = path) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.ClassBuilder(typeof<'Class>, ?path = path) :: this.OutParamBuilders
+            }
+
+        /// <summary>
+        /// Adds a mapper using static method to create an instance of object.
+        /// </summary>
+        /// <param name="method">
+        /// The static method.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowStaticMethodMapper(method: MethodInfo, ?path: bool) = 
+            { this with 
+                RowBuilders = RowsImpl.StaticMethodBuilder(method, ?path = path) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.StaticMethodBuilder(method, ?path = path) :: this.OutParamBuilders
+            }
+
+        /// <summary>
+        /// Adds a mapper using static method to create an instance of object.
+        /// </summary>
+        /// <param name="methodName">
+        /// The static method name.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowStaticMethodMapper<'OwnerType>(methodName: string, ?path: bool) = 
+            let method = typeof<'OwnerType>.GetMethod(methodName)
+            { this with 
+                RowBuilders = RowsImpl.StaticMethodBuilder(method, ?path = path) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.StaticMethodBuilder(method, ?path = path) :: this.OutParamBuilders
             }
 
         /// <summary>
@@ -186,6 +278,47 @@ type IDerivedConfigExtensions =
     [<Extension>]
     static member AddConfigurator(config: IDerivedConfig<'Derived, 'DbKey>, getConfig: string -> 'Config, canBuild: Type -> bool) = 
         config.MapCommon(fun common -> common.AddConfigurator(getConfig, canBuild))
+
+    /// <summary>
+    /// Adds a mapper that creates parameters for properties of the specified type.
+    /// </summary>
+    /// <param name="ownerType">
+    /// The type containing mapped properties.
+    /// </param>
+    /// <param name="excluded">
+    /// The list of excluded properties.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent property should be added to property names when creating parameters.
+    /// </param>
+    [<Extension>]
+    static member AddParamPropertyMapper(ownerType: Type, config: IDerivedConfig<'Derived, 'DbKey>, ?excluded: string seq, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddParamPropertyMapper(ownerType, ?excluded = excluded, ?path = path))
+
+    /// <summary>
+    /// Adds a mapper of the specified class.
+    /// </summary>
+    /// <param name="path">
+    /// The mapped class.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter should be added to parameter names when accessing result columns.
+    /// </param>
+    static member AddRowClassMapper(config: IDerivedConfig<'Derived, 'DbKey>, clazz: Type, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowClassMapper(clazz, ?path = path))
+
+    /// <summary>
+    /// Adds a mapper using static method to create an instance of object.
+    /// </summary>
+    /// <param name="method">
+    /// The static method used in mapping.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+    /// </param>
+    static member AddRowStaticMethodMapper(config: IDerivedConfig<'Derived, 'DbKey>, method: MethodInfo, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowStaticMethodMapper(method, ?path = path))
+
 
     /// <summary>
     /// Allows to generate functions executing queries without discovering resultset structure using SchemaOnly calls.

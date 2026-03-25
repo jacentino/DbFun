@@ -77,6 +77,10 @@ module OutParamsImpl =
 
     type UnionBuilder = GenericGetters.UnionBuilder<unit, IDbCommand>
 
+    type ClassBuilder = GenericGetters.ClassBuilder<unit, IDbCommand>
+
+    type StaticMethodBuilder = GenericGetters.StaticMethodBuilder<unit, IDbCommand>
+
     type RecordBuilder = GenericGetters.RecordBuilder<unit, IDbCommand>
 
     type TupleBuilder = GenericGetters.TupleBuilder<unit, IDbCommand>

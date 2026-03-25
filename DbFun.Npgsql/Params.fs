@@ -92,6 +92,8 @@ module ParamsImpl =
 
     type OptionBuilder = GenericSetters.OptionBuilder<unit, MultipleArrays>
 
+    type PropertiesBuilder = GenericSetters.PropertiesBuilder<unit, MultipleArrays>
+
     type RecordBuilder = GenericSetters.RecordBuilder<unit, MultipleArrays>
 
     type TupleBuilder = GenericSetters.TupleBuilder<unit, MultipleArrays>

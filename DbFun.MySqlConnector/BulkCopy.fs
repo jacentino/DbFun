@@ -44,6 +44,9 @@ module BulkCopyParamsImpl =
 
     type Configurator<'Config> = GenericSetters.Configurator<DataTable, DataRow, 'Config>
 
+    type PropertiesBuilder = GenericSetters.PropertiesBuilder<DataTable, DataRow>
+
+
 
 open BulkCopyParamsImpl
 
@@ -84,6 +87,23 @@ type BulkCopyConfig =
         member this.AddConfigurator(getConfig: string -> 'Config, canBuild: Type -> bool) = 
             { this with 
                 ParamBuilders = BulkCopyParamsImpl.Configurator<'Config>(getConfig, canBuild) :: this.ParamBuilders 
+            }
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="ownerType">
+        /// The type containing properties.
+        /// </param>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper(ownerType: Type, ?excluded: string seq, ?path: bool) = 
+            { this with 
+                ParamBuilders = BulkCopyParamsImpl.PropertiesBuilder(ownerType, ?excluded = excluded, ?path = path) :: this.ParamBuilders 
             }
 
 

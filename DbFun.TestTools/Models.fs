@@ -58,3 +58,23 @@ type Account =
         password    : string
         signature   : Signature
     }
+
+
+module Classes = 
+
+    type User(          
+            userId  : int,
+            name    : string,
+            email   : string,
+            created : DateTime) = 
+        member __.UserId    = userId
+        member __.Name      = name
+        member __.Email     = email
+        member __.Created   = created
+        static member Create(userId, name, email, created) = User(userId, name, email, created)
+        override __.Equals(other: obj) = 
+            match other with
+            | :? User as u -> userId = u.UserId && name = u.Name && email = u.Email && created = u.Created
+            | _ -> false
+        override __.GetHashCode() =
+            userId.GetHashCode() ^^^ name.GetHashCode() ^^^ email.GetHashCode() ^^^ created.GetHashCode() 

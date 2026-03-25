@@ -297,6 +297,19 @@ module GenericSetters =
                 }
 
 
+    type PropertiesBuilder<'Prototype, 'DbObject>(clazz: Type, ?excluded: string seq, ?path: bool) = 
+            
+        interface IBuilder<'Prototype, 'DbObject> with
+
+            member __.CanBuild(argType: Type): bool = clazz.IsAssignableFrom(argType)
+
+            member __.Build(name: string, provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype): ISetter<'DbObject, 'Arg> = 
+                let makeName = if path |> Option.defaultValue false then sprintf "%s%s" name else id
+                let excluded = excluded |> Option.defaultValue Seq.empty |> Set.ofSeq 
+                let fields = clazz.GetProperties() |> Array.filter (_.Name >> excluded.Contains >> not) |> Array.map (fun f -> f, makeName f.Name)
+                FieldListBuilder.build(provider, fields, prototype)
+
+
     type RecordBuilder<'Prototype, 'DbObject>() = 
             
         interface IBuilder<'Prototype, 'DbObject> with
@@ -967,4 +980,23 @@ module GenericSetters =
                     | None -> 
                         InitialDerivedSetterProvider<'Prototype, 'DbObject, unit>(provider, (), defaultArg overrides [])
                 provider.Setter<'Arg>(defaultArg name "", prototype)
+
+        /// <summary>
+        /// Creates builder creating parameters based on properties of a given type.
+        /// </summary>
+        /// <param name="excluded">
+        /// Excluded property names.
+        /// </param>
+        /// <param name="name">
+        /// The parameter name prefix.
+        /// </param>
+        static member Properties<'Arg>(?excluded: string seq, ?name: string) = 
+            fun (provider: ISetterProvider<'Prototype, 'DbObject>, prototype: 'Prototype) ->
+                let excluded = excluded |> Option.defaultValue Seq.empty |> Set.ofSeq
+                let makeName = match name with Some name -> sprintf "%s%s" name | None -> id
+                let fields = typeof<'Arg>.GetProperties() |> Array.filter (_.Name >> excluded.Contains >> not) |> Array.map (fun f -> f, makeName f.Name)
+                let setter: ISetter<'DbObject, 'Arg> = FieldListBuilder.build(provider, fields, prototype)
+                setter
+
+
                 

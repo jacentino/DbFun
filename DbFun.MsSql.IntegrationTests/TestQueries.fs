@@ -17,7 +17,9 @@ type Diag() =
 
 module TestQueries = 
     
-    let query = query.LogCompileTimeErrors()
+    let config = config.AddParamPropertyMapper<Criteria>()
+
+    let query = QueryBuilder(config).LogCompileTimeErrors()
 
     let p = any<Post>
 
@@ -97,33 +99,31 @@ module TestQueries =
         <*> Results.List<Comment>()
         <*> Results.List<string> "name")
 
-    let findPosts = query.HandleCollectionParams().Sql ( 
+    let findPosts = query.HandleCollectionParams().Sql<Criteria, Post seq>( 
         Templating.define 
             "select p.id, p.blogId, p.name, p.title, p.content, p.author, p.createdAt, p.modifiedAt, p.modifiedBy, p.status from post p
              {{JOIN-CLAUSES}} {{WHERE-CLAUSE}} {{ORDER-BY-CLAUSE}}"
-            (Templating.applyWhen (fun c -> c.name.IsSome) 
-                (Templating.where "p.name like '%' + @name + '%'")
-            >> Templating.applyWhen (fun c -> c.title.IsSome) 
-                (Templating.where "p.title like '%' + @title + '%'")
-            >> Templating.applyWhen (fun c -> c.content.IsSome) 
-                (Templating.where "p.content like '%' + @content + '%'")
-            >> Templating.applyWhen (fun c -> c.author.IsSome) 
-                (Templating.where "p.author like '%' + @author + '%'")                
-            >> Templating.applyWhen (fun c -> c.createdFrom.IsSome) 
-                (Templating.where "p.createdAt >= @createdFrom")
-            >> Templating.applyWhen (fun c -> c.createdTo.IsSome) 
-                (Templating.where "p.createdAt <= @createdTo")
-            >> Templating.applyWhen (fun c -> c.modifiedFrom.IsSome) 
-                (Templating.where "p.modifiedAt >= @modifiedFrom")
-            >> Templating.applyWhen (fun c -> c.modifiedTo.IsSome) 
-                (Templating.where "p.modifiedAt <= @modifiedTo")
-            >> Templating.applyWhen (fun c -> not c.statuses.IsEmpty) 
-                (Templating.where "p.status in (@statuses)")
-            >> Templating.applyWhen (fun c -> not c.tags.IsEmpty) 
-                (Templating.join "join Tag t on t.postId = p.id" >> Templating.where "t.name in (@tags)")
-            >> Templating.applyWith (fun c -> c.sortOrder) (Templating.orderBy { field = SortField.CreatedAt; direction = SortDirection.Asc })),
-        Params.Record<Criteria>(), 
-        Results.Seq<Post>()) 
+            (Templating.applyWhen (fun (c: Criteria) -> c.Name.IsSome) 
+                (Templating.where "p.name like '%' + @Name + '%'")
+            >> Templating.applyWhen _.Title.IsSome
+                (Templating.where "p.title like '%' + @Title + '%'")
+            >> Templating.applyWhen _.Content.IsSome
+                (Templating.where "p.content like '%' + @Content + '%'")
+            >> Templating.applyWhen _.Author.IsSome 
+                (Templating.where "p.author like '%' + @Author + '%'")                
+            >> Templating.applyWhen _.CreatedFrom.IsSome
+                (Templating.where "p.createdAt >= @CreatedFrom")
+            >> Templating.applyWhen _.CreatedTo.IsSome
+                (Templating.where "p.createdAt <= @CreatedTo")
+            >> Templating.applyWhen _.ModifiedFrom.IsSome
+                (Templating.where "p.modifiedAt >= @ModifiedFrom")
+            >> Templating.applyWhen _.ModifiedTo.IsSome 
+                (Templating.where "p.modifiedAt <= @ModifiedTo")
+            >> Templating.applyWhen (_.Statuses.IsEmpty >> not) 
+                (Templating.where "p.status in (@Statuses)")
+            >> Templating.applyWhen (_.Tags.IsEmpty >> not) 
+                (Templating.join "join Tag t on t.postId = p.id" >> Templating.where "t.name in (@Tags)")
+            >> Templating.applyWith _.SortOrder (Templating.orderBy { field = SortField.CreatedAt; direction = SortDirection.Asc }))) 
 
 
     let getAllPosts = 

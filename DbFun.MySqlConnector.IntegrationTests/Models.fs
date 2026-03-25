@@ -52,6 +52,22 @@ module Models =
         posts: Post list
     }
 
+    type UserProfile(          
+            id  : string,
+            name    : string,
+            email   : string,
+            avatar  : byte array) = 
+        member __.Id        = id
+        member __.Name      = name
+        member __.Email     = email
+        member __.Avatar    = avatar
+        static member Create(userId, name, email, created) = UserProfile(userId, name, email, created)
+        override __.Equals(other: obj) = 
+            match other with
+            | :? UserProfile as u -> id = u.Id && name = u.Name && email = u.Email && avatar = u.Avatar
+            | _ -> false
+        override __.GetHashCode() =
+            id.GetHashCode() ^^^ name.GetHashCode() ^^^ email.GetHashCode() ^^^ avatar.GetHashCode() 
 
 module Tooling = 
 

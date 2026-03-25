@@ -27,4 +27,4 @@ module TestQueries =
     
     let bulkInsertBlogs = bulkCopy.WriteToServer<Blog>()
 
-    let bulkInsertUsers = bulkCopy.WriteToServer(BulkCopyParams.Tuple<string, string, string, byte array>("id", "name", "email", "avatar"), "userprofile")
+    let bulkInsertUsers = bulkCopy.WriteToServer(BulkCopyParams.Properties<UserProfile>())

@@ -159,6 +159,8 @@ module ParamsImpl =
 
     type OptionBuilder = GenericSetters.OptionBuilder<SqlDataRecord, SqlDataRecord>
 
+    type PropertiesBuilder = GenericSetters.PropertiesBuilder<SqlDataRecord, SqlDataRecord>
+
     type RecordBuilder = GenericSetters.RecordBuilder<SqlDataRecord, SqlDataRecord>
 
     type TupleBuilder = GenericSetters.TupleBuilder<SqlDataRecord, SqlDataRecord>

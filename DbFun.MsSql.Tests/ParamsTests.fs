@@ -22,6 +22,12 @@ module ParamsTests =
         let provider = BaseSetterProvider<IDbConnection, IDbCommand>(tvpCollBuilder :: ParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
         provider :> IParamSetterProvider, createConnection()
 
+    let makeBuilderParams'(createConnection: unit -> IDbConnection) = 
+        let tvpProvider = ParamsImpl.BaseSetterProvider(ParamsImpl.PropertiesBuilder(typeof<Classes.User>) :: TableValuedParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
+        let tvpCollBuilder = ParamsImpl.TVPCollectionBuilder(tvpProvider) :> ParamsImpl.IBuilder
+        let provider = BaseSetterProvider<IDbConnection, IDbCommand>(tvpCollBuilder :: ParamsImpl.getDefaultBuilders(), LinqExpressionCompiler())
+        provider :> IParamSetterProvider, createConnection()
+
 
     [<Fact>]
     let ``Record seq - explicit`` () =
@@ -300,3 +306,91 @@ module ParamsTests =
         (Params.TableValuedSeq<User>("users", "USER_TVP")(builderParams)).SetValue([user], None, command)
 
         Assert.Equal("USER_TVP", command.Parameters.["users"].TypeName)
+
+
+    [<Fact>]
+    let ``Object seq - super explicit`` () =
+    
+        let createConnection () = 
+            createConnectionMock                
+                []
+                [
+                    [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
+                    [
+                        [ "userId"; "int"; 4s; 10uy; 0uy; 0uy ]
+                        [ "name"; "nvarchar"; 20s; 0uy; 0uy; 0uy ]
+                        [ "email"; "nvarchar"; 100s; 0uy; 0uy; 0uy ]
+                        [ "created"; "datetime"; 8s; 0uy; 0uy; 0uy ]
+                    ]                            
+                ]
+
+        let builderParams = makeBuilderParams(createConnection)
+        use command = connection.CreateCommand()
+
+        let user = Classes.User(3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        (Params.TableValuedSeq(TVParams.Properties<Classes.User>(), "users")(builderParams)).SetValue([user], None, command)
+
+        let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+    
+
+    [<Fact>]
+    let ``Object seq - explicit`` () =
+    
+        let createConnection () = 
+            createConnectionMock                         
+                []
+                [
+                    [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
+                    [
+                        [ "userId"; "int"; 4s; 10uy; 0uy; 0uy ]
+                        [ "name"; "nvarchar"; 20s; 0uy; 0uy; 0uy ]
+                        [ "email"; "nvarchar"; 100s; 0uy; 0uy; 0uy ]
+                        [ "created"; "datetime"; 8s; 0uy; 0uy; 0uy ]
+                    ]                            
+                ]
+
+        let builderParams = makeBuilderParams'(createConnection)
+        use command = connection.CreateCommand()
+
+        let user = Classes.User(3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        (Params.TableValuedSeq<Classes.User>("users")(builderParams)).SetValue([user], None, command)
+
+        let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+    
+
+    (*[<Fact>]
+    let ``Object seq - implicit`` () =
+    
+        let createConnection () = 
+            createConnectionMock                         
+                []
+                [
+                    [ col<string> "name"; col<string> "typeName"; col<int16> "max_length"; col<int16> "precision"; col<byte> "scale"; col<byte> "is_nullable" ],
+                    [
+                        [ "userId"; "int"; 4s; 10uy; 0uy; 0uy ]
+                        [ "name"; "nvarchar"; 20s; 0uy; 0uy; 0uy ]
+                        [ "email"; "nvarchar"; 100s; 0uy; 0uy; 0uy ]
+                        [ "created"; "datetime"; 8s; 0uy; 0uy; 0uy ]
+                    ]                            
+                ]
+
+        let builderParams = makeBuilderParams'(createConnection)
+        use command = connection.CreateCommand()
+
+        let user = Classes.User(3, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
+        (Params.Auto<Classes.User seq>("users")(builderParams)).SetValue([user], None, command)
+
+        let record = command.Parameters.["users"].Value :?> SqlDataRecord seq |> Seq.head
+        Assert.Equal(3, record.GetInt32(0))
+        Assert.Equal("jacentino", record.GetString(1))
+        Assert.Equal("jacentino@gmail.com", record.GetString(2))
+        Assert.Equal(DateTime(2023, 1, 1), record.GetDateTime(3))
+*)

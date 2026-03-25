@@ -61,6 +61,35 @@ type QueryConfig<'DbKey> =
                 .AddOracleArrayBuilder(arrayBuilder)
 
         /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="ownerType">
+        /// The type containing properties.
+        /// </param>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper(ownerType: Type, ?excluded: string seq, ?path: bool) = 
+            let arrayBuilder = ParamsImpl.PropertiesBuilder(ownerType, ?excluded = excluded, ?path = path) 
+            { this with Common = this.Common.AddParamPropertyMapper(ownerType, ?excluded = excluded, ?path = path) }
+                .AddOracleArrayBuilder(arrayBuilder)
+
+        /// <summary>
+        /// Adds a mapper that creates parameters for properties of the specified type.
+        /// </summary>
+        /// <param name="excluded">
+        /// The list of excluded properties.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent property shold be added to property names when creating parameters.
+        /// </param>
+        member this.AddParamPropertyMapper<'OwnerType>(?excluded: string seq, ?path: bool) = 
+            this.AddParamPropertyMapper(typeof<'OwnerType>, ?excluded = excluded, ?path = path)
+
+        /// <summary>
         /// Adds a configurator for parameter builders of types determined by canBuild function.
         /// </summary>
         /// <param name="getConfig">

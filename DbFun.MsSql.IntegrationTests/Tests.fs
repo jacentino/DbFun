@@ -84,12 +84,12 @@ module Tests =
     [<Fact>]
     let ``Template-based query returning one result``() = 
         let criteria = 
-            { Criteria.Default with
-                author          = Some "jac"
-                statuses        = [ PostStatus.Published ]
-                tags            = [ "framework" ]
+            Criteria(
+                author          = "jac",
+                statuses        = [ PostStatus.Published ],
+                tags            = [ "framework" ],
                 sortOrder       = { field = SortField.Name; direction = SortDirection.Asc }
-            }
+            )
         let p = TestQueries.findPosts criteria |> run |> Async.RunSynchronously |> Seq.head
         Assert.Equal(1, p.blogId)
 
