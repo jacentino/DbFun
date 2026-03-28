@@ -122,6 +122,15 @@ type QueryConfig<'DbKey> =
         member this.AddParamPropertyMapper<'OwnerType>(?excluded: string seq, ?path: bool) = 
             this.AddParamPropertyMapper(typeof<'OwnerType>, ?excluded = excluded, ?path = path)
 
+        /// <summary>
+        /// Adds a mapper of the specified class.
+        /// </summary>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowClassMapper<'Class>(?path: bool) = 
+            { this with Common = this.Common.AddRowClassMapper<'Class>(?path = path) }
+
         interface IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
             member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 
                 { this with Common = map(this.Common) }

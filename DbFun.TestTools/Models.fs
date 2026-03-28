@@ -72,6 +72,7 @@ module Classes =
         member __.Email     = email
         member __.Created   = created
         static member Create(userId, name, email, created) = User(userId, name, email, created)
+        static member Make userId name email created = User(userId, name, email, created)
         override __.Equals(other: obj) = 
             match other with
             | :? User as u -> userId = u.UserId && name = u.Name && email = u.Email && created = u.Created

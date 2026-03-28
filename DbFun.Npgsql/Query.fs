@@ -153,7 +153,6 @@ type QueryConfig<'DbKey> =
         member this.AddParamPropertyMapper<'Type>(?excluded: string seq, ?path: bool) = 
             this.AddParamPropertyMapper(typeof<'Type>, ?excluded = excluded, ?path = path)
 
-
         /// <summary>
         /// Adds a mapper of the specified class.
         /// </summary>
@@ -162,18 +161,6 @@ type QueryConfig<'DbKey> =
         /// </param>
         member this.AddRowClassMapper<'Class>(?path: bool) = 
             { this with Common = this.Common.AddRowClassMapper<'Class>(?path = path) }
-
-        /// <summary>
-        /// Adds a mapper using static method to create an instance of object.
-        /// </summary>
-        /// <param name="methodName">
-        /// The static method name.
-        /// </param>
-        /// <param name="path">
-        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
-        /// </param>
-        member this.AddRowStaticMethodMapper<'OwnerType>(methodName: string, ?path: bool) = 
-            { this with Common = this.Common.AddRowStaticMethodMapper<'OwnerType>(methodName, ?path = path) }
 
         interface DbFun.Core.Builders.IDerivedConfig<QueryConfig<'DbKey>, 'DbKey> with
             member this.MapCommon(map: DbFun.Core.Builders.QueryConfig<'DbKey> -> DbFun.Core.Builders.QueryConfig<'DbKey>): QueryConfig<'DbKey> = 

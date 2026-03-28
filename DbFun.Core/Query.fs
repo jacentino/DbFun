@@ -8,7 +8,7 @@ open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System
 open System.Data.Common
-open System.Reflection
+open System.Linq.Expressions
 
 /// <summary>
 /// The query builder configuration data.
@@ -127,36 +127,71 @@ type QueryConfig<'DbKey> =
                 OutParamBuilders = OutParamsImpl.ClassBuilder(typeof<'Class>, ?path = path) :: this.OutParamBuilders
             }
 
-        /// <summary>
-        /// Adds a mapper using static method to create an instance of object.
-        /// </summary>
-        /// <param name="method">
-        /// The static method.
-        /// </param>
-        /// <param name="path">
-        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
-        /// </param>
-        member this.AddRowStaticMethodMapper(method: MethodInfo, ?path: bool) = 
+        member private this.AddLambdaBuilder(lambda: LambdaExpression, ?path: bool) = 
             { this with 
-                RowBuilders = RowsImpl.StaticMethodBuilder(method, ?path = path) :: this.RowBuilders
-                OutParamBuilders = OutParamsImpl.StaticMethodBuilder(method, ?path = path) :: this.OutParamBuilders
+                RowBuilders = RowsImpl.LambdaBuilder(lambda, ?path = path) :: this.RowBuilders
+                OutParamBuilders = OutParamsImpl.LambdaBuilder(lambda, ?path = path) :: this.OutParamBuilders
             }
 
         /// <summary>
-        /// Adds a mapper using static method to create an instance of object.
+        /// Adds a mapper using function to create an instance of object.
         /// </summary>
-        /// <param name="methodName">
-        /// The static method name.
+        /// <param name="lambda">
+        /// The function used in mapping.
         /// </param>
         /// <param name="path">
         /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
         /// </param>
-        member this.AddRowStaticMethodMapper<'OwnerType>(methodName: string, ?path: bool) = 
-            let method = typeof<'OwnerType>.GetMethod(methodName)
-            { this with 
-                RowBuilders = RowsImpl.StaticMethodBuilder(method, ?path = path) :: this.RowBuilders
-                OutParamBuilders = OutParamsImpl.StaticMethodBuilder(method, ?path = path) :: this.OutParamBuilders
-            }
+        member this.AddRowFunctionMapper(lambda: Expression<Func<'Param, 'Result>>, ?path: bool) = 
+            this.AddLambdaBuilder(lambda, ?path = path)
+
+        /// <summary>
+        /// Adds a mapper using function to create an instance of object.
+        /// </summary>
+        /// <param name="lambda">
+        /// The function used in mapping.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowFunctionMapper(lambda: Expression<Func<'Param1, 'Param2, 'Result>>, ?path: bool) = 
+            this.AddLambdaBuilder(lambda, ?path = path)
+
+        /// <summary>
+        /// Adds a mapper using function to create an instance of object.
+        /// </summary>
+        /// <param name="lambda">
+        /// The function used in mapping.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowFunctionMapper(lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Result>>, ?path: bool) = 
+            this.AddLambdaBuilder(lambda, ?path = path)
+
+        /// <summary>
+        /// Adds a mapper using function to create an instance of object.
+        /// </summary>
+        /// <param name="lambda">
+        /// The function used in mapping.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowFunctionMapper(lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Param4, 'Result>>, ?path: bool) = 
+            this.AddLambdaBuilder(lambda, ?path = path)
+
+        /// <summary>
+        /// Adds a mapper using function to create an instance of object.
+        /// </summary>
+        /// <param name="lambda">
+        /// The function used in mapping.
+        /// </param>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowFunctionMapper(lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Param4, 'Param5, 'Result>>, ?path: bool) = 
+            this.AddLambdaBuilder(lambda, ?path = path)
 
         /// <summary>
         /// Adds a configurator for parameter builders of types determined by canBuild function.
@@ -304,21 +339,74 @@ type IDerivedConfigExtensions =
     /// <param name="path">
     /// Determines, whether the name of parent parameter should be added to parameter names when accessing result columns.
     /// </param>
+    [<Extension>]
     static member AddRowClassMapper(config: IDerivedConfig<'Derived, 'DbKey>, clazz: Type, ?path: bool) = 
         config.MapCommon(fun common -> common.AddRowClassMapper(clazz, ?path = path))
 
     /// <summary>
-    /// Adds a mapper using static method to create an instance of object.
+    /// Adds a mapper using function to create an instance of object.
     /// </summary>
-    /// <param name="method">
-    /// The static method used in mapping.
+    /// <param name="lambda">
+    /// The function used in mapping.
     /// </param>
     /// <param name="path">
     /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
     /// </param>
-    static member AddRowStaticMethodMapper(config: IDerivedConfig<'Derived, 'DbKey>, method: MethodInfo, ?path: bool) = 
-        config.MapCommon(fun common -> common.AddRowStaticMethodMapper(method, ?path = path))
+    [<Extension>]
+    static member AddRowFunctionMapper(config: IDerivedConfig<'Derived, 'DbKey>, lambda: Expression<Func<'Param, 'Result>>, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowFunctionMapper(lambda, ?path = path))
 
+    /// <summary>
+    /// Adds a mapper using function to create an instance of object.
+    /// </summary>
+    /// <param name="lambda">
+    /// The function used in mapping.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+    /// </param>
+    [<Extension>]
+    static member AddRowFunctionMapper(config: IDerivedConfig<'Derived, 'DbKey>, lambda: Expression<Func<'Param1, 'Param2, 'Result>>, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowFunctionMapper(lambda, ?path = path))
+
+    /// <summary>
+    /// Adds a mapper using function to create an instance of object.
+    /// </summary>
+    /// <param name="lambda">
+    /// The function used in mapping.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+    /// </param>
+    [<Extension>]
+    static member AddRowFunctionMapper(config: IDerivedConfig<'Derived, 'DbKey>, lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Result>>, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowFunctionMapper(lambda, ?path = path))
+
+    /// <summary>
+    /// Adds a mapper using function to create an instance of object.
+    /// </summary>
+    /// <param name="lambda">
+    /// The function used in mapping.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+    /// </param>
+    [<Extension>]
+    static member AddRowFunctionMapper(config: IDerivedConfig<'Derived, 'DbKey>, lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Param4, 'Result>>, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowFunctionMapper(lambda, ?path = path))
+
+    /// <summary>
+    /// Adds a mapper using function to create an instance of object.
+    /// </summary>
+    /// <param name="lambda">
+    /// The function used in mapping.
+    /// </param>
+    /// <param name="path">
+    /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+    /// </param>
+    [<Extension>]
+    static member AddRowFunctionMapper(config: IDerivedConfig<'Derived, 'DbKey>, lambda: Expression<Func<'Param1, 'Param2, 'Param3, 'Param4, 'Param5, 'Result>>, ?path: bool) = 
+        config.MapCommon(fun common -> common.AddRowFunctionMapper(lambda, ?path = path))
 
     /// <summary>
     /// Allows to generate functions executing queries without discovering resultset structure using SchemaOnly calls.

@@ -90,6 +90,15 @@ type QueryConfig<'DbKey> =
             this.AddParamPropertyMapper(typeof<'OwnerType>, ?excluded = excluded, ?path = path)
 
         /// <summary>
+        /// Adds a mapper of the specified class.
+        /// </summary>
+        /// <param name="path">
+        /// Determines, whether the name of parent parameter shold be added to parameter names when accessing result columns.
+        /// </param>
+        member this.AddRowClassMapper<'Class>(?path: bool) = 
+            { this with Common = this.Common.AddRowClassMapper<'Class>(?path = path) }
+
+        /// <summary>
         /// Adds a configurator for parameter builders of types determined by canBuild function.
         /// </summary>
         /// <param name="getConfig">

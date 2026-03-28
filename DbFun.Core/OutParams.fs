@@ -79,7 +79,7 @@ module OutParamsImpl =
 
     type ClassBuilder = GenericGetters.ClassBuilder<unit, IDbCommand>
 
-    type StaticMethodBuilder = GenericGetters.StaticMethodBuilder<unit, IDbCommand>
+    type LambdaBuilder = GenericGetters.LambdaBuilder<unit, IDbCommand>
 
     type RecordBuilder = GenericGetters.RecordBuilder<unit, IDbCommand>
 

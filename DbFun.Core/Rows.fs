@@ -132,7 +132,7 @@ module RowsImpl =
 
     type ClassBuilder = GenericGetters.ClassBuilder<IDataRecord, IDataRecord>
 
-    type StaticMethodBuilder = GenericGetters.StaticMethodBuilder<IDataRecord, IDataRecord>
+    type LambdaBuilder = GenericGetters.LambdaBuilder<IDataRecord, IDataRecord>
 
     type RecordBuilder = GenericGetters.RecordBuilder<IDataRecord, IDataRecord>
 

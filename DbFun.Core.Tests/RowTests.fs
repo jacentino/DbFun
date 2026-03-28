@@ -10,6 +10,7 @@ open DbFun.FastExpressionCompiler.Compilers
 open DbFun.TestTools.Models
 open DbFun.Core.Builders.RowsImpl
 open DbFun.Core.Builders.Compilers
+open System.Linq.Expressions
 
 module RowTests = 
 
@@ -55,11 +56,12 @@ module RowTests =
                 RowsImpl.ClassBuilder(typeof<Classes.User>) :: RowsImpl.getDefaultBuilders(), compiler) 
         |])
 
+    let makeUser: Expression<Func<_, _, _, _, _>> = Classes.User.Make
     let providers3 = 
         compilers
         |> List.map (fun compiler -> [| 
             GenericGetters.BaseGetterProvider<IDataRecord, IDataRecord>(
-                RowsImpl.StaticMethodBuilder(typeof<Classes.User>.GetMethod("Create")) :: RowsImpl.getDefaultBuilders(), compiler) 
+                RowsImpl.LambdaBuilder(makeUser) :: RowsImpl.getDefaultBuilders(), compiler) 
         |])
         
 
@@ -621,7 +623,7 @@ module RowTests =
 
 
     [<Theory>][<MemberData(nameof providers)>]
-    let ``Static methods - explicit``(provider) = 
+    let ``Functions - explicit``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", 5)
@@ -631,7 +633,7 @@ module RowTests =
                         ]
         let builderParams = provider, record
 
-        let getter = Rows.StaticMethod<Classes.User>(typeof<Classes.User>.GetMethod("Create")) builderParams
+        let getter = Rows.Function(Classes.User.Make) builderParams
         let value = getter.Get(record)
 
         let expected = Classes.User(5, "jacentino", "jacentino@gmail.com", DateTime(2023, 1, 1))
@@ -639,7 +641,7 @@ module RowTests =
 
 
     [<Theory>][<MemberData(nameof providers3)>]
-    let ``Static methods - auto``(provider) = 
+    let ``Functions - auto``(provider) = 
 
         let record = createDataRecordMock 
                         [   vcol("userId", 5)

@@ -8,6 +8,7 @@ open DbFun.FastExpressionCompiler.Compilers
 open DbFun.TestTools.Models
 open DbFun.Core.Builders.Compilers
 open System.Data
+open System.Linq.Expressions
 
 module OutParamsTests = 
 
@@ -27,11 +28,12 @@ module OutParamsTests =
             GenericGetters.BaseGetterProvider<unit, IDbCommand>(OutParamsImpl.ClassBuilder(typeof<Classes.User>) :: OutParamsImpl.getDefaultBuilders(), compiler)
         |])
 
+    let makeUser: Expression<Func<int, string, string, DateTime, Classes.User>> = Classes.User.Make 
     let providers3 = 
         compilers 
         |> List.map (fun compiler -> [|
             GenericGetters.BaseGetterProvider<unit, IDbCommand>(
-                OutParamsImpl.StaticMethodBuilder(typeof<Classes.User>.GetMethod("Create")) :: 
+                OutParamsImpl.LambdaBuilder(makeUser) :: 
                 OutParamsImpl.getDefaultBuilders(), compiler)
         |])
 
@@ -208,26 +210,8 @@ module OutParamsTests =
 
         
     [<Theory>]
-    [<MemberData(nameof providers)>]
-    let ``Static methods - explicit``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
-
-        let command = connection.CreateCommand()
-        let getter = OutParams.StaticMethod<Classes.User, Classes.User>(nameof Classes.User.Create) (provider, ())
-
-        getter.Create(command)
-        command.Parameters.["userId"].Value <- 2
-        command.Parameters.["name"].Value <- "jacentino"
-        command.Parameters.["email"].Value <- "jacentino@gmail.com"
-        command.Parameters.["created"].Value <- DateTime.Today
-        let value = getter.Get(command)
-
-        let expected = Classes.User(2, "jacentino", "jacentino@gmail.com", DateTime.Today)
-        Assert.Equal(expected, value)
-
-        
-    [<Theory>]
     [<MemberData(nameof providers3)>]
-    let ``Static methods - auto``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
+    let ``Functions - auto``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
 
         let command = connection.CreateCommand()
         let getter = OutParams.Auto<Classes.User>() (provider, ())
@@ -242,6 +226,23 @@ module OutParamsTests =
         let expected = Classes.User(2, "jacentino", "jacentino@gmail.com", DateTime.Today)
         Assert.Equal(expected, value)
 
+        
+    [<Theory>]
+    [<MemberData(nameof providers)>]
+    let ``Functions - explicit``(provider: GenericGetters.BaseGetterProvider<unit, IDbCommand>) = 
+
+        let command = connection.CreateCommand()
+        let getter = OutParams.Function(Classes.User.Make) (provider, ())
+
+        getter.Create(command)
+        command.Parameters.["userId"].Value <- 2
+        command.Parameters.["name"].Value <- "jacentino"
+        command.Parameters.["email"].Value <- "jacentino@gmail.com"
+        command.Parameters.["created"].Value <- DateTime.Today
+        let value = getter.Get(command)
+
+        let expected = Classes.User(2, "jacentino", "jacentino@gmail.com", DateTime.Today)
+        Assert.Equal(expected, value)
         
     [<Theory>]
     [<MemberData(nameof providers)>]
