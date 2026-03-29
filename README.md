@@ -24,6 +24,7 @@ There are also extensions for [MS SQL](https://www.nuget.org/packages/DbFun.MsSq
 * Support for parameter and column conversions
 * Support for result transformations
 * Support for enum types
+* Support for POCO
 * Asynchrony
 * Template-based queries
 * Computation expression for database operations
